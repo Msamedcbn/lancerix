@@ -1,11 +1,13 @@
 import type { Route } from "next";
 import Link from "next/link";
 import {
+  Building2,
   FileText,
   Gavel,
   LayoutDashboard,
   ReceiptText,
   ScrollText,
+  UserCog,
   Wallet,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -26,11 +28,13 @@ const NAV: Record<UserRole, readonly NavItem[]> = {
     { href: "/freelancer", label: "Projects", icon: LayoutDashboard },
     { href: "/freelancer/earnings", label: "Earnings", icon: Wallet },
     { href: "/freelancer/invoices", label: "Invoices", icon: ReceiptText },
+    { href: "/freelancer/settings", label: "Settings", icon: UserCog },
   ],
   CLIENT: [
     { href: "/client", label: "Payments", icon: LayoutDashboard },
     { href: "/client/approvals", label: "Approvals", icon: FileText },
     { href: "/client/invoices", label: "Invoices", icon: ReceiptText },
+    { href: "/client/company", label: "Company", icon: Building2 },
   ],
   ADMIN: [
     { href: "/admin", label: "Disputes", icon: Gavel },

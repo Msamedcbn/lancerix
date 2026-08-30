@@ -530,15 +530,41 @@ export type Database = {
         }
         Returns: boolean
       }
+      contract_company: {
+        Args: { p_contract_id: string }
+        Returns: {
+          address: string
+          id: string
+          legal_name: string
+          tax_office: string
+          vkn: string
+        }[]
+      }
       current_user_role: {
         Args: never
         Returns: Database["public"]["Enums"]["user_role"]
+      }
+      find_counterparty: {
+        Args: { p_email: string }
+        Returns: {
+          companies: Json
+          full_name: string
+          id: string
+          role: Database["public"]["Enums"]["user_role"]
+        }[]
       }
       is_admin: { Args: never; Returns: boolean }
       is_contract_party: { Args: { p_contract_id: string }; Returns: boolean }
       is_milestone_party: { Args: { p_milestone_id: string }; Returns: boolean }
       is_valid_tckn: { Args: { value: string }; Returns: boolean }
       is_valid_vkn: { Args: { value: string }; Returns: boolean }
+      party_display_names: {
+        Args: { p_ids: string[] }
+        Returns: {
+          full_name: string
+          id: string
+        }[]
+      }
       transition_milestone: {
         Args: {
           p_metadata?: Json

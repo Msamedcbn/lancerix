@@ -130,6 +130,33 @@ whether any client will prefund, and sub-merchant onboarding is slow.
 Effort XL · Risk High. Rejected for now: needs a BDDK licence and a balance sheet, and it
 is the longest path to testing whether the core premise is even true.
 
+## REVISED 2026-08-30 — build first, interview in parallel
+
+The sequencing below (validate, then build) was overturned by the founder on
+domain knowledge this document did not have: **Turkish investors outside the
+angel tier do not fund validated interviews.** They fund a working product with
+users in it. A deck saying "ten CFOs said they would prefund" raises nothing; a
+live platform processing real contracts gets the meeting. Under that constraint
+the product is not the thing you build *after* the evidence, it *is* the
+evidence, and "no product this stage" was optimising for the wrong currency.
+
+What changes: the build starts now rather than after 2026-09-18.
+
+What does not change: **the ten interviews still run.** They cost nothing that
+building consumes -- one happens on calls, the other at a keyboard -- and they
+answer what to build rather than whether to build. Cancelling them would trade a
+free steering signal for nothing.
+
+Why little is at risk either way: almost none of the work depends on the
+prefunding answer. Contracts, milestones, the money split, stopaj and SMM, the
+ledger and payouts are identical whether the client funds at kickoff or on
+delivery. Only the *timing* of the funding step moves, and the escrow state
+machine already expresses both. jobtogo.co is the proof: it runs the same
+invoicing rail commercially without prefunding at all.
+
+The success criteria below still stand as written -- they decide which product
+this becomes, not whether to start.
+
 ## Recommended Approach
 
 **A1 now, A2 only if A1 passes.** The riskiest assumption is client prefunding
