@@ -196,7 +196,7 @@ const FLOW_STEPS = [
     step: "02",
     edge: "AWAITING_PAYMENT -> IN_PROGRESS",
     title: "Para kilitlenir",
-    body: "Müşteri aşamanın tutarını hizmet bedeliyle birlikte, iş başlamadan yatırır. Tutar lisanslı ödeme kuruluşunda tutulur. Ne freelancer çekebilir ne müşteri geri alabilir; durum ancak doğrulanmış bir webhook ile ilerler.",
+    body: "Müşteri aşamanın tutarını hizmet bedeliyle birlikte, iş başlamadan yatırır. Tutar lisanslı bir ödeme kuruluşunda tutulacak; ne freelancer çekebilir ne müşteri geri alabilir. Bu adım henüz devrede değil: kurum entegrasyonu sürerken sözleşme, teslim ve kabul süreci çalışıyor, para platform üzerinden geçmiyor.",
     Diagram: LockDiagram,
   },
   {
