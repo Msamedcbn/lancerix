@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { env } from "@/lib/env";
+import { appUrl } from "@/lib/env.server";
 import { createClient } from "@/lib/supabase/server";
 import { loginSchema, registerSchema } from "@/lib/validations/auth";
 
@@ -47,7 +47,7 @@ export async function register(
     email,
     password,
     options: {
-      emailRedirectTo: `${env.NEXT_PUBLIC_APP_URL}/auth/callback`,
+      emailRedirectTo: `${appUrl()}/auth/callback`,
       // Consumed by the handle_new_user trigger to seed the profile row.
       data: { full_name: fullName, role },
     },

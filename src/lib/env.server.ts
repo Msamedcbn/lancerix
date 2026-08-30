@@ -11,6 +11,32 @@ const serverEnvSchema = z.object({
 
 type ServerEnv = z.infer<typeof serverEnvSchema>;
 
+/**
+ * Absolute origin for links that are emailed to users, such as the magic-link
+ * callback. Server-only: it is never read in the browser, so it does not need
+ * to be inlined into the client bundle.
+ *
+ * Explicit APP_URL wins, which is what a custom domain uses. On Vercel it
+ * falls back to the project's stable production domain, then to the
+ * per-deployment URL so previews link to themselves. Locally it is localhost.
+ * Nothing has to be configured for a Vercel deploy to link to itself.
+ */
+export function appUrl(): string {
+  const explicit = process.env.APP_URL;
+  if (explicit) {
+    const parsed = z.url().safeParse(explicit);
+    if (!parsed.success) {
+      throw new Error(`APP_URL must be an absolute URL, got "${explicit}"`);
+    }
+    return new URL(parsed.data).origin;
+  }
+
+  const host = process.env.VERCEL_PROJECT_PRODUCTION_URL ?? process.env.VERCEL_URL;
+  if (host) return `https://${host}`;
+
+  return "http://localhost:3000";
+}
+
 let cached: ServerEnv | null = null;
 
 /**

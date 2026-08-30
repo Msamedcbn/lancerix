@@ -1,7 +1,6 @@
 import { z } from "zod";
 
 const publicEnvSchema = z.object({
-  NEXT_PUBLIC_APP_URL: z.url(),
   NEXT_PUBLIC_SUPABASE_URL: z.url(),
   NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1),
 });
@@ -9,7 +8,6 @@ const publicEnvSchema = z.object({
 // Next.js only inlines NEXT_PUBLIC_* when accessed as a static property path,
 // so these cannot be read off a dynamic `process.env` spread.
 const parsed = publicEnvSchema.safeParse({
-  NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
   NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
   NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
 });
@@ -52,7 +50,6 @@ if (!parsed.success) {
 export const env = parsed.success
   ? parsed.data
   : {
-      NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000",
       NEXT_PUBLIC_SUPABASE_URL: "http://supabase.invalid",
       NEXT_PUBLIC_SUPABASE_ANON_KEY: "unconfigured",
     };
