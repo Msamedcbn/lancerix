@@ -43,7 +43,7 @@ export async function register(
 
   const { email, password, fullName, role } = parsed.data;
   const supabase = await createClient();
-  const { error } = await supabase.auth.signUp({
+  const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
@@ -53,6 +53,17 @@ export async function register(
     },
   });
   if (error) return { error: error.message };
+
+  // Supabase returns a session here only when email confirmation is switched
+  // off for the project. Branching on it means the app is correct under both
+  // settings: straight into the dashboard when nothing has to be confirmed,
+  // and a clear pending state when it does. Reading the setting itself is not
+  // possible from the client, and assuming it is what stranded new accounts on
+  // a bare sign-in form.
+  if (data.session) {
+    revalidatePath("/", "layout");
+    redirect("/dashboard");
+  }
 
   redirect("/login?checkEmail=1");
 }

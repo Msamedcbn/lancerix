@@ -19,9 +19,15 @@ import { Label } from "@/components/ui/label";
 const INITIAL: AuthFormState = { error: null };
 
 /**
- * Registration redirects here with ?checkEmail=1. Without this notice the
- * account exists but nothing says so, and the first sign-in attempt fails with
- * "Email not confirmed" for no visible reason.
+ * Registration redirects here with ?checkEmail=1, which only happens when the
+ * project requires email confirmation. Without this notice the account exists
+ * but nothing says so, and the first sign-in attempt fails with "Email not
+ * confirmed" for no visible reason.
+ *
+ * The wording deliberately does not promise that a message has arrived. Until
+ * a mail provider is configured, delivery goes through Supabase's shared SMTP,
+ * which is rate-limited and slow; confirming the user from the dashboard is
+ * the reliable path in the meantime.
  */
 function CheckEmailNotice() {
   const shown = useSearchParams().get("checkEmail") === "1";
@@ -32,7 +38,7 @@ function CheckEmailNotice() {
       role="status"
       className="mb-4 rounded-md border border-emerald-600/30 bg-emerald-50 px-3 py-2 text-sm text-emerald-900"
     >
-      Account created. Confirm your address from the email we sent, then sign in.
+      Account created. It has to be confirmed before you can sign in.
     </p>
   );
 }
