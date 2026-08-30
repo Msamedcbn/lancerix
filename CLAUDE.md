@@ -1,4 +1,4 @@
-# Remotify — B2B Freelancer Billing & Escrow Platform
+# Mutabık — B2B Freelancer Billing & Escrow Platform
 
 Freelancers issue B2B corporate invoices, sign 3-way contracts, hold client funds
 in escrow via a marketplace gateway, and receive net payouts after automatic
@@ -13,14 +13,29 @@ sub-merchant API · Parasut / KolayBi e-Archive · vitest.
 ## Non-negotiable rules
 
 **Money.** Every amount is an integer of kurus (BIGINT). Never a float. Rates are
-basis points (1500 = 15.00%). Platform fee is 15% unless an active coupon lowers
-it. Derived amounts are computed by subtraction, never by a second percentage, so
-`fee + freelancerGross == gross` holds exactly.
+basis points (1000 = 10.00%). Platform fee is 10% and 10% is the ceiling: a
+contract or coupon may only lower it.
+
+The fee is charged to the **client**, on top of the freelancer's contract amount.
+It is never withheld from what the freelancer earns. `Gross` is the freelancer's
+contract amount and the figure their SMM is issued for.
 
 - `PlatformFee = Gross * feeRate`
-- `FreelancerGross = Gross - PlatformFee`
-- `FreelancerNet = FreelancerGross - Stopaj` (stopaj is withheld from the
-  freelancer's gross, never from the project gross)
+- `ClientCharge = Gross + PlatformFee` (what the client funds into escrow)
+- `FreelancerNet = Gross - Stopaj` (stopaj is withheld from the full contract
+  amount; the platform fee never enters that base)
+
+Derived amounts are computed by subtraction, never by a second percentage, so
+`ClientCharge - PlatformFee == Gross` and `Stopaj + FreelancerNet == Gross` both
+hold exactly. The addition in `ClientCharge` is the one place a total can grow,
+so it is range-checked in both languages.
+
+A milestone must be at least 500,00 TRY (`MIN_MILESTONE_GROSS_KURUS`, mirrored by
+a Postgres check): below that the fee rounds toward zero while the payment
+provider's per-transaction cost does not.
+
+Rationale and the open question for the accountant:
+`docs/designs/pricing-client-pays-model.md`.
 
 `src/lib/escrow/money.ts` and the STORED GENERATED columns in
 `supabase/migrations/` must stay bit-identical. Postgres `round()` is
