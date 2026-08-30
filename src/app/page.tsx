@@ -1,8 +1,11 @@
 "use client";
 
 import { useRef } from "react";
+import Image from "next/image";
 import Link from "next/link";
 
+import { Money } from "@/components/money";
+import { StatusBadge } from "@/components/status-badge";
 import { gsap, ScrollTrigger, useGSAP } from "@/lib/gsap";
 import {
   computeEscrowSplit,
@@ -36,22 +39,18 @@ const NAV = [
  */
 const STEPS = [
   {
-    no: "01",
     title: "Sözleşme imzalanır",
     body: "İki taraf aynı metni imzalar. Tutar, aşamalar, stopaj oranı ve itiraz süresi imza anında dondurulur. İmzayla birlikte metnin parmak izi de kayda geçer; şartlar sonradan değişirse bu tutmaz ve değişiklik görünür.",
   },
   {
-    no: "02",
     title: "İş aşama aşama teslim edilir",
     body: "Proje tek bir büyük teslim değil, sırayla kapanan aşamalardır. Her aşama kendi başına ilerler; birindeki tıkanma diğerlerini bekletmez.",
   },
   {
-    no: "03",
     title: "Geri sayım başlar",
     body: "Teslimatla birlikte müşteriye bildirim gider ve sözleşmede yazan itiraz süresi işlemeye başlar. Süre, tahmine değil imzalanan metne dayanır.",
   },
   {
-    no: "04",
     title: "Sessizlik kabul sayılır",
     body: "Müşteri süre içinde itiraz etmezse teslimat sözleşme uyarınca kabul edilmiş sayılır ve kabul, zaman damgasıyla silinemeyen bir deftere yazılır. Beklemek varsayılan değildir.",
   },
@@ -191,16 +190,16 @@ export default function HomePage() {
           </div>
           <Link
             href="/register"
-            className="ml-auto rounded-full bg-white px-4 py-1.5 text-sm font-medium text-zinc-950 hover:bg-zinc-200 active:translate-y-px"
+            className="ml-auto rounded-full bg-white px-4 py-1.5 text-sm font-medium whitespace-nowrap text-zinc-950 hover:bg-zinc-200 active:translate-y-px"
           >
-            Başla
+            Hesap oluştur
           </Link>
         </nav>
       </header>
 
       {/* Asymmetric hero: text on the left, the image floating off the right
           edge. A centred headline wastes the eye's starting position. */}
-      <section className="relative overflow-hidden px-6 pt-40 pb-24 md:pt-52 md:pb-36">
+      <section className="relative overflow-hidden px-6 pt-28 pb-20 md:pt-24 md:pb-28">
         <div
           aria-hidden
           className="absolute -top-32 -left-40 h-[36rem] w-[36rem] rounded-full bg-emerald-500/10 blur-[150px]"
@@ -251,9 +250,10 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* The product itself rather than a stock photograph. It is built from
-              markup, so it cannot fail to load, cannot contradict the product,
-              and says something a picture of a desk does not. */}
+          {/* The real components, not a drawing of them. StatusBadge and Money
+              are the same modules the dashboard renders, so this preview cannot
+              drift from the product and is not a fake screenshot built out of
+              divs. */}
           <div
             style={{ "--i": 8 } as React.CSSProperties}
             className="reveal relative z-0 mt-12 w-full max-w-sm rounded-2xl border border-white/10 bg-zinc-900/80 p-5 backdrop-blur md:ml-auto lg:absolute lg:right-0 lg:bottom-4 lg:mt-0 xl:-right-8"
@@ -267,23 +267,20 @@ export default function HomePage() {
                   LX-8FQ2K · Vega Dijital A.Ş.
                 </p>
               </div>
-              <span className="inline-flex items-center gap-1.5 text-xs font-medium whitespace-nowrap text-amber-400">
-                <span className="size-1.5 rounded-full bg-amber-400" aria-hidden />
-                Teslim edildi
-              </span>
+              <StatusBadge status="SUBMITTED" />
             </div>
 
             <dl className="mt-5 grid grid-cols-2 gap-y-3 text-sm">
               <div>
                 <dt className="text-xs text-zinc-500">Sözleşme bedeli</dt>
-                <dd className="mt-0.5 text-zinc-200 tabular-nums">
-                  {formatKurus(SPLIT.grossKurus)}
+                <dd className="mt-0.5 text-zinc-200">
+                  <Money kurus={SPLIT.grossKurus} />
                 </dd>
               </div>
               <div>
                 <dt className="text-xs text-zinc-500">Eline geçecek</dt>
-                <dd className="mt-0.5 font-medium text-emerald-400 tabular-nums">
-                  {formatKurus(SPLIT.freelancerNetKurus)}
+                <dd className="text-brand mt-0.5 font-medium">
+                  <Money kurus={SPLIT.freelancerNetKurus} />
                 </dd>
               </div>
             </dl>
@@ -371,19 +368,37 @@ export default function HomePage() {
         </p>
       </section>
 
+      {/* TODO: replace with real photography, 1920x1080, a Turkish freelancer at
+          work or a signing moment. The picsum seed below is a placeholder and
+          the service is not reliable enough to demo on -- it was returning 503
+          when this was written.
+
+          A full-bleed photographic band. It is a layout family the page does not
+          otherwise use, and it gives the argument above somewhere to land before
+          the mechanism starts. The container carries its own background and
+          gradient so a failed load degrades to a deliberate dark band rather
+          than an empty box. */}
+      <section className="relative h-[42vh] min-h-[18rem] w-full overflow-hidden bg-zinc-900 md:h-[52vh]">
+        <Image
+          src="https://picsum.photos/seed/istanbul-studio-desk-work/1920/1080"
+          alt="Bir çalışma masasında sözleşme ve dizüstü bilgisayar"
+          fill
+          sizes="100vw"
+          className="object-cover opacity-45 grayscale"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/30 to-zinc-950" />
+      </section>
+
       {/* The mechanism, as a stack that builds up while you read it. */}
       <section id="nasil" data-steps className="px-6 pb-24 md:pb-32">
         <div className="mx-auto max-w-4xl">
           {STEPS.map((step) => (
             <article
-              key={step.no}
+              key={step.title}
               data-step
               className="mb-5 origin-top rounded-3xl border border-white/10 bg-zinc-900 p-8 md:p-12"
             >
-              <span className="text-sm font-medium text-zinc-500">
-                {step.no}
-              </span>
-              <h3 className="mt-3 text-2xl font-semibold tracking-tight text-white md:text-3xl">
+              <h3 className="text-2xl font-semibold tracking-tight text-white md:text-3xl">
                 {step.title}
               </h3>
               <p className="mt-4 max-w-2xl text-base leading-relaxed text-zinc-400">
