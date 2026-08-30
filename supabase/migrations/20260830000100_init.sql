@@ -161,7 +161,10 @@ create table public.profiles (
   full_name text not null check (length(btrim(full_name)) between 2 and 160),
   email text not null,
   -- Freelancers invoice as individuals; TCKN is required before first payout.
-  tckn text check (public.is_valid_tckn(tckn)),
+  -- The NULL guard is load-bearing: is_valid_tckn() returns false rather than
+  -- null for an absent value, and a CHECK that evaluates to false rejects the
+  -- row. Without it every profile created without a TCKN is refused.
+  tckn text check (tckn is null or public.is_valid_tckn(tckn)),
   iban text check (iban ~ '^TR[0-9]{24}$'),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()

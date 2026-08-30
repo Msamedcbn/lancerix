@@ -50,6 +50,13 @@ function lastMatch(re: RegExp, label: string): RegExpMatchArray {
   return all[all.length - 1]!;
 }
 
+/** Every `create table public.X (...)` in the migrations, as [name, body]. */
+function tableBodies(): Array<[string, string]> {
+  return [...SQL.matchAll(/create table public\.(\w+) \(([\s\S]*?)\n\);/g)].map(
+    (m) => [m[1]!, m[2]!] as [string, string],
+  );
+}
+
 function tableBody(table: string): string {
   return lastMatch(
     new RegExp(String.raw`create table public\.${table} \(([\s\S]*?)\n\);`, "g"),
@@ -289,5 +296,38 @@ describe("status coverage", () => {
     for (const status of ESCROW_STATUSES as readonly EscrowStatus[]) {
       expect(SQL, `status ${status} never appears in SQL`).toContain(`'${status}'`);
     }
+  });
+});
+
+describe("nullable column checks", () => {
+  it("guards every function-backed CHECK on a nullable column against NULL", () => {
+    // A CHECK passes on TRUE or NULL and fails on FALSE. The is_valid_* helpers
+    // return FALSE for an absent value -- deliberately, so they mirror the
+    // TypeScript validators -- which means a nullable column whose CHECK calls
+    // one rejects every row that leaves it unset. Not hypothetical:
+    // profiles.tckn shipped this way and made sign-up fail for everyone with
+    // "Database error saving new user".
+    const offenders: string[] = [];
+
+    for (const [table, body] of tableBodies()) {
+      for (const raw of body.split("\n")) {
+        const line = raw.trim();
+        if (!/\bcheck\s*\(/i.test(line)) continue;
+        // Only function-backed checks: a bare regex or range applied to NULL
+        // yields NULL, which passes, so those are safe as written.
+        if (!/public\.\w+\s*\(/.test(line)) continue;
+
+        const column = /^(\w+)\s/.exec(line)?.[1];
+        if (!column) continue;
+        if (/\bnot null\b/i.test(line)) continue;
+
+        const guarded = new RegExp(String.raw`\b${column}\s+is\s+null\s+or\b`, "i");
+        if (guarded.test(line)) continue;
+
+        offenders.push(`${table}.${column}`);
+      }
+    }
+
+    expect(offenders, "nullable columns whose CHECK rejects NULL").toEqual([]);
   });
 });
