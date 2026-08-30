@@ -3,9 +3,8 @@
 import { useActionState } from "react";
 
 import { saveProfile, type FormState } from "@/app/(dashboard)/actions";
+import { Field, TextInput } from "@/components/field";
 import { FormFeedback, SubmitButton } from "@/components/form-feedback";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 
 const INITIAL: FormState = { error: null };
 
@@ -17,43 +16,43 @@ export function ProfileForm({
   const [state, action] = useActionState(saveProfile, INITIAL);
 
   return (
-    <form action={action} className="flex max-w-md flex-col gap-4">
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="fullName">Full name</Label>
-        <Input id="fullName" name="fullName" defaultValue={fullName} required />
-      </div>
+    <form action={action} className="flex max-w-md flex-col gap-5">
+      <Field label="Ad soyad" htmlFor="fullName">
+        <TextInput id="fullName" name="fullName" defaultValue={fullName} required />
+      </Field>
 
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="tckn">TCKN</Label>
-        <Input
+      <Field
+        label="TCKN"
+        htmlFor="tckn"
+        hint="İlk ödemeden önce zorunlu, çünkü serbest meslek makbuzu bu numara üzerine düzenlenir. Doğrulama hem burada hem veritabanında yapılır."
+      >
+        <TextInput
           id="tckn"
           name="tckn"
           defaultValue={tckn ?? ""}
           inputMode="numeric"
           maxLength={11}
-          placeholder="11 digits"
+          placeholder="11 hane"
         />
-        <p className="text-muted-foreground text-sm">
-          Required before a first payout, because the SMM is issued against it.
-          The checksum is verified here and again in the database.
-        </p>
-      </div>
+      </Field>
 
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="iban">IBAN</Label>
-        <Input
+      <Field
+        label="IBAN"
+        htmlFor="iban"
+        hint="Serbest kalan aşamaların yatırılacağı hesap. Yalnızca Türkiye IBAN'ı."
+      >
+        <TextInput
           id="iban"
           name="iban"
           defaultValue={iban ?? ""}
           placeholder="TR00 0000 0000 0000 0000 0000 00"
         />
-        <p className="text-muted-foreground text-sm">
-          Where released milestones are paid. Turkish IBANs only.
-        </p>
-      </div>
+      </Field>
 
       <FormFeedback state={state} />
-      <SubmitButton pendingLabel="Saving...">Save profile</SubmitButton>
+      <SubmitButton className="self-start" pendingLabel="Kaydediliyor...">
+        Kaydet
+      </SubmitButton>
     </form>
   );
 }

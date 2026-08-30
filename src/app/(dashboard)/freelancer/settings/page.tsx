@@ -1,5 +1,5 @@
 import { ProfileForm } from "@/app/(dashboard)/freelancer/settings/profile-form";
-import { EmptyState, PageHeading } from "@/components/empty-state";
+import { EmptyState, PageHeading } from "@/components/page-shell";
 import { requireRole } from "@/lib/auth/session";
 import { payoutBlockers } from "@/lib/validations/profile";
 import { createClient } from "@/lib/supabase/server";
@@ -19,16 +19,13 @@ export default async function FreelancerSettingsPage() {
     : ["TCKN", "IBAN"];
 
   return (
-    <div className="flex flex-col gap-6">
-      <PageHeading
-        title="Settings"
-        subtitle="Your identity and payout details"
-      />
+    <>
+      <PageHeading title="Ayarlar" subtitle="Kimlik ve ödeme bilgilerin" />
 
       {missing.length > 0 ? (
         <EmptyState
-          title={`${missing.join(" and ")} still missing`}
-          description="A milestone can be delivered and approved without these, but the money cannot leave escrow until they are on file."
+          title={`${missing.join(" ve ")} eksik`}
+          description="Bunlar olmadan da aşama teslim edilebilir ve onaylanabilir, ama dosyada olmadan para escrow hesabından çıkamaz."
         />
       ) : null}
 
@@ -37,6 +34,6 @@ export default async function FreelancerSettingsPage() {
         tckn={profile?.tckn ?? null}
         iban={profile?.iban ?? null}
       />
-    </div>
+    </>
   );
 }

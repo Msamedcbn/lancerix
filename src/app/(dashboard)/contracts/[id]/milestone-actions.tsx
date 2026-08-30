@@ -8,8 +8,8 @@ import {
   transitionMilestone,
   type FormState,
 } from "@/app/(dashboard)/actions";
+import { TextInput } from "@/components/field";
 import { FormFeedback, SubmitButton } from "@/components/form-feedback";
-import { Input } from "@/components/ui/input";
 import type { Enums } from "@/lib/supabase/database.types";
 
 type EscrowStatus = Enums<"escrow_status">;
@@ -28,7 +28,7 @@ export function MilestoneActions({
   canDeliver,
 }: Readonly<{
   milestoneId: string;
-  actions: ReadonlyArray<{ to: EscrowStatus; label: string }>;
+  actions: ReadonlyArray<{ to: EscrowStatus; label: string; tone?: "danger" }>;
   canDispute: boolean;
   canDeliver: boolean;
 }>) {
@@ -39,7 +39,7 @@ export function MilestoneActions({
   if (actions.length === 0 && !canDispute && !canDeliver) return null;
 
   return (
-    <div className="flex flex-col gap-3 border-t pt-4">
+    <div className="flex flex-col gap-3 border-t border-zinc-200 pt-4 dark:border-zinc-800">
       <div className="flex flex-wrap items-center gap-2">
         {/* Delivery has its own action rather than sharing the generic one:
             it starts the objection clock, and the client has to be told the
@@ -47,16 +47,20 @@ export function MilestoneActions({
         {canDeliver ? (
           <form action={deliverAction}>
             <input type="hidden" name="milestoneId" value={milestoneId} />
-            <SubmitButton size="sm" pendingLabel="Delivering...">
-              Mark delivered
+            <SubmitButton pendingLabel="Gönderiliyor...">
+              Teslim ettim
             </SubmitButton>
           </form>
         ) : null}
-        {actions.map(({ to, label }) => (
+
+        {actions.map(({ to, label, tone }) => (
           <form key={to} action={action}>
             <input type="hidden" name="milestoneId" value={milestoneId} />
             <input type="hidden" name="toStatus" value={to} />
-            <SubmitButton size="sm" pendingLabel="Working...">
+            <SubmitButton
+              tone={tone ?? "secondary"}
+              pendingLabel="İşleniyor..."
+            >
               {label}
             </SubmitButton>
           </form>
@@ -69,24 +73,20 @@ export function MilestoneActions({
       {canDispute ? (
         <form action={disputeAction} className="flex flex-col gap-2">
           <input type="hidden" name="milestoneId" value={milestoneId} />
-          <div className="flex gap-2">
-            <Input
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <TextInput
               name="reason"
-              placeholder="What is wrong with this delivery?"
+              placeholder="Teslimatta sorun nedir?"
               minLength={10}
               required
             />
-            <SubmitButton
-              size="sm"
-              variant="destructive"
-              pendingLabel="Opening..."
-            >
-              Dispute
+            <SubmitButton tone="danger" pendingLabel="Açılıyor...">
+              İtiraz et
             </SubmitButton>
           </div>
-          <p className="text-muted-foreground text-xs">
-            A dispute stops the clock. Only an administrator can end it, and it
-            can only end in a release or a cancellation.
+          <p className="max-w-[62ch] text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">
+            İtiraz süreyi durdurur. Yalnızca bir yönetici sonlandırabilir ve
+            süreç ya serbest bırakmayla ya iptalle biter.
           </p>
           <FormFeedback state={disputeState} />
         </form>

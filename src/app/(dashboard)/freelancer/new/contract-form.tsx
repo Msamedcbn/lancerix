@@ -8,10 +8,8 @@ import {
   type CounterpartyResult,
   type FormState,
 } from "@/app/(dashboard)/actions";
+import { Field, Select, TextArea, TextInput } from "@/components/field";
 import { FormFeedback, SubmitButton } from "@/components/form-feedback";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   computeEscrowSplit,
   formatKurus,
@@ -31,7 +29,7 @@ const blankRow = (id: number): Row => ({ id, title: "", amount: "", dueDate: "" 
  *
  * It calls the same computeEscrowSplit() the database mirrors, so the figure
  * quoted while drafting is the figure the milestone will carry. Anything it
- * cannot parse is simply left out rather than guessed at.
+ * cannot parse is left out rather than guessed at.
  */
 function Totals({
   rows,
@@ -66,22 +64,34 @@ function Totals({
   if (priced === 0) return null;
 
   return (
-    <dl className="bg-muted/40 grid gap-2 rounded-lg border p-4 text-sm">
-      <div className="flex justify-between">
-        <dt className="text-muted-foreground">Contract amount</dt>
-        <dd className="font-medium">{formatKurus(gross)}</dd>
+    <dl className="grid gap-3 rounded-xl border border-zinc-200 px-5 py-4 sm:grid-cols-3 dark:border-zinc-800">
+      <div>
+        <dt className="text-xs text-zinc-500 dark:text-zinc-400">
+          Sözleşme bedeli
+        </dt>
+        <dd className="tnum mt-0.5 text-sm font-medium text-zinc-950 dark:text-zinc-50">
+          {formatKurus(gross)}
+        </dd>
       </div>
-      <div className="flex justify-between">
-        <dt className="text-muted-foreground">Client transfers into escrow</dt>
-        <dd className="font-medium">{formatKurus(charge)}</dd>
+      <div>
+        <dt className="text-xs text-zinc-500 dark:text-zinc-400">
+          Müşteri escrow&apos;a yatırır
+        </dt>
+        <dd className="tnum mt-0.5 text-sm font-medium text-zinc-950 dark:text-zinc-50">
+          {formatKurus(charge)}
+        </dd>
       </div>
-      <div className="flex justify-between">
-        <dt className="text-muted-foreground">You receive after stopaj</dt>
-        <dd className="font-semibold text-emerald-700">{formatKurus(net)}</dd>
+      <div>
+        <dt className="text-xs text-zinc-500 dark:text-zinc-400">
+          Stopaj sonrası eline geçen
+        </dt>
+        <dd className="tnum text-brand mt-0.5 text-sm font-medium">
+          {formatKurus(net)}
+        </dd>
       </div>
-      <p className="text-muted-foreground pt-1 text-xs">
-        The service fee is added on top of your amount and paid by the client,
-        so it never comes out of what you receive.
+      <p className="text-xs leading-relaxed text-zinc-500 sm:col-span-3 dark:text-zinc-400">
+        Hizmet bedeli senin bedelinin üstüne eklenir ve müşteri tarafından
+        ödenir; eline geçen tutardan düşülmez.
       </p>
     </dl>
   );
@@ -105,31 +115,41 @@ export function ContractForm({
   return (
     <div className="flex flex-col gap-8">
       {/* Step one, on its own: the contract cannot be drafted until the other
-          side is resolved to an account and a company to bill. */}
-      <form action={lookupAction} className="flex max-w-md flex-col gap-3">
-        <Label htmlFor="lookupEmail">Client email</Label>
-        <div className="flex gap-2">
-          <Input
-            id="lookupEmail"
-            name="clientEmail"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="finance@company.com"
-            required
-          />
-          <SubmitButton variant="secondary" pendingLabel="Looking...">
-            Find
-          </SubmitButton>
-        </div>
+          side resolves to an account and a company to bill. */}
+      <form action={lookupAction} className="flex max-w-md flex-col gap-2">
+        <Field
+          label="Müşteri e-postası"
+          htmlFor="lookupEmail"
+          hint="Tam adres. Müşterinin kayıtlı olması ve bir şirket eklemiş olması gerekir."
+        >
+          <div className="flex gap-2">
+            <TextInput
+              id="lookupEmail"
+              name="clientEmail"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="finans@sirket.com"
+              required
+            />
+            <SubmitButton tone="secondary" pendingLabel="Aranıyor...">
+              Bul
+            </SubmitButton>
+          </div>
+        </Field>
+
         {lookup.error ? (
-          <p className="text-destructive text-sm" role="alert">
+          <p
+            role="alert"
+            className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-300"
+          >
             {lookup.error}
           </p>
         ) : null}
+
         {lookup.client ? (
-          <p className="text-sm text-emerald-700" role="status">
-            Found {lookup.client.fullName}.
+          <p role="status" className="text-brand text-sm">
+            {lookup.client.fullName} bulundu.
           </p>
         ) : null}
       </form>
@@ -138,107 +158,105 @@ export function ContractForm({
         <form action={action} className="flex max-w-2xl flex-col gap-6">
           <input type="hidden" name="clientEmail" value={email} />
 
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="companyId">Bill to</Label>
-            <select
-              id="companyId"
-              name="companyId"
-              required
-              className="border-input bg-background h-9 rounded-md border px-3 text-sm"
-            >
+          <Field label="Fatura edilecek şirket" htmlFor="companyId">
+            <Select id="companyId" name="companyId" required>
               {lookup.client.companies.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.legal_name} — {c.vkn}
                 </option>
               ))}
-            </select>
-          </div>
+            </Select>
+          </Field>
 
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="title">Project title</Label>
-            <Input id="title" name="title" required />
-          </div>
+          <Field label="Proje başlığı" htmlFor="title">
+            <TextInput id="title" name="title" required />
+          </Field>
 
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="scopeOfWork">Scope of work</Label>
-            <textarea
+          <Field
+            label="İşin kapsamı"
+            htmlFor="scopeOfWork"
+            hint="İki tarafın imzalayacağı metin bu. Onayın ne anlama geldiğini burası belirler, o yüzden somut yazmakta fayda var."
+          >
+            <TextArea
               id="scopeOfWork"
               name="scopeOfWork"
               required
               rows={4}
-              className="border-input bg-background rounded-md border px-3 py-2 text-sm"
-              placeholder="What is being delivered, and what counts as delivered."
+              placeholder="Ne teslim edilecek ve neye teslim edilmiş sayılacak."
             />
-            <p className="text-muted-foreground text-sm">
-              This is the text both sides sign. It decides what an approval
-              means, so it is worth being specific.
-            </p>
-          </div>
+          </Field>
 
           <fieldset className="flex flex-col gap-4">
-            <legend className="text-sm font-medium">Milestones</legend>
-            <p className="text-muted-foreground -mt-2 text-sm">
-              Each one is funded and released on its own. A hold-up on one does
-              not block the others.
+            <legend className="text-sm font-medium text-zinc-950 dark:text-zinc-50">
+              Aşamalar
+            </legend>
+            <p className="-mt-2 max-w-[62ch] text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">
+              Her aşama kendi başına fonlanır ve kendi başına serbest kalır.
+              Birindeki tıkanma diğerlerini bekletmez.
             </p>
 
             {rows.map((row, index) => (
-              <div key={row.id} className="grid gap-2 sm:grid-cols-[1fr_10rem_10rem_auto]">
-                <Input
+              <div
+                key={row.id}
+                className="grid gap-2 sm:grid-cols-[1fr_9rem_9rem_auto]"
+              >
+                <TextInput
                   name={`milestones[${index}][title]`}
                   value={row.title}
                   onChange={(e) => update(row.id, "title", e.target.value)}
-                  placeholder="Milestone"
+                  placeholder="Aşama adı"
+                  aria-label="Aşama adı"
                   required
                 />
-                <Input
+                <TextInput
                   name={`milestones[${index}][amount]`}
                   value={row.amount}
                   onChange={(e) => update(row.id, "amount", e.target.value)}
                   placeholder="10.000,00"
+                  aria-label="Tutar"
                   inputMode="decimal"
                   required
                 />
-                <Input
+                <TextInput
                   name={`milestones[${index}][dueDate]`}
                   value={row.dueDate}
                   onChange={(e) => update(row.id, "dueDate", e.target.value)}
+                  aria-label="Teslim tarihi"
                   type="date"
                 />
-                <Button
+                <button
                   type="button"
-                  variant="ghost"
-                  size="sm"
                   disabled={rows.length === 1}
                   onClick={() =>
                     setRows((current) => current.filter((r) => r.id !== row.id))
                   }
+                  className="rounded-lg px-3 py-2 text-sm text-zinc-500 hover:bg-zinc-100 hover:text-zinc-950 active:translate-y-px disabled:opacity-40 disabled:hover:bg-transparent dark:hover:bg-zinc-900 dark:hover:text-zinc-50"
                 >
-                  Remove
-                </Button>
+                  Kaldır
+                </button>
               </div>
             ))}
 
-            <Button
+            <button
               type="button"
-              variant="outline"
-              size="sm"
-              className="self-start"
               onClick={() =>
                 setRows((current) => [
                   ...current,
                   blankRow((current.at(-1)?.id ?? 0) + 1),
                 ])
               }
+              className="self-start rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-950 hover:bg-zinc-50 active:translate-y-px dark:border-zinc-800 dark:text-zinc-50 dark:hover:bg-zinc-900"
             >
-              Add milestone
-            </Button>
+              Aşama ekle
+            </button>
           </fieldset>
 
           <Totals rows={rows} feeBps={feeBps} stopajBps={stopajBps} />
 
           <FormFeedback state={state} />
-          <SubmitButton pendingLabel="Creating...">Create contract</SubmitButton>
+          <SubmitButton className="self-start" pendingLabel="Oluşturuluyor...">
+            Sözleşmeyi oluştur
+          </SubmitButton>
         </form>
       ) : null}
     </div>

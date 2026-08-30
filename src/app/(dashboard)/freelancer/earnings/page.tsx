@@ -1,26 +1,7 @@
-import { EmptyState, PageHeading } from "@/components/empty-state";
-import { Money } from "@/components/money";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { formatKurus } from "@/lib/escrow/money";
+import { EmptyState, PageHeading, Stat } from "@/components/page-shell";
 import { requireRole } from "@/lib/auth/session";
 import { earningsSummary } from "@/lib/data/contracts";
-
-function Stat({
-  label,
-  kurus,
-}: Readonly<{ label: string; kurus: number }>) {
-  return (
-    <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-muted-foreground text-sm font-normal">
-          {label}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <Money kurus={kurus} className="text-2xl font-semibold" />
-      </CardContent>
-    </Card>
-  );
-}
 
 export default async function FreelancerEarningsPage() {
   const session = await requireRole("FREELANCER");
@@ -29,32 +10,48 @@ export default async function FreelancerEarningsPage() {
   const nothingYet = summary.releasedKurus === 0 && summary.lockedKurus === 0;
 
   return (
-    <div className="flex flex-col gap-6">
+    <>
       <PageHeading
-        title="Earnings"
-        subtitle="What has been released, and what is still locked"
+        title="Kazanç"
+        subtitle="Hesabına geçen, escrow'da bekleyen ve vergi dairesine giden tutarlar"
       />
 
       {nothingYet ? (
         <EmptyState
-          title="Nothing released yet"
-          description="Released milestones are listed here with the stopaj withheld and the net paid out. The service fee is charged to the client and never comes out of this figure."
+          title="Henüz serbest kalan tutar yok"
+          description="Bir aşama serbest kaldığında burada kesilen stopajla ve eline geçen netle birlikte listelenir. Hizmet bedeli müşteriden alınır; bu rakamdan düşülmez."
         />
       ) : (
         <>
-          <div className="grid gap-4 sm:grid-cols-3">
-            <Stat label="Paid out" kurus={summary.releasedKurus} />
-            <Stat label="Locked in escrow" kurus={summary.lockedKurus} />
-            <Stat label="Stopaj withheld" kurus={summary.withheldKurus} />
+          {/* Asymmetric on purpose: the figure that matters is what landed, so
+              it gets the wide column and the other two share the narrow one. */}
+          <div className="grid gap-8 md:grid-cols-[1.4fr_1fr_1fr]">
+            <Stat
+              label="Hesabına geçen"
+              value={formatKurus(summary.releasedKurus)}
+              hint="Serbest kalmış ve ödenmiş aşamalar"
+              index={0}
+            />
+            <Stat
+              label="Escrow'da bekleyen"
+              value={formatKurus(summary.lockedKurus)}
+              hint="Fonlanmış, henüz serbest kalmamış"
+              index={1}
+            />
+            <Stat
+              label="Kesilen stopaj"
+              value={formatKurus(summary.withheldKurus)}
+              hint="Vergi dairesine yatırıldı"
+              index={2}
+            />
           </div>
 
-          <p className="text-muted-foreground text-sm">
-            Stopaj is not a cost of using this platform. It is withheld at
-            source by whoever pays you, and it is credited against your annual
-            income tax.
+          <p className="max-w-[62ch] text-sm leading-relaxed text-zinc-500 dark:text-zinc-400">
+            Stopaj bu platformun bir maliyeti değil. Sana kim öderse ödesin
+            kaynakta kesilir ve yıllık gelir vergisi beyanında mahsup edilir.
           </p>
         </>
       )}
-    </div>
+    </>
   );
 }

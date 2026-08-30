@@ -1,22 +1,8 @@
-import type { Route } from "next";
 import Link from "next/link";
-import {
-  Building2,
-  FileText,
-  Gavel,
-  LayoutDashboard,
-  ReceiptText,
-  ScrollText,
-  UserCog,
-  Wallet,
-} from "lucide-react";
-import type { LucideIcon } from "lucide-react";
 
 import { signOut } from "@/app/(auth)/actions";
-import { Button } from "@/components/ui/button";
+import { DashboardNav, type NavItem } from "@/components/dashboard-nav";
 import { requireSession, type UserRole } from "@/lib/auth/session";
-
-type NavItem = { href: Route; label: string; icon: LucideIcon };
 
 /**
  * One nav per role. The areas mirror the split in CLAUDE.md: a freelancer sees
@@ -25,20 +11,20 @@ type NavItem = { href: Route; label: string; icon: LucideIcon };
  */
 const NAV: Record<UserRole, readonly NavItem[]> = {
   FREELANCER: [
-    { href: "/freelancer", label: "Projects", icon: LayoutDashboard },
-    { href: "/freelancer/earnings", label: "Earnings", icon: Wallet },
-    { href: "/freelancer/invoices", label: "Invoices", icon: ReceiptText },
-    { href: "/freelancer/settings", label: "Settings", icon: UserCog },
+    { href: "/freelancer", label: "Projeler" },
+    { href: "/freelancer/earnings", label: "Kazanç" },
+    { href: "/freelancer/invoices", label: "Makbuzlar" },
+    { href: "/freelancer/settings", label: "Ayarlar" },
   ],
   CLIENT: [
-    { href: "/client", label: "Payments", icon: LayoutDashboard },
-    { href: "/client/approvals", label: "Approvals", icon: FileText },
-    { href: "/client/invoices", label: "Invoices", icon: ReceiptText },
-    { href: "/client/company", label: "Company", icon: Building2 },
+    { href: "/client", label: "Ödemeler" },
+    { href: "/client/approvals", label: "Onaylar" },
+    { href: "/client/invoices", label: "Faturalar" },
+    { href: "/client/company", label: "Şirket" },
   ],
   ADMIN: [
-    { href: "/admin", label: "Disputes", icon: Gavel },
-    { href: "/admin/audit", label: "Audit log", icon: ScrollText },
+    { href: "/admin", label: "İtirazlar" },
+    { href: "/admin/audit", label: "Kayıt defteri" },
   ],
 };
 
@@ -49,33 +35,39 @@ export default async function DashboardLayout({
   const nav = NAV[session.role];
 
   return (
-    <div className="min-h-dvh">
-      <header className="flex h-14 items-center gap-6 border-b px-6">
-        <Link href={nav[0]!.href} className="font-semibold tracking-tight">
-          Lancerix
-        </Link>
-        <nav className="flex items-center gap-1">
-          {nav.map(({ href, label, icon: Icon }) => (
-            <Button key={href} asChild variant="ghost" size="sm">
-              <Link href={href}>
-                <Icon />
-                {label}
-              </Link>
-            </Button>
-          ))}
-        </nav>
-        <div className="ml-auto flex items-center gap-3">
-          <span className="text-muted-foreground hidden text-sm sm:inline">
-            {session.fullName}
-          </span>
-          <form action={signOut}>
-            <Button type="submit" variant="ghost" size="sm">
-              Sign out
-            </Button>
-          </form>
+    <div className="min-h-[100dvh] bg-zinc-50 dark:bg-zinc-950">
+      {/* The header is the only sticky layer in the app, so it is the only
+          place a z-index is justified. */}
+      <header className="sticky top-0 z-30 border-b border-zinc-200 bg-white/80 backdrop-blur-md dark:border-zinc-800 dark:bg-zinc-950/80">
+        <div className="mx-auto flex max-w-6xl items-center gap-6 px-4 sm:px-6">
+          <Link
+            href={nav[0]!.href}
+            className="py-3 text-[0.95rem] font-semibold tracking-tight text-zinc-950 dark:text-zinc-50"
+          >
+            Lancerix
+          </Link>
+
+          <DashboardNav items={nav} />
+
+          <div className="ml-auto flex items-center gap-3 py-3">
+            <span className="hidden max-w-[18ch] truncate text-sm text-zinc-500 sm:inline dark:text-zinc-400">
+              {session.fullName}
+            </span>
+            <form action={signOut}>
+              <button
+                type="submit"
+                className="rounded-lg px-3 py-1.5 text-sm text-zinc-500 hover:bg-zinc-100 hover:text-zinc-950 active:scale-[0.98] dark:text-zinc-400 dark:hover:bg-zinc-900 dark:hover:text-zinc-50"
+              >
+                Çıkış
+              </button>
+            </form>
+          </div>
         </div>
       </header>
-      <main className="mx-auto max-w-5xl px-6 py-10">{children}</main>
+
+      <main className="mx-auto flex max-w-6xl flex-col gap-8 px-4 py-8 sm:px-6 sm:py-12">
+        {children}
+      </main>
     </div>
   );
 }

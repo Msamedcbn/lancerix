@@ -1,10 +1,8 @@
 import Link from "next/link";
 
-import { EmptyState, PageHeading } from "@/components/empty-state";
 import { Money } from "@/components/money";
+import { EmptyState, PageHeading, Row, Rows } from "@/components/page-shell";
 import { StatusBadge } from "@/components/status-badge";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireRole } from "@/lib/auth/session";
 import { listDisputes } from "@/lib/data/contracts";
 
@@ -13,57 +11,62 @@ export default async function AdminDisputesPage() {
   const disputes = await listDisputes();
 
   return (
-    <div className="flex flex-col gap-6">
+    <>
       <PageHeading
-        title="Disputes"
-        subtitle="Milestones a party has escalated"
+        title="İtirazlar"
+        subtitle="Taraflardan birinin süreci durdurduğu aşamalar"
       />
 
       {disputes.length === 0 ? (
         <EmptyState
-          title="No open disputes"
-          description="A disputed milestone can only end in a release or a cancellation, and only an administrator may resolve it. Open disputes appear here with both parties' accounts."
+          title="Açık itiraz yok"
+          description="İtiraz edilmiş bir aşama yalnızca serbest bırakma veya iptalle sonuçlanabilir ve yalnızca bir yönetici çözebilir. Açık itirazlar burada iki tarafın beyanıyla listelenir."
         />
       ) : (
-        <div className="flex flex-col gap-4">
-          {disputes.map((d) => (
-            <Card key={d.id}>
-              <CardHeader className="flex flex-row items-start justify-between gap-4">
-                <div>
-                  <CardTitle className="text-base">
-                    {d.milestone ? (
-                      <Link
-                        href={`/contracts/${d.milestone.contract_id}`}
-                        className="hover:underline"
-                      >
-                        {d.milestone.title}
-                      </Link>
-                    ) : (
-                      "Milestone"
-                    )}
-                  </CardTitle>
-                  <p className="text-muted-foreground text-sm">
-                    Opened {d.created_at.slice(0, 10)}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Badge variant="destructive">{d.status}</Badge>
-                  {d.milestone ? <StatusBadge status={d.milestone.status} /> : null}
-                </div>
-              </CardHeader>
-              <CardContent className="flex flex-col gap-3">
-                <p className="text-sm whitespace-pre-wrap">{d.reason}</p>
-                {d.milestone ? (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Amount at stake</span>
-                    <Money kurus={d.milestone.gross_amount_kurus} />
+        <Rows>
+          {disputes.map((d, index) => (
+            <Row key={d.id} index={index}>
+              <div className="flex flex-col gap-3">
+                <div className="grid gap-2 sm:grid-cols-[1fr_auto] sm:items-start">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-zinc-950 dark:text-zinc-50">
+                      {d.milestone ? (
+                        <Link
+                          href={`/contracts/${d.milestone.contract_id}`}
+                          className="hover:underline"
+                        >
+                          {d.milestone.title}
+                        </Link>
+                      ) : (
+                        "Aşama"
+                      )}
+                    </p>
+                    <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
+                      {d.created_at.slice(0, 10)} tarihinde açıldı
+                    </p>
                   </div>
-                ) : null}
-              </CardContent>
-            </Card>
+
+                  <div className="flex items-center gap-4">
+                    {d.milestone ? (
+                      <StatusBadge status={d.milestone.status} />
+                    ) : null}
+                    {d.milestone ? (
+                      <Money
+                        kurus={d.milestone.gross_amount_kurus}
+                        className="text-sm font-medium text-zinc-950 dark:text-zinc-50"
+                      />
+                    ) : null}
+                  </div>
+                </div>
+
+                <p className="max-w-[70ch] border-l-2 border-rose-200 pl-3 text-sm leading-relaxed whitespace-pre-wrap text-zinc-600 dark:border-rose-900 dark:text-zinc-300">
+                  {d.reason}
+                </p>
+              </div>
+            </Row>
           ))}
-        </div>
+        </Rows>
       )}
-    </div>
+    </>
   );
 }

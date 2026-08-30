@@ -1,16 +1,26 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { PageHeading } from "@/components/empty-state";
+import { PageHeading, Panel } from "@/components/page-shell";
 import { StatusBadge } from "@/components/status-badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireSession } from "@/lib/auth/session";
 import { hashDocument, renderContractDocument } from "@/lib/contracts/document";
 import { getContract } from "@/lib/data/contracts";
 import { createClient } from "@/lib/supabase/server";
 
 const when = (value: string) => value.slice(0, 16).replace("T", " ");
+
+const PARTY: Record<string, string> = {
+  FREELANCER: "Hizmeti veren",
+  CLIENT: "Hizmeti alan",
+  PLATFORM: "Platform",
+};
+
+const ACTOR: Record<string, string> = {
+  USER: "Taraf",
+  ADMIN: "Yönetici",
+  SYSTEM: "Otomatik",
+};
 
 /**
  * The whole history of one contract on a single page: the exact signed text,
@@ -53,136 +63,141 @@ export default async function ContractRecordPage({
     .order("created_at", { ascending: true });
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex items-start justify-between gap-4">
-        <PageHeading
-          title="Record"
-          subtitle={`${contract.reference} · ${contract.title}`}
-        />
-        <Button asChild variant="outline" size="sm">
-          <Link href={`/contracts/${contract.id}`}>Back to contract</Link>
-        </Button>
-      </div>
+    <>
+      <PageHeading
+        title="Kayıt"
+        subtitle={`${contract.reference} · ${contract.title}`}
+        action={
+          <Link
+            href={`/contracts/${contract.id}`}
+            className="inline-flex items-center rounded-lg border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-950 hover:bg-zinc-50 active:translate-y-px dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-50 dark:hover:bg-zinc-900"
+          >
+            Sözleşmeye dön
+          </Link>
+        }
+      />
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Signed text</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-3">
-          <pre className="bg-muted/40 overflow-x-auto rounded-lg border p-4 text-xs leading-relaxed whitespace-pre-wrap">
+      <div className="grid items-start gap-6 lg:grid-cols-[1.5fr_1fr]">
+        <Panel title="İmzalanan metin">
+          <pre className="max-h-[32rem] overflow-auto rounded-xl bg-zinc-50 p-4 text-xs leading-relaxed whitespace-pre-wrap text-zinc-700 dark:bg-zinc-900 dark:text-zinc-300">
             {document}
           </pre>
-          <p className="text-muted-foreground font-mono text-xs break-all">
+          <p className="tnum mt-3 font-mono text-[0.7rem] break-all text-zinc-400">
             sha256: {currentHash}
           </p>
-        </CardContent>
-      </Card>
+        </Panel>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Signatures</CardTitle>
-        </CardHeader>
-        <CardContent>
+        <Panel title="İmzalar" index={1}>
           {contract.signatures.length === 0 ? (
-            <p className="text-muted-foreground text-sm">
-              Not signed yet.
+            <p className="text-sm text-zinc-500 dark:text-zinc-400">
+              Henüz imzalanmadı.
             </p>
           ) : (
-            <div className="flex flex-col gap-4">
+            <ul className="flex flex-col gap-5">
               {contract.signatures.map((s) => {
                 const matches = s.document_sha256 === currentHash;
+
                 return (
-                  <div key={s.id} className="flex flex-col gap-1 text-sm">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium">{s.party}</span>
-                      <span className="text-muted-foreground">
-                        {when(s.signed_at)} from {String(s.ip_address)}
-                      </span>
-                    </div>
-                    <p className="text-muted-foreground font-mono text-xs break-all">
+                  <li key={s.id} className="flex flex-col gap-1">
+                    <p className="text-sm font-medium text-zinc-950 dark:text-zinc-50">
+                      {PARTY[s.party] ?? s.party}
+                    </p>
+                    <p className="tnum text-xs text-zinc-500 dark:text-zinc-400">
+                      {when(s.signed_at)} · {String(s.ip_address)}
+                    </p>
+                    <p className="font-mono text-[0.7rem] break-all text-zinc-400">
                       {s.document_sha256}
                     </p>
                     {/* A mismatch is the whole reason the hash is stored: it
                         means the terms changed after this party signed. */}
                     <p
-                      className={
+                      className={`text-xs ${
                         matches
-                          ? "text-xs text-emerald-700"
-                          : "text-destructive text-xs font-medium"
-                      }
+                          ? "text-brand"
+                          : "font-medium text-rose-600 dark:text-rose-400"
+                      }`}
                     >
                       {matches
-                        ? "Matches the text above."
-                        : "Does not match the text above — the terms changed after this signature."}
+                        ? "Yukarıdaki metinle eşleşiyor."
+                        : "Yukarıdaki metinle eşleşmiyor — bu imzadan sonra şartlar değişmiş."}
                     </p>
-                  </div>
+                  </li>
                 );
               })}
-            </div>
+            </ul>
           )}
-        </CardContent>
-      </Card>
+        </Panel>
+      </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">History</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {!ledger || ledger.length === 0 ? (
-            <p className="text-muted-foreground text-sm">
-              Nothing has happened yet.
-            </p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="text-muted-foreground text-left">
-                  <tr>
-                    <th className="py-2 pr-4 font-medium">When</th>
-                    <th className="py-2 pr-4 font-medium">Milestone</th>
-                    <th className="py-2 pr-4 font-medium">Change</th>
-                    <th className="py-2 pr-4 font-medium">By</th>
-                    <th className="py-2 font-medium">Reason</th>
+      <Panel title="Geçmiş" index={2}>
+        {!ledger || ledger.length === 0 ? (
+          <p className="text-sm text-zinc-500 dark:text-zinc-400">
+            Henüz bir hareket olmadı.
+          </p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[40rem] text-sm">
+              <thead>
+                <tr className="border-b border-zinc-200 text-left dark:border-zinc-800">
+                  <th className="pb-2 text-xs font-medium tracking-wide text-zinc-500 uppercase">
+                    Zaman
+                  </th>
+                  <th className="pb-2 text-xs font-medium tracking-wide text-zinc-500 uppercase">
+                    Aşama
+                  </th>
+                  <th className="pb-2 text-xs font-medium tracking-wide text-zinc-500 uppercase">
+                    Değişim
+                  </th>
+                  <th className="pb-2 text-xs font-medium tracking-wide text-zinc-500 uppercase">
+                    Kim
+                  </th>
+                  <th className="pb-2 text-xs font-medium tracking-wide text-zinc-500 uppercase">
+                    Gerekçe
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
+                {ledger.map((row, index) => (
+                  <tr
+                    key={row.id}
+                    className="reveal align-top"
+                    style={{ "--i": index } as React.CSSProperties}
+                  >
+                    <td className="tnum py-3 pr-4 whitespace-nowrap text-zinc-500 dark:text-zinc-400">
+                      {when(row.created_at)}
+                    </td>
+                    <td className="py-3 pr-4 text-zinc-950 dark:text-zinc-50">
+                      {row.milestone
+                        ? `${row.milestone.sequence_no}. ${row.milestone.title}`
+                        : "—"}
+                    </td>
+                    <td className="py-3 pr-4">
+                      <span className="flex items-center gap-2 whitespace-nowrap">
+                        {row.from_status ? (
+                          <StatusBadge status={row.from_status} />
+                        ) : (
+                          <span className="text-xs text-zinc-400">yeni</span>
+                        )}
+                        <span className="text-zinc-300 dark:text-zinc-600">→</span>
+                        <StatusBadge status={row.to_status} />
+                      </span>
+                    </td>
+                    <td className="py-3 pr-4 text-zinc-500 dark:text-zinc-400">
+                      {/* SYSTEM here is the objection window closing. That is
+                          the distinction the record exists to preserve:
+                          accepted, or accepted by not objecting. */}
+                      {ACTOR[row.actor_kind] ?? row.actor_kind}
+                    </td>
+                    <td className="max-w-[28ch] py-3 text-zinc-500 dark:text-zinc-400">
+                      {row.reason ?? "—"}
+                    </td>
                   </tr>
-                </thead>
-                <tbody>
-                  {ledger.map((row) => (
-                    <tr key={row.id} className="border-t align-top">
-                      <td className="text-muted-foreground py-2 pr-4 whitespace-nowrap">
-                        {when(row.created_at)}
-                      </td>
-                      <td className="py-2 pr-4">
-                        {row.milestone
-                          ? `${row.milestone.sequence_no}. ${row.milestone.title}`
-                          : "—"}
-                      </td>
-                      <td className="py-2 pr-4">
-                        <span className="flex items-center gap-2">
-                          {row.from_status ? (
-                            <StatusBadge status={row.from_status} />
-                          ) : (
-                            <span className="text-muted-foreground">new</span>
-                          )}
-                          <span className="text-muted-foreground">&rarr;</span>
-                          <StatusBadge status={row.to_status} />
-                        </span>
-                      </td>
-                      <td className="py-2 pr-4">
-                        {/* SYSTEM here is the objection window closing. That is
-                            the distinction the record exists to preserve:
-                            accepted, or accepted by not objecting. */}
-                        {row.actor_kind === "SYSTEM" ? "Automatic" : row.actor_kind}
-                      </td>
-                      <td className="text-muted-foreground py-2">
-                        {row.reason ?? "—"}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Panel>
+    </>
   );
 }

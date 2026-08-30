@@ -2,7 +2,6 @@
 
 import { useFormStatus } from "react-dom";
 
-import { Button } from "@/components/ui/button";
 import type { FormState } from "@/app/(dashboard)/actions";
 
 /**
@@ -12,31 +11,65 @@ import type { FormState } from "@/app/(dashboard)/actions";
 export function FormFeedback({ state }: Readonly<{ state: FormState }>) {
   if (state.error) {
     return (
-      <p className="text-destructive text-sm" role="alert">
+      <p
+        role="alert"
+        className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-300"
+      >
         {state.error}
       </p>
     );
   }
+
   if (state.ok) {
     return (
-      <p className="text-sm text-emerald-700" role="status">
+      <p
+        role="status"
+        className="border-brand/20 bg-brand-muted text-brand rounded-lg border px-3 py-2 text-sm"
+      >
         {state.ok}
       </p>
     );
   }
+
   return null;
 }
 
+type ButtonTone = "primary" | "secondary" | "danger";
+
+const TONE: Record<ButtonTone, string> = {
+  primary:
+    "bg-brand text-brand-foreground hover:opacity-90 disabled:opacity-50",
+  secondary:
+    "border border-zinc-200 bg-white text-zinc-950 hover:bg-zinc-50 disabled:opacity-50 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-50 dark:hover:bg-zinc-900",
+  danger:
+    "border border-rose-200 bg-white text-rose-700 hover:bg-rose-50 disabled:opacity-50 dark:border-rose-900 dark:bg-zinc-950 dark:text-rose-300 dark:hover:bg-rose-950/40",
+};
+
+/**
+ * The pressed state moves the button a pixel rather than changing its colour.
+ * Colour says "different"; movement says "received", which is what a click
+ * needs to confirm.
+ */
 export function SubmitButton({
   children,
   pendingLabel,
-  ...props
-}: Readonly<{ children: React.ReactNode; pendingLabel?: string }> &
-  React.ComponentProps<typeof Button>) {
+  tone = "primary",
+  className = "",
+}: Readonly<{
+  children: React.ReactNode;
+  pendingLabel?: string;
+  tone?: ButtonTone;
+  className?: string;
+}>) {
   const { pending } = useFormStatus();
+
   return (
-    <Button type="submit" disabled={pending} {...props}>
-      {pending ? (pendingLabel ?? "Working...") : children}
-    </Button>
+    <button
+      type="submit"
+      disabled={pending}
+      className={`inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium whitespace-nowrap active:translate-y-px disabled:cursor-not-allowed ${TONE[tone]} ${className}`}
+    >
+      {pending ? (pendingLabel ?? "Gönderiliyor...") : children}
+    </button>
   );
 }

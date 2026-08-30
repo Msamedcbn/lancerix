@@ -1,14 +1,11 @@
-import { notFound } from "next/navigation";
-
 import Link from "next/link";
+import { notFound } from "next/navigation";
 
 import { MilestoneActions } from "@/app/(dashboard)/contracts/[id]/milestone-actions";
 import { SignContract } from "@/app/(dashboard)/contracts/[id]/signing";
-import { Button } from "@/components/ui/button";
-import { PageHeading } from "@/components/empty-state";
 import { Money } from "@/components/money";
+import { PageHeading, Panel } from "@/components/page-shell";
 import { StatusBadge } from "@/components/status-badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireSession } from "@/lib/auth/session";
 import { getContract, kurus, type Milestone } from "@/lib/data/contracts";
 import type { Enums } from "@/lib/supabase/database.types";
@@ -26,19 +23,19 @@ type Side = "freelancer" | "client";
  * into IN_PROGRESS, never a button.
  */
 function actionsFor(status: EscrowStatus, side: Side) {
-  const moves: Array<{ to: EscrowStatus; label: string }> = [];
+  const moves: Array<{ to: EscrowStatus; label: string; tone?: "danger" }> = [];
 
   if (side === "freelancer" && status === "DRAFT") {
-    moves.push({ to: "AWAITING_PAYMENT", label: "Publish for funding" });
+    moves.push({ to: "AWAITING_PAYMENT", label: "Fonlamaya aç" });
   }
 
   if (side === "client" && status === "SUBMITTED") {
-    moves.push({ to: "COMPLETED", label: "Approve delivery" });
-    moves.push({ to: "IN_PROGRESS", label: "Send back for rework" });
+    moves.push({ to: "COMPLETED", label: "Teslimatı onayla" });
+    moves.push({ to: "IN_PROGRESS", label: "Revizyona gönder" });
   }
 
   if (status === "DRAFT" || status === "AWAITING_PAYMENT") {
-    moves.push({ to: "CANCELLED", label: "Cancel" });
+    moves.push({ to: "CANCELLED", label: "İptal et", tone: "danger" });
   }
 
   return moves;
@@ -52,76 +49,86 @@ const DISPUTABLE: readonly EscrowStatus[] = [
 ];
 
 function Countdown({ deadline }: Readonly<{ deadline: string }>) {
-  const days = Math.ceil(
-    (Date.parse(deadline) - Date.now()) / (1000 * 60 * 60 * 24),
-  );
+  const days = Math.ceil((Date.parse(deadline) - Date.now()) / 86_400_000);
+  const date = deadline.slice(0, 10);
 
   return (
-    <p className="text-sm font-medium text-amber-700">
+    <p
+      className={`text-sm font-medium ${
+        days <= 2
+          ? "text-rose-600 dark:text-rose-400"
+          : "text-amber-700 dark:text-amber-400"
+      }`}
+    >
       {days > 0
-        ? `Accepted automatically in ${days} day${days === 1 ? "" : "s"}, on ${deadline.slice(0, 10)}, unless objected to.`
-        : `The objection window closed on ${deadline.slice(0, 10)}. Acceptance runs on the next sweep.`}
+        ? `İtiraz edilmezse ${days} gün içinde, ${date} tarihinde kabul edilmiş sayılacak.`
+        : `İtiraz süresi ${date} tarihinde doldu. Kabul, bir sonraki taramada işlenecek.`}
     </p>
+  );
+}
+
+function Amount({
+  label,
+  kurus: value,
+  strong,
+}: Readonly<{ label: string; kurus: number; strong?: boolean }>) {
+  return (
+    <div>
+      <dt className="text-xs text-zinc-500 dark:text-zinc-400">{label}</dt>
+      <dd
+        className={`mt-0.5 text-sm ${
+          strong
+            ? "text-brand font-medium"
+            : "text-zinc-950 dark:text-zinc-50"
+        }`}
+      >
+        <Money kurus={value} />
+      </dd>
+    </div>
   );
 }
 
 function MilestoneCard({
   milestone,
   side,
-}: Readonly<{ milestone: Milestone; side: Side }>) {
-  const gross = milestone.gross_amount_kurus;
-  const charge = kurus(milestone.client_charge_kurus, "client_charge_kurus");
-  const fee = kurus(milestone.platform_fee_kurus, "platform_fee_kurus");
-  const stopaj = kurus(milestone.tax_withholding_kurus, "tax_withholding_kurus");
-  const net = kurus(milestone.freelancer_net_kurus, "freelancer_net_kurus");
-
+  index,
+}: Readonly<{ milestone: Milestone; side: Side; index: number }>) {
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-start justify-between gap-4">
-        <div>
-          <CardTitle className="text-base">
-            {milestone.sequence_no}. {milestone.title}
-          </CardTitle>
-          {milestone.due_date ? (
-            <p className="text-muted-foreground text-sm">
-              Due {milestone.due_date}
+    <Panel index={index}>
+      <div className="flex flex-col gap-4">
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-zinc-950 dark:text-zinc-50">
+              {milestone.sequence_no}. {milestone.title}
             </p>
-          ) : null}
+            {milestone.due_date ? (
+              <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
+                Teslim tarihi {milestone.due_date}
+              </p>
+            ) : null}
+          </div>
+          <StatusBadge status={milestone.status} />
         </div>
-        <StatusBadge status={milestone.status} />
-      </CardHeader>
-      <CardContent className="flex flex-col gap-4">
-        <dl className="grid gap-1 text-sm sm:grid-cols-2">
-          <div className="flex justify-between sm:pr-6">
-            <dt className="text-muted-foreground">Contract amount</dt>
-            <dd>
-              <Money kurus={gross} />
-            </dd>
-          </div>
-          <div className="flex justify-between sm:pl-6">
-            <dt className="text-muted-foreground">Client pays</dt>
-            <dd>
-              <Money kurus={charge} />
-            </dd>
-          </div>
-          <div className="flex justify-between sm:pr-6">
-            <dt className="text-muted-foreground">Service fee</dt>
-            <dd>
-              <Money kurus={fee} />
-            </dd>
-          </div>
-          <div className="flex justify-between sm:pl-6">
-            <dt className="text-muted-foreground">Stopaj</dt>
-            <dd>
-              <Money kurus={stopaj} />
-            </dd>
-          </div>
-          <div className="flex justify-between font-medium sm:pr-6">
-            <dt>Freelancer receives</dt>
-            <dd>
-              <Money kurus={net} className="text-emerald-700" />
-            </dd>
-          </div>
+
+        <dl className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-5">
+          <Amount label="Sözleşme bedeli" kurus={milestone.gross_amount_kurus} />
+          <Amount
+            label="Hizmet bedeli"
+            kurus={kurus(milestone.platform_fee_kurus, "platform_fee_kurus")}
+          />
+          <Amount
+            label="Müşteri öder"
+            kurus={kurus(milestone.client_charge_kurus, "client_charge_kurus")}
+          />
+          <Amount
+            label="Stopaj"
+            kurus={kurus(milestone.tax_withholding_kurus, "tax_withholding_kurus")}
+          />
+          <Amount
+            label="Freelancer alır"
+            kurus={kurus(milestone.freelancer_net_kurus, "freelancer_net_kurus")}
+            strong
+          />
         </dl>
 
         {milestone.status === "SUBMITTED" && milestone.auto_accept_at ? (
@@ -134,8 +141,8 @@ function MilestoneCard({
           canDispute={DISPUTABLE.includes(milestone.status)}
           canDeliver={side === "freelancer" && milestone.status === "IN_PROGRESS"}
         />
-      </CardContent>
-    </Card>
+      </div>
+    </Panel>
   );
 }
 
@@ -152,72 +159,88 @@ export default async function ContractPage({
     contract.freelancer_id === session.userId ? "freelancer" : "client";
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex items-start justify-between gap-4">
-        <PageHeading
-          title={contract.title}
-          subtitle={`${contract.reference} · with ${contract.counterpartyName}`}
-        />
-        <Button asChild variant="outline" size="sm">
-          <Link href={`/contracts/${contract.id}/record`}>Record</Link>
-        </Button>
-      </div>
+    <>
+      <PageHeading
+        title={contract.title}
+        subtitle={`${contract.reference} · ${contract.counterpartyName} ile`}
+        action={
+          <Link
+            href={`/contracts/${contract.id}/record`}
+            className="inline-flex items-center rounded-lg border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-950 hover:bg-zinc-50 active:translate-y-px dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-50 dark:hover:bg-zinc-900"
+          >
+            Kaydı gör
+          </Link>
+        }
+      />
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Terms</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-3 text-sm">
-          <p className="whitespace-pre-wrap">{contract.scope_of_work}</p>
-          <dl className="grid gap-1 sm:grid-cols-2">
-            <div className="flex justify-between sm:pr-6">
-              <dt className="text-muted-foreground">Service fee</dt>
-              <dd>{contract.platform_fee_bps / 100}%</dd>
-            </div>
-            <div className="flex justify-between sm:pl-6">
-              <dt className="text-muted-foreground">Stopaj</dt>
-              <dd>{contract.stopaj_bps / 100}%</dd>
-            </div>
-          </dl>
-          {contract.company ? (
-            <p className="text-muted-foreground">
-              Billed to {contract.company.legal_name} (VKN {contract.company.vkn}),{" "}
-              {contract.company.tax_office}.
+      {/* Asymmetric: the terms are read once, the milestones are worked in, so
+          the milestones get the wide column. */}
+      <div className="grid items-start gap-6 lg:grid-cols-[1fr_1.6fr]">
+        <div className="flex flex-col gap-6">
+          <Panel title="Şartlar">
+            <p className="text-sm leading-relaxed whitespace-pre-wrap text-zinc-600 dark:text-zinc-300">
+              {contract.scope_of_work}
             </p>
-          ) : null}
-          <p className="text-muted-foreground">
-            A delivery not objected to within {contract.objection_window_days}{" "}
-            days is accepted automatically, and the acceptance is recorded.
-          </p>
-          <p className="text-muted-foreground text-xs">
-            These rates and that window were frozen when the contract was drawn
-            up. A later change to any of them does not reach this contract.
-          </p>
-        </CardContent>
-      </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Signatures</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-3">
-          <SignContract
-            contractId={contract.id}
-            alreadySigned={contract.signatures.some(
-              (s) => s.signer_id === session.userId,
-            )}
-            otherPartySigned={contract.signatures.some(
-              (s) => s.signer_id !== session.userId,
-            )}
-          />
-        </CardContent>
-      </Card>
+            <dl className="mt-5 grid grid-cols-2 gap-x-6 gap-y-3">
+              <div>
+                <dt className="text-xs text-zinc-500 dark:text-zinc-400">
+                  Hizmet bedeli
+                </dt>
+                <dd className="tnum mt-0.5 text-sm text-zinc-950 dark:text-zinc-50">
+                  %{contract.platform_fee_bps / 100}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-xs text-zinc-500 dark:text-zinc-400">
+                  Stopaj
+                </dt>
+                <dd className="tnum mt-0.5 text-sm text-zinc-950 dark:text-zinc-50">
+                  %{contract.stopaj_bps / 100}
+                </dd>
+              </div>
+              <div className="col-span-2">
+                <dt className="text-xs text-zinc-500 dark:text-zinc-400">
+                  İtiraz süresi
+                </dt>
+                <dd className="tnum mt-0.5 text-sm text-zinc-950 dark:text-zinc-50">
+                  {contract.objection_window_days} gün
+                </dd>
+              </div>
+            </dl>
 
-      <div className="flex flex-col gap-4">
-        {contract.milestones.map((m) => (
-          <MilestoneCard key={m.id} milestone={m} side={side} />
-        ))}
+            {contract.company ? (
+              <p className="mt-5 text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">
+                {contract.company.legal_name} adına fatura edilir (VKN{" "}
+                {contract.company.vkn}), {contract.company.tax_office}.
+              </p>
+            ) : null}
+
+            <p className="mt-3 border-t border-zinc-200 pt-3 text-xs leading-relaxed text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
+              Bu oranlar ve süre sözleşme kurulduğu anda donduruldu. Sonradan
+              yapılan bir değişiklik bu sözleşmeye ulaşmaz.
+            </p>
+          </Panel>
+
+          <Panel title="İmzalar" index={1}>
+            <SignContract
+              contractId={contract.id}
+              alreadySigned={contract.signatures.some(
+                (s) => s.signer_id === session.userId,
+              )}
+              otherPartySigned={contract.signatures.some(
+                (s) => s.signer_id !== session.userId,
+              )}
+            />
+          </Panel>
+        </div>
+
+        <div className="flex flex-col gap-4">
+          {contract.milestones.map((m, i) => (
+            <MilestoneCard key={m.id} milestone={m} side={side} index={i} />
+          ))}
+        </div>
       </div>
-    </div>
+    </>
   );
 }

@@ -3,9 +3,8 @@
 import { useActionState } from "react";
 
 import { saveCompany, type FormState } from "@/app/(dashboard)/actions";
+import { Field, TextInput } from "@/components/field";
 import { FormFeedback, SubmitButton } from "@/components/form-feedback";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 
 const INITIAL: FormState = { error: null };
 
@@ -21,22 +20,24 @@ export function CompanyForm({ company }: Readonly<{ company: CompanyValues }>) {
   const [state, action] = useActionState(saveCompany, INITIAL);
 
   return (
-    <form action={action} className="flex max-w-md flex-col gap-4">
+    <form action={action} className="flex max-w-md flex-col gap-5">
       <input type="hidden" name="companyId" value={company?.id ?? ""} />
 
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="legalName">Registered name</Label>
-        <Input
+      <Field label="Ticaret unvanı" htmlFor="legalName">
+        <TextInput
           id="legalName"
           name="legalName"
           defaultValue={company?.legal_name ?? ""}
           required
         />
-      </div>
+      </Field>
 
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="vkn">VKN</Label>
-        <Input
+      <Field
+        label="VKN"
+        htmlFor="vkn"
+        hint="On hane. Kontrol algoritması hem burada hem veritabanında doğrulanır."
+      >
+        <TextInput
           id="vkn"
           name="vkn"
           defaultValue={company?.vkn ?? ""}
@@ -44,31 +45,33 @@ export function CompanyForm({ company }: Readonly<{ company: CompanyValues }>) {
           maxLength={10}
           required
         />
-      </div>
+      </Field>
 
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="taxOffice">Tax office</Label>
-        <Input
+      <Field label="Vergi dairesi" htmlFor="taxOffice">
+        <TextInput
           id="taxOffice"
           name="taxOffice"
           defaultValue={company?.tax_office ?? ""}
           required
         />
-      </div>
+      </Field>
 
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="address">Billing address</Label>
-        <Input
+      <Field
+        label="Fatura adresi"
+        htmlFor="address"
+        hint="Faturada basılacağı şekliyle, açık adres."
+      >
+        <TextInput
           id="address"
           name="address"
           defaultValue={company?.address ?? ""}
           required
         />
-      </div>
+      </Field>
 
       <FormFeedback state={state} />
-      <SubmitButton pendingLabel="Saving...">
-        {company ? "Update company" : "Add company"}
+      <SubmitButton className="self-start" pendingLabel="Kaydediliyor...">
+        {company ? "Şirketi güncelle" : "Şirket ekle"}
       </SubmitButton>
     </form>
   );

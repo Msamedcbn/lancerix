@@ -4,94 +4,137 @@ import Link from "next/link";
 import { useActionState } from "react";
 
 import { register, type AuthFormState } from "@/app/(auth)/actions";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Field, TextInput } from "@/components/field";
 
 const INITIAL: AuthFormState = { error: null };
+
+const ROLES = [
+  {
+    value: "FREELANCER",
+    label: "Freelancerım",
+    hint: "İş teslim ediyorum, makbuz kesiyorum",
+  },
+  {
+    value: "CLIENT",
+    label: "İşverenim",
+    hint: "İş veriyorum, escrow hesabını fonluyorum",
+  },
+] as const;
 
 export default function RegisterPage() {
   const [state, formAction, pending] = useActionState(register, INITIAL);
 
   return (
-    <main className="flex min-h-dvh items-center justify-center px-6 py-16">
-      <Card className="w-full max-w-sm">
-        <CardHeader>
-          <CardTitle>Create an account</CardTitle>
-          <CardDescription>
-            Freelancers issue invoices; clients fund escrow.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form action={formAction} className="flex flex-col gap-4">
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="fullName">Full name</Label>
-              <Input id="fullName" name="fullName" required />
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="email">Email</Label>
-              <Input id="email" name="email" type="email" required />
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
+    <main className="grid min-h-[100dvh] lg:grid-cols-[1fr_1.1fr]">
+      <section className="hidden flex-col justify-between bg-zinc-950 p-12 lg:flex">
+        <span className="text-sm font-semibold tracking-tight text-zinc-50">
+          Lancerix
+        </span>
+        <div className="max-w-[34ch]">
+          <p className="text-3xl leading-tight font-medium tracking-tight text-zinc-50">
+            Sözleşme imzalanır, aşamalar tek tek kapanır.
+          </p>
+          <p className="mt-4 text-sm leading-relaxed text-zinc-400">
+            Her aşamanın bedeli, kesintisi ve teslim tarihi baştan yazılıdır.
+            Kim neyi ne zaman onayladı, silinemeyen bir defterde durur.
+          </p>
+        </div>
+        <span className="text-xs text-zinc-600">
+          Sözleşme, aşama ve kabul kaydı
+        </span>
+      </section>
+
+      <section className="flex items-center justify-center px-6 py-16">
+        <div className="w-full max-w-sm">
+          <h1 className="text-2xl font-semibold tracking-tight text-zinc-950">
+            Hesap oluştur
+          </h1>
+          <p className="mt-1 mb-8 text-sm text-zinc-500">
+            Freelancer makbuz keser, işveren escrow hesabını fonlar.
+          </p>
+
+          <form action={formAction} className="flex flex-col gap-5">
+            <Field label="Ad soyad" htmlFor="fullName">
+              <TextInput id="fullName" name="fullName" required />
+            </Field>
+
+            <Field label="E-posta" htmlFor="email">
+              <TextInput id="email" name="email" type="email" required />
+            </Field>
+
+            <Field label="Parola" htmlFor="password" hint="En az 8 karakter.">
+              <TextInput
                 id="password"
                 name="password"
                 type="password"
                 minLength={8}
                 required
               />
-            </div>
+            </Field>
+
             <fieldset className="flex flex-col gap-2">
-              <legend className="text-sm leading-none font-medium">
-                I am a
+              <legend className="mb-2 text-sm font-medium text-zinc-950">
+                Hangisisin?
               </legend>
-              <div className="flex gap-4 pt-1">
-                <Label htmlFor="role-freelancer" className="font-normal">
-                  <input
-                    id="role-freelancer"
-                    type="radio"
-                    name="role"
-                    value="FREELANCER"
-                    defaultChecked
-                  />
-                  Freelancer
-                </Label>
-                <Label htmlFor="role-client" className="font-normal">
-                  <input
-                    id="role-client"
-                    type="radio"
-                    name="role"
-                    value="CLIENT"
-                  />
-                  Client
-                </Label>
+              {/* Cards rather than bare radios: this choice decides which half
+                  of the product the account sees, so it earns the space. */}
+              <div className="grid gap-2">
+                {ROLES.map((role, index) => (
+                  <label
+                    key={role.value}
+                    htmlFor={`role-${role.value}`}
+                    className="has-checked:border-brand has-checked:bg-brand-muted flex cursor-pointer items-start gap-3 rounded-lg border border-zinc-200 px-3 py-2.5 hover:bg-zinc-50 has-checked:hover:bg-[var(--brand-muted)]"
+                  >
+                    <input
+                      id={`role-${role.value}`}
+                      type="radio"
+                      name="role"
+                      value={role.value}
+                      defaultChecked={index === 0}
+                      className="accent-brand mt-1"
+                    />
+                    <span>
+                      <span className="block text-sm font-medium text-zinc-950">
+                        {role.label}
+                      </span>
+                      <span className="block text-xs text-zinc-500">
+                        {role.hint}
+                      </span>
+                    </span>
+                  </label>
+                ))}
               </div>
             </fieldset>
-            {state.error && (
-              <p className="text-destructive text-sm" role="alert">
+
+            {state.error ? (
+              <p
+                role="alert"
+                className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700"
+              >
                 {state.error}
               </p>
-            )}
-            <Button type="submit" disabled={pending}>
-              {pending ? "Creating..." : "Create account"}
-            </Button>
-            <p className="text-muted-foreground text-center text-sm">
-              Already registered?{" "}
-              <Link href="/login" className="underline underline-offset-4">
-                Sign in
+            ) : null}
+
+            <button
+              type="submit"
+              disabled={pending}
+              className="bg-brand text-brand-foreground inline-flex items-center justify-center rounded-lg px-4 py-2.5 text-sm font-medium hover:opacity-90 active:translate-y-px disabled:opacity-50"
+            >
+              {pending ? "Oluşturuluyor..." : "Hesap oluştur"}
+            </button>
+
+            <p className="text-center text-sm text-zinc-500">
+              Zaten kayıtlı mısın?{" "}
+              <Link
+                href="/login"
+                className="text-zinc-950 underline underline-offset-4"
+              >
+                Giriş yap
               </Link>
             </p>
           </form>
-        </CardContent>
-      </Card>
+        </div>
+      </section>
     </main>
   );
 }

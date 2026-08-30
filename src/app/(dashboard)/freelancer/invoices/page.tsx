@@ -1,6 +1,5 @@
-import { EmptyState, PageHeading } from "@/components/empty-state";
 import { Money } from "@/components/money";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { EmptyState, PageHeading, Row, Rows } from "@/components/page-shell";
 import { requireRole } from "@/lib/auth/session";
 import { earningsSummary, kurus } from "@/lib/data/contracts";
 
@@ -9,66 +8,67 @@ export default async function FreelancerInvoicesPage() {
   const { released } = await earningsSummary(session.userId);
 
   return (
-    <div className="flex flex-col gap-6">
+    <>
       <PageHeading
-        title="Invoices"
-        subtitle="Serbest meslek makbuzu basis, per released milestone"
+        title="Makbuzlar"
+        subtitle="Serbest kalan her aşama için serbest meslek makbuzu matrahı"
       />
 
       {released.length === 0 ? (
         <EmptyState
-          title="No invoices yet"
-          description="An e-SMM is issued for the full contract amount when a milestone is released. Until the e-invoicing integration exists these rows are the basis to issue one from, which is what a concierge run needs."
+          title="Henüz makbuz yok"
+          description="Bir aşama serbest kaldığında, tam sözleşme bedeli üzerinden e-SMM düzenlenir. E-fatura entegrasyonu bağlanana kadar buradaki satırlar makbuzu elle kesmek için gereken matrahtır."
         />
       ) : (
-        <div className="flex flex-col gap-4">
-          {released.map((m) => (
-            <Card key={m.id}>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base">{m.title}</CardTitle>
-                <p className="text-muted-foreground text-sm">
-                  {m.contract.reference}
-                  {m.released_at
-                    ? ` · released ${m.released_at.slice(0, 10)}`
-                    : ""}
-                </p>
-              </CardHeader>
-              <CardContent>
-                <dl className="grid gap-1 text-sm sm:grid-cols-3">
-                  <div className="flex justify-between sm:pr-6">
-                    <dt className="text-muted-foreground">SMM amount</dt>
-                    <dd>
+        <Rows>
+          {released.map((m, index) => (
+            <Row key={m.id} index={index}>
+              <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-center">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-zinc-950 dark:text-zinc-50">
+                    {m.title}
+                  </p>
+                  <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
+                    {m.contract.reference}
+                    {m.released_at ? ` · ${m.released_at.slice(0, 10)}` : ""}
+                  </p>
+                </div>
+
+                <dl className="flex items-center gap-6 text-right">
+                  <div>
+                    <dt className="text-xs text-zinc-500 dark:text-zinc-400">
+                      Matrah
+                    </dt>
+                    <dd className="text-sm">
                       <Money kurus={m.gross_amount_kurus} />
                     </dd>
                   </div>
-                  <div className="flex justify-between sm:px-3">
-                    <dt className="text-muted-foreground">Stopaj</dt>
-                    <dd>
+                  <div>
+                    <dt className="text-xs text-zinc-500 dark:text-zinc-400">
+                      Stopaj
+                    </dt>
+                    <dd className="text-sm">
                       <Money
-                        kurus={kurus(
-                          m.tax_withholding_kurus,
-                          "tax_withholding_kurus",
-                        )}
+                        kurus={kurus(m.tax_withholding_kurus, "tax_withholding_kurus")}
                       />
                     </dd>
                   </div>
-                  <div className="flex justify-between font-medium sm:pl-6">
-                    <dt>Net</dt>
-                    <dd>
+                  <div>
+                    <dt className="text-xs text-zinc-500 dark:text-zinc-400">
+                      Net
+                    </dt>
+                    <dd className="text-brand text-sm font-medium">
                       <Money
-                        kurus={kurus(
-                          m.freelancer_net_kurus,
-                          "freelancer_net_kurus",
-                        )}
+                        kurus={kurus(m.freelancer_net_kurus, "freelancer_net_kurus")}
                       />
                     </dd>
                   </div>
                 </dl>
-              </CardContent>
-            </Card>
+              </div>
+            </Row>
           ))}
-        </div>
+        </Rows>
       )}
-    </div>
+    </>
   );
 }

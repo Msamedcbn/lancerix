@@ -1,5 +1,5 @@
 import { CompanyForm } from "@/app/(dashboard)/client/company/company-form";
-import { EmptyState, PageHeading } from "@/components/empty-state";
+import { EmptyState, PageHeading } from "@/components/page-shell";
 import { requireRole } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 
@@ -15,20 +15,20 @@ export default async function ClientCompanyPage() {
     .maybeSingle();
 
   return (
-    <div className="flex flex-col gap-6">
+    <>
       <PageHeading
-        title="Company"
-        subtitle="The legal entity every invoice is billed to"
+        title="Şirket"
+        subtitle="Faturaların kesileceği tüzel kişilik"
       />
 
       {company ? null : (
         <EmptyState
-          title="No company on file"
-          description="A freelancer cannot draw up a contract with you until this exists: the contract has to name the entity that will be invoiced, and its VKN is checked against the tax office's checksum."
+          title="Kayıtlı şirket yok"
+          description="Bu bilgi girilmeden bir freelancer seninle sözleşme kuramaz: sözleşmenin fatura edilecek tüzel kişiliği adıyla göstermesi gerekir ve VKN, vergi dairesinin kontrol algoritmasıyla doğrulanır."
         />
       )}
 
       <CompanyForm company={company ?? null} />
-    </div>
+    </>
   );
 }

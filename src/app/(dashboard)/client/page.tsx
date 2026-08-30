@@ -1,14 +1,18 @@
 import Link from "next/link";
 
-import { EmptyState, PageHeading } from "@/components/empty-state";
 import { Money } from "@/components/money";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { EmptyState, PageHeading, Row, Rows, Stat } from "@/components/page-shell";
 import { requireRole } from "@/lib/auth/session";
+import { formatKurus } from "@/lib/escrow/money";
 import { kurus, listMilestones } from "@/lib/data/contracts";
 
 export default async function ClientPaymentsPage() {
   const session = await requireRole("CLIENT");
-  const waiting = await listMilestones(["AWAITING_PAYMENT"], "client", session.userId);
+  const waiting = await listMilestones(
+    ["AWAITING_PAYMENT"],
+    "client",
+    session.userId,
+  );
 
   const total = waiting.reduce(
     (sum, m) => sum + kurus(m.client_charge_kurus, "client_charge_kurus"),
@@ -16,85 +20,87 @@ export default async function ClientPaymentsPage() {
   );
 
   return (
-    <div className="flex flex-col gap-6">
+    <>
       <PageHeading
-        title="Payments"
-        subtitle="Milestones waiting to be funded"
+        title="Ödemeler"
+        subtitle="Fonlanmayı bekleyen aşamalar ve escrow hesabına aktaracağın tutar"
       />
 
       {waiting.length === 0 ? (
         <EmptyState
-          title="Nothing to fund"
-          description="Milestones waiting to be funded appear here with the contract amount, the service fee added on top, and the total to transfer into escrow."
+          title="Fonlanacak aşama yok"
+          description="Bir aşama fonlanmayı beklediğinde burada sözleşme bedeli, üzerine eklenen hizmet bedeli ve aktaracağın toplamla birlikte görünür."
         />
       ) : (
         <>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-muted-foreground text-sm font-normal">
-                Total to transfer
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Money kurus={total} className="text-2xl font-semibold" />
-            </CardContent>
-          </Card>
+          <div className="grid gap-8 md:grid-cols-[1.4fr_1fr]">
+            <Stat
+              label="Aktarılacak toplam"
+              value={formatKurus(total)}
+              hint={`${waiting.length} aşama fonlanmayı bekliyor`}
+            />
+          </div>
 
-          <div className="flex flex-col gap-4">
-            {waiting.map((m) => (
-              <Card key={m.id}>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-base">
-                    <Link
-                      href={`/contracts/${m.contract_id}`}
-                      className="hover:underline"
-                    >
+          <Rows>
+            {waiting.map((m, index) => (
+              <Row key={m.id} index={index}>
+                <Link
+                  href={`/contracts/${m.contract_id}`}
+                  className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-center"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-zinc-950 dark:text-zinc-50">
                       {m.title}
-                    </Link>
-                  </CardTitle>
-                  <p className="text-muted-foreground text-sm">
-                    {m.contract.reference} &middot; {m.counterpartyName}
-                  </p>
-                </CardHeader>
-                <CardContent>
-                  <dl className="grid gap-1 text-sm sm:grid-cols-3">
-                    <div className="flex justify-between sm:pr-6">
-                      <dt className="text-muted-foreground">Contract amount</dt>
-                      <dd>
+                    </p>
+                    <p className="mt-0.5 truncate text-xs text-zinc-500 dark:text-zinc-400">
+                      {m.counterpartyName} · {m.contract.reference}
+                    </p>
+                  </div>
+
+                  <dl className="flex items-center gap-6 text-right">
+                    <div>
+                      <dt className="text-xs text-zinc-500 dark:text-zinc-400">
+                        Sözleşme bedeli
+                      </dt>
+                      <dd className="text-sm">
                         <Money kurus={m.gross_amount_kurus} />
                       </dd>
                     </div>
-                    <div className="flex justify-between sm:px-3">
-                      <dt className="text-muted-foreground">Service fee</dt>
-                      <dd>
+                    <div>
+                      <dt className="text-xs text-zinc-500 dark:text-zinc-400">
+                        Hizmet bedeli
+                      </dt>
+                      <dd className="text-sm">
                         <Money
                           kurus={kurus(m.platform_fee_kurus, "platform_fee_kurus")}
                         />
                       </dd>
                     </div>
-                    <div className="flex justify-between font-medium sm:pl-6">
-                      <dt>You transfer</dt>
-                      <dd>
+                    <div>
+                      <dt className="text-xs text-zinc-500 dark:text-zinc-400">
+                        Aktaracağın
+                      </dt>
+                      <dd className="text-sm font-medium text-zinc-950 dark:text-zinc-50">
                         <Money
                           kurus={kurus(m.client_charge_kurus, "client_charge_kurus")}
                         />
                       </dd>
                     </div>
                   </dl>
-                </CardContent>
-              </Card>
+                </Link>
+              </Row>
             ))}
-          </div>
+          </Rows>
 
-          {/* Funding is deliberately not a button. A milestone only becomes
-              IN_PROGRESS when a verified provider webhook says the money is
-              actually held, which is the whole point of escrow. */}
-          <p className="text-muted-foreground text-sm">
-            Funding is confirmed by the payment provider, not by clicking here.
-            A milestone starts only once the money is genuinely held.
+          {/* Funding is deliberately not a button: a milestone starts only when
+              a verified provider webhook says the money is genuinely held. */}
+          <p className="max-w-[62ch] text-sm leading-relaxed text-zinc-500 dark:text-zinc-400">
+            Fonlama buradan bir tuşla değil, ödeme kuruluşunun doğrulanmış
+            bildirimiyle onaylanır. Aşama ancak para gerçekten tutulduğunda
+            başlar.
           </p>
         </>
       )}
-    </div>
+    </>
   );
 }
