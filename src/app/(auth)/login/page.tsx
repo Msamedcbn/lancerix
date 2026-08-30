@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState } from "react";
+import { useSearchParams } from "next/navigation";
+import { Suspense, useActionState } from "react";
 
 import { login, type AuthFormState } from "@/app/(auth)/actions";
 import { Button } from "@/components/ui/button";
@@ -17,7 +18,26 @@ import { Label } from "@/components/ui/label";
 
 const INITIAL: AuthFormState = { error: null };
 
-export default function LoginPage() {
+/**
+ * Registration redirects here with ?checkEmail=1. Without this notice the
+ * account exists but nothing says so, and the first sign-in attempt fails with
+ * "Email not confirmed" for no visible reason.
+ */
+function CheckEmailNotice() {
+  const shown = useSearchParams().get("checkEmail") === "1";
+  if (!shown) return null;
+
+  return (
+    <p
+      role="status"
+      className="mb-4 rounded-md border border-emerald-600/30 bg-emerald-50 px-3 py-2 text-sm text-emerald-900"
+    >
+      Account created. Confirm your address from the email we sent, then sign in.
+    </p>
+  );
+}
+
+function LoginForm() {
   const [state, formAction, pending] = useActionState(login, INITIAL);
 
   return (
@@ -30,6 +50,10 @@ export default function LoginPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
+          {/* useSearchParams needs a Suspense boundary to keep this page static. */}
+          <Suspense fallback={null}>
+            <CheckEmailNotice />
+          </Suspense>
           <form action={formAction} className="flex flex-col gap-4">
             <div className="flex flex-col gap-2">
               <Label htmlFor="email">Email</Label>
@@ -58,4 +82,8 @@ export default function LoginPage() {
       </Card>
     </main>
   );
+}
+
+export default function LoginPage() {
+  return <LoginForm />;
 }
