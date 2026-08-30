@@ -7,7 +7,7 @@ import { gsap, useGSAP } from "@/lib/gsap";
 import { DEFAULT_PLATFORM_FEE_BPS, computeEscrowSplit } from "@/lib/escrow/money";
 import { DEFAULT_STOPAJ_BPS } from "@/lib/tax/stopaj";
 
-const BRAND = "Mutabık";
+const BRAND = "Lancerix";
 
 const img = (seed: string) => `https://picsum.photos/seed/${seed}/1920/1080`;
 

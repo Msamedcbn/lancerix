@@ -1,4 +1,4 @@
-# Mutabık — B2B Freelancer Billing & Escrow Platform
+# Lancerix — B2B Freelancer Billing & Escrow Platform
 
 Freelancers issue B2B corporate invoices, sign 3-way contracts, hold client funds
 in escrow via a marketplace gateway, and receive net payouts after automatic

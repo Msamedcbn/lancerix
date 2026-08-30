@@ -24,7 +24,7 @@ export default async function DashboardLayout({
     <div className="min-h-dvh">
       <header className="flex h-14 items-center gap-6 border-b px-6">
         <Link href="/dashboard" className="font-semibold tracking-tight">
-          Mutabık
+          Lancerix
         </Link>
         <nav className="flex items-center gap-1">
           {NAV.map(({ href, label, icon: Icon }) => (

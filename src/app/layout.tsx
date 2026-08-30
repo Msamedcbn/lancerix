@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Mutabık — Emeğinizin karşılığı zamanında",
+  title: "Lancerix — Emeğinizin karşılığı zamanında",
   description:
     "Kurumsal müşterilerden alacağınız 90 gün beklemesin. Sözleşme, kilitli ödeme ve otomatik serbest bırakma tek yerde.",
 };

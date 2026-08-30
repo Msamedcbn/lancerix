@@ -7,10 +7,10 @@ import { gsap, ScrollTrigger, useGSAP } from "@/lib/gsap";
 
 /**
  * The wordmark lives here as a single edit point. Named 2026-08-30, replacing
- * the "Remotify" working title that collided with remotify.co. The .com is
- * taken by a broker -- domain and TÜRKPATENT registration are still open.
+ * the "Remotify" working title that collided with remotify.co. lancerix.com is
+ * unregistered; TÜRKPATENT registration is still open.
  */
-const BRAND = "Mutabık";
+const BRAND = "Lancerix";
 
 const img = (seed: string) =>
   `https://picsum.photos/seed/${seed}/1920/1080`;
