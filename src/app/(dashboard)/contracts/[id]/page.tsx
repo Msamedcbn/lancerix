@@ -1,6 +1,10 @@
 import { notFound } from "next/navigation";
 
+import Link from "next/link";
+
 import { MilestoneActions } from "@/app/(dashboard)/contracts/[id]/milestone-actions";
+import { SignContract } from "@/app/(dashboard)/contracts/[id]/signing";
+import { Button } from "@/components/ui/button";
 import { PageHeading } from "@/components/empty-state";
 import { Money } from "@/components/money";
 import { StatusBadge } from "@/components/status-badge";
@@ -24,13 +28,8 @@ type Side = "freelancer" | "client";
 function actionsFor(status: EscrowStatus, side: Side) {
   const moves: Array<{ to: EscrowStatus; label: string }> = [];
 
-  if (side === "freelancer") {
-    if (status === "DRAFT") {
-      moves.push({ to: "AWAITING_PAYMENT", label: "Publish for funding" });
-    }
-    if (status === "IN_PROGRESS") {
-      moves.push({ to: "SUBMITTED", label: "Mark delivered" });
-    }
+  if (side === "freelancer" && status === "DRAFT") {
+    moves.push({ to: "AWAITING_PAYMENT", label: "Publish for funding" });
   }
 
   if (side === "client" && status === "SUBMITTED") {
@@ -51,6 +50,20 @@ const DISPUTABLE: readonly EscrowStatus[] = [
   "SUBMITTED",
   "COMPLETED",
 ];
+
+function Countdown({ deadline }: Readonly<{ deadline: string }>) {
+  const days = Math.ceil(
+    (Date.parse(deadline) - Date.now()) / (1000 * 60 * 60 * 24),
+  );
+
+  return (
+    <p className="text-sm font-medium text-amber-700">
+      {days > 0
+        ? `Accepted automatically in ${days} day${days === 1 ? "" : "s"}, on ${deadline.slice(0, 10)}, unless objected to.`
+        : `The objection window closed on ${deadline.slice(0, 10)}. Acceptance runs on the next sweep.`}
+    </p>
+  );
+}
 
 function MilestoneCard({
   milestone,
@@ -111,10 +124,15 @@ function MilestoneCard({
           </div>
         </dl>
 
+        {milestone.status === "SUBMITTED" && milestone.auto_accept_at ? (
+          <Countdown deadline={milestone.auto_accept_at} />
+        ) : null}
+
         <MilestoneActions
           milestoneId={milestone.id}
           actions={actionsFor(milestone.status, side)}
           canDispute={DISPUTABLE.includes(milestone.status)}
+          canDeliver={side === "freelancer" && milestone.status === "IN_PROGRESS"}
         />
       </CardContent>
     </Card>
@@ -135,10 +153,15 @@ export default async function ContractPage({
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeading
-        title={contract.title}
-        subtitle={`${contract.reference} · with ${contract.counterpartyName}`}
-      />
+      <div className="flex items-start justify-between gap-4">
+        <PageHeading
+          title={contract.title}
+          subtitle={`${contract.reference} · with ${contract.counterpartyName}`}
+        />
+        <Button asChild variant="outline" size="sm">
+          <Link href={`/contracts/${contract.id}/record`}>Record</Link>
+        </Button>
+      </div>
 
       <Card>
         <CardHeader>
@@ -162,10 +185,31 @@ export default async function ContractPage({
               {contract.company.tax_office}.
             </p>
           ) : null}
-          <p className="text-muted-foreground text-xs">
-            These rates were frozen when the contract was drawn up. A later
-            change to either one does not reach this contract.
+          <p className="text-muted-foreground">
+            A delivery not objected to within {contract.objection_window_days}{" "}
+            days is accepted automatically, and the acceptance is recorded.
           </p>
+          <p className="text-muted-foreground text-xs">
+            These rates and that window were frozen when the contract was drawn
+            up. A later change to any of them does not reach this contract.
+          </p>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Signatures</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-3">
+          <SignContract
+            contractId={contract.id}
+            alreadySigned={contract.signatures.some(
+              (s) => s.signer_id === session.userId,
+            )}
+            otherPartySigned={contract.signatures.some(
+              (s) => s.signer_id !== session.userId,
+            )}
+          />
         </CardContent>
       </Card>
 

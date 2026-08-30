@@ -109,6 +109,7 @@ export type Database = {
           document_sha256: string | null
           freelancer_id: string
           id: string
+          objection_window_days: number
           platform_fee_bps: number
           reference: string
           scope_of_work: string
@@ -125,6 +126,7 @@ export type Database = {
           document_sha256?: string | null
           freelancer_id: string
           id?: string
+          objection_window_days?: number
           platform_fee_bps?: number
           reference: string
           scope_of_work: string
@@ -141,6 +143,7 @@ export type Database = {
           document_sha256?: string | null
           freelancer_id?: string
           id?: string
+          objection_window_days?: number
           platform_fee_bps?: number
           reference?: string
           scope_of_work?: string
@@ -357,6 +360,7 @@ export type Database = {
       }
       milestones: {
         Row: {
+          auto_accept_at: string | null
           client_charge_kurus: number | null
           completed_at: string | null
           contract_id: string
@@ -378,6 +382,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          auto_accept_at?: string | null
           client_charge_kurus?: number | null
           completed_at?: string | null
           contract_id: string
@@ -399,6 +404,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          auto_accept_at?: string | null
           client_charge_kurus?: number | null
           completed_at?: string | null
           contract_id?: string
@@ -565,6 +571,37 @@ export type Database = {
           id: string
         }[]
       }
+      sign_contract: {
+        Args: {
+          p_contract_id: string
+          p_document_sha256: string
+          p_ip: unknown
+          p_user_agent: string
+        }
+        Returns: {
+          client_id: string
+          company_id: string
+          coupon_id: string | null
+          created_at: string
+          document_sha256: string | null
+          freelancer_id: string
+          id: string
+          objection_window_days: number
+          platform_fee_bps: number
+          reference: string
+          scope_of_work: string
+          status: Database["public"]["Enums"]["contract_status"]
+          stopaj_bps: number
+          title: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "contracts"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       transition_milestone: {
         Args: {
           p_metadata?: Json
@@ -574,6 +611,7 @@ export type Database = {
           p_to_status: Database["public"]["Enums"]["escrow_status"]
         }
         Returns: {
+          auto_accept_at: string | null
           client_charge_kurus: number | null
           completed_at: string | null
           contract_id: string

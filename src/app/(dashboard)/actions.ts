@@ -1,11 +1,15 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { requireRole, requireSession } from "@/lib/auth/session";
 import { assertMilestoneGross } from "@/lib/escrow/money";
 import type { EscrowStatus } from "@/lib/data/contracts";
+import { hashDocument, renderContractDocument } from "@/lib/contracts/document";
+import { getContract } from "@/lib/data/contracts";
+import { notifyDelivery, notifySignatureRequested } from "@/lib/notify/email";
 import { createClient } from "@/lib/supabase/server";
 import { companySchema } from "@/lib/validations/company";
 import { contractSchema } from "@/lib/validations/contract";
@@ -324,4 +328,126 @@ export async function raiseDispute(
 
   revalidatePath("/", "layout");
   return OK("Dispute opened. An administrator will review it.");
+}
+
+// ---------------------------------------------------------------------------
+// Signing
+// ---------------------------------------------------------------------------
+
+/**
+ * The request's origin, for the signature record. Vercel sets
+ * x-forwarded-for; the fallback is a documented placeholder rather than a
+ * guess, because ip_address is not nullable and a wrong address would be worse
+ * than an obviously absent one.
+ */
+async function requestOrigin(): Promise<{ ip: string; userAgent: string }> {
+  const h = await headers();
+  const forwarded = h.get("x-forwarded-for")?.split(",")[0]?.trim();
+  return {
+    ip: forwarded || h.get("x-real-ip") || "0.0.0.0",
+    userAgent: h.get("user-agent") ?? "unknown",
+  };
+}
+
+export async function signContract(
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const session = await requireSession();
+  const contractId = String(formData.get("contractId") ?? "");
+  if (!contractId) return FAIL("Missing contract.");
+
+  const contract = await getContract(contractId, session.userId);
+  if (!contract) return FAIL("Contract not found.");
+
+  // The hash is taken from the text the server renders right now, which is the
+  // text the page showed. If the terms change afterwards, this stored hash no
+  // longer matches and the mismatch is visible on the record.
+  const document = renderContractDocument(contract, contract.milestones, {
+    freelancerName:
+      contract.freelancer_id === session.userId
+        ? session.fullName
+        : contract.counterpartyName,
+    clientName:
+      contract.client_id === session.userId
+        ? session.fullName
+        : contract.counterpartyName,
+    company: contract.company,
+  });
+
+  const { ip, userAgent } = await requestOrigin();
+  const supabase = await createClient();
+
+  const { error } = await supabase.rpc("sign_contract", {
+    p_contract_id: contractId,
+    p_document_sha256: hashDocument(document),
+    p_ip: ip,
+    p_user_agent: userAgent,
+  });
+
+  if (error) return FAIL(error.message);
+
+  const otherParty =
+    contract.freelancer_id === session.userId
+      ? contract.client_id
+      : contract.freelancer_id;
+
+  const sent = await notifySignatureRequested({
+    toUserId: otherParty,
+    contractId,
+    contractTitle: contract.title,
+    signerName: session.fullName,
+  });
+
+  revalidatePath(`/contracts/${contractId}`);
+
+  return sent.ok
+    ? OK("Signed. The other party has been notified.")
+    : OK(`Signed, but the other party could not be emailed: ${sent.reason}`);
+}
+
+/**
+ * Marking a delivery is the one transition that starts a clock, so it is not
+ * folded into transitionMilestone(): the client has to be told, and the message
+ * has to carry the deadline the database just wrote.
+ */
+export async function submitDelivery(
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const session = await requireRole("FREELANCER");
+  const milestoneId = String(formData.get("milestoneId") ?? "");
+  if (!milestoneId) return FAIL("Missing milestone.");
+
+  const supabase = await createClient();
+  // The function returns the updated row, so the deadline it just wrote is read
+  // from the same call rather than fetched again and possibly raced.
+  const { data: milestone, error } = await supabase.rpc("transition_milestone", {
+    p_milestone_id: milestoneId,
+    p_to_status: "SUBMITTED",
+  });
+
+  if (error) return FAIL(error.message);
+  if (!milestone) return FAIL("The milestone did not come back from the transition.");
+
+  const contract = await getContract(milestone.contract_id, session.userId);
+  if (!contract) return OK("Delivered.");
+
+  const sent = await notifyDelivery({
+    toUserId: contract.client_id,
+    contractId: contract.id,
+    milestoneTitle: milestone.title,
+    windowDays: contract.objection_window_days,
+    deadline: (milestone.auto_accept_at ?? "").slice(0, 10),
+  });
+
+  revalidatePath("/", "layout");
+
+  // An unnotified clock is not a fair clock, so a failure to send is stated
+  // rather than swallowed: the freelancer needs to know to chase it by hand.
+  return sent.ok
+    ? OK("Delivered. The client has been notified and the objection window has started.")
+    : OK(
+        `Delivered and the window has started, but the client could not be emailed: ${sent.reason}`,
+      );
 }

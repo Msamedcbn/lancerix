@@ -7,7 +7,11 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
+  // Machine-to-machine routes are excluded: they authenticate themselves with a
+  // signature or a shared secret and have no user session to refresh. Without
+  // this the session middleware redirects them to /login, which silently stops
+  // the objection-window sweep from ever running.
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|api/webhooks|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|api/webhooks|api/cron|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };

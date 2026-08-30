@@ -4,6 +4,7 @@ import { useActionState } from "react";
 
 import {
   raiseDispute,
+  submitDelivery,
   transitionMilestone,
   type FormState,
 } from "@/app/(dashboard)/actions";
@@ -24,19 +25,33 @@ export function MilestoneActions({
   milestoneId,
   actions,
   canDispute,
+  canDeliver,
 }: Readonly<{
   milestoneId: string;
   actions: ReadonlyArray<{ to: EscrowStatus; label: string }>;
   canDispute: boolean;
+  canDeliver: boolean;
 }>) {
   const [state, action] = useActionState(transitionMilestone, INITIAL);
+  const [deliverState, deliverAction] = useActionState(submitDelivery, INITIAL);
   const [disputeState, disputeAction] = useActionState(raiseDispute, INITIAL);
 
-  if (actions.length === 0 && !canDispute) return null;
+  if (actions.length === 0 && !canDispute && !canDeliver) return null;
 
   return (
     <div className="flex flex-col gap-3 border-t pt-4">
       <div className="flex flex-wrap items-center gap-2">
+        {/* Delivery has its own action rather than sharing the generic one:
+            it starts the objection clock, and the client has to be told the
+            deadline the database just wrote. */}
+        {canDeliver ? (
+          <form action={deliverAction}>
+            <input type="hidden" name="milestoneId" value={milestoneId} />
+            <SubmitButton size="sm" pendingLabel="Delivering...">
+              Mark delivered
+            </SubmitButton>
+          </form>
+        ) : null}
         {actions.map(({ to, label }) => (
           <form key={to} action={action}>
             <input type="hidden" name="milestoneId" value={milestoneId} />
@@ -49,6 +64,7 @@ export function MilestoneActions({
       </div>
 
       <FormFeedback state={state} />
+      <FormFeedback state={deliverState} />
 
       {canDispute ? (
         <form action={disputeAction} className="flex flex-col gap-2">

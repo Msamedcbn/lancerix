@@ -18,6 +18,8 @@ const FUNDED: readonly EscrowStatus[] = [
   "DISPUTED",
 ];
 
+export type Signature = Tables<"contract_signatures">;
+
 export type ContractRow = Contract & {
   milestones: Milestone[];
   counterpartyName: string;
@@ -64,6 +66,7 @@ export async function getContract(
   userId: string,
 ): Promise<
   | (ContractRow & {
+      signatures: Signature[];
       company: {
         legal_name: string;
         vkn: string;
@@ -77,7 +80,7 @@ export async function getContract(
 
   const { data, error } = await supabase
     .from("contracts")
-    .select("*, milestones(*)")
+    .select("*, milestones(*), contract_signatures(*)")
     .eq("id", contractId)
     .maybeSingle();
 
@@ -92,6 +95,7 @@ export async function getContract(
   return {
     ...data,
     milestones: sortMilestones(data.milestones),
+    signatures: data.contract_signatures,
     counterpartyName:
       names.get(data.freelancer_id === userId ? data.client_id : data.freelancer_id) ??
       "Unknown",
