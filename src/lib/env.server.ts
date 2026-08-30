@@ -2,11 +2,15 @@ import "server-only";
 
 import { z } from "zod";
 
+/**
+ * Only what the code actually reads today. The payment gateway and e-invoicing
+ * credentials are deliberately absent: no code integrates them yet, and a
+ * schema that demands them would make the admin client below fail for a
+ * missing PayTR setting it never uses. They get their own schema when the
+ * webhook route that needs them is written.
+ */
 const serverEnvSchema = z.object({
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
-  PAYMENT_PROVIDER: z.enum(["paytr", "iyzico"]),
-  PAYMENT_WEBHOOK_SECRET: z.string().min(1),
-  INVOICE_PROVIDER: z.enum(["parasut", "kolaybi"]),
 });
 
 type ServerEnv = z.infer<typeof serverEnvSchema>;
