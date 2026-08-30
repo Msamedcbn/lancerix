@@ -30,7 +30,24 @@ const INITIAL: AuthFormState = { error: null };
  * the reliable path in the meantime.
  */
 function CheckEmailNotice() {
-  const shown = useSearchParams().get("checkEmail") === "1";
+  const params = useSearchParams();
+
+  // A profile row that never got created leaves an account that can sign in but
+  // has no role, so the dashboard cannot decide what to show it. Saying so beats
+  // bouncing the user between pages.
+  if (params.get("error") === "profile_missing") {
+    return (
+      <p
+        role="alert"
+        className="text-destructive mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm"
+      >
+        This account has no profile record, so there is nothing to sign in to
+        yet. Register again or contact support.
+      </p>
+    );
+  }
+
+  const shown = params.get("checkEmail") === "1";
   if (!shown) return null;
 
   return (

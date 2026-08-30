@@ -1,34 +1,12 @@
-import {
-  Card,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { createClient } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
 
+import { HOME_FOR, requireSession } from "@/lib/auth/session";
+
+/**
+ * Kept as the one address the rest of the app can link to without knowing who
+ * is signed in. It resolves to whichever area the role belongs in.
+ */
 export default async function DashboardPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  return (
-    <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Overview</h1>
-        <p className="text-muted-foreground text-sm">
-          Signed in as {user?.email}
-        </p>
-      </div>
-      <Card>
-        <CardHeader>
-          <CardTitle>No contracts yet</CardTitle>
-          <CardDescription>
-            Contracts, escrow balances and invoices will appear here once the
-            schema and payment flows are wired up.
-          </CardDescription>
-        </CardHeader>
-      </Card>
-    </div>
-  );
+  const { role } = await requireSession();
+  redirect(HOME_FOR[role]);
 }
