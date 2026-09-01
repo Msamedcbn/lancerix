@@ -4,6 +4,47 @@ Freelancers issue B2B corporate invoices, sign 3-way contracts, hold client fund
 in escrow via a marketplace gateway, and receive net payouts after automatic
 tax/withholding calculation. Turkish market.
 
+## Phasing (current: Faz 1)
+
+Faz 1 ships as a **Verification & Reporting SaaS**, not an escrow/payment
+business: no fund custody, no e-invoice issuance, no company formation, no
+BDDK/TCMB payment-license surface. Flow: freelancer & client sign a contract
+with objective technical acceptance criteria → freelancer delivers a staging
+URL / PR link → the platform runs QA (tiered below) and issues a timestamped
+PDF verification report → payment settles directly between the two parties;
+Lancerix supplies only the technical arbitration report. A green QA result
+does not auto-release anything — it triggers a 5-day final-review notice to
+the client.
+
+QA in Faz 1 verifies only the acceptance criteria written into the contract.
+Criteria are free-text descriptions the freelancer writes and both parties
+sign off on (`src/lib/validations/acceptance-criteria.ts`) — not the fixed
+HTTP_STATUS/FORM_SUBMIT/RESPONSIVE_BREAKPOINT/BUTTON_ACTION categories an
+earlier pass tried and dropped (every job is unique; those categories don't
+fit non-web work). When QA testing is purchased, the platform decides how to
+verify each one — the freelancer doesn't need to know the technical method.
+This is explicitly not a security audit or an error-free guarantee. The
+contract must carry a liability-limitation clause stating Lancerix is an
+independent technical auditor of stated criteria, not a software warranty
+body.
+
+Tiered QA (`QA_TIER_INFO` in `src/lib/validations/delivery.ts` is the source
+of truth for pricing and availability — check there before quoting a number):
+**Tier 1** free criteria checklist + standard client approval. **Tier 2**
+Agentic QA — Playwright agents would scan the staging link for console
+errors, status codes, form flow; priced at 250₺ + API cost but **not
+orderable yet**, the worker doesn't exist (`available: false`). **Tier 3**
+Agentic + a senior/principal engineer's manual sign-off, tester fee added on
+top. **Tier 4** manual-only, no agent, tester sets their own project fee. No
+payroll for Tier 3/4 — a per-review roster, admin-managed
+(`admin/reviewers`).
+
+Everything below this section — escrow, stopaj, payouts, marketplace gateway
+— is the **Faz 2** design once fund custody is in scope. It documents the
+target architecture; it is not what Faz 1 builds against. Before writing new
+escrow/payout/invoice code, confirm with the user that Faz 2 has actually
+started rather than assuming these rules are active now.
+
 ## Stack
 
 Next.js 15 (App Router, Server Actions) · TypeScript strict · Tailwind v4 +

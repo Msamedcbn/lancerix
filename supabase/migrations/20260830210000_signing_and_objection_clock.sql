@@ -94,7 +94,8 @@ begin
     and party in ('FREELANCER', 'CLIENT');
 
   update public.contracts
-  set status = case when v_signatures >= 2 then 'ACTIVE' else 'PENDING_SIGNATURES' end,
+  set status = (case when v_signatures >= 2 then 'ACTIVE' else 'PENDING_SIGNATURES' end)
+        ::public.contract_status,
       document_sha256 = coalesce(document_sha256, p_document_sha256)
   where id = p_contract_id
   returning * into v_contract;

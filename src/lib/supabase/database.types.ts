@@ -14,33 +14,84 @@ export type Database = {
   }
   public: {
     Tables: {
+      acceptance_criteria: {
+        Row: {
+          check_config: Json
+          check_type: string
+          contract_id: string
+          created_at: string
+          description: string
+          id: string
+          milestone_id: string | null
+          sequence_no: number
+        }
+        Insert: {
+          check_config?: Json
+          check_type?: string
+          contract_id: string
+          created_at?: string
+          description: string
+          id?: string
+          milestone_id?: string | null
+          sequence_no: number
+        }
+        Update: {
+          check_config?: Json
+          check_type?: string
+          contract_id?: string
+          created_at?: string
+          description?: string
+          id?: string
+          milestone_id?: string | null
+          sequence_no?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "acceptance_criteria_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "acceptance_criteria_milestone_id_fkey"
+            columns: ["milestone_id"]
+            isOneToOne: false
+            referencedRelation: "milestones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       companies: {
         Row: {
-          address: string
+          address: string | null
           created_at: string
           id: string
           legal_name: string
           owner_id: string
-          tax_office: string
-          vkn: string
+          public_id: string
+          tax_office: string | null
+          vkn: string | null
         }
         Insert: {
-          address: string
+          address?: string | null
           created_at?: string
           id?: string
           legal_name: string
           owner_id: string
-          tax_office: string
-          vkn: string
+          public_id: string
+          tax_office?: string | null
+          vkn?: string | null
         }
         Update: {
-          address?: string
+          address?: string | null
           created_at?: string
           id?: string
           legal_name?: string
           owner_id?: string
-          tax_office?: string
-          vkn?: string
+          public_id?: string
+          tax_office?: string | null
+          vkn?: string | null
         }
         Relationships: [
           {
@@ -102,55 +153,79 @@ export type Database = {
       }
       contracts: {
         Row: {
-          client_id: string
-          company_id: string
+          client_email: string
+          client_id: string | null
+          client_start_confirmed: boolean
+          company_id: string | null
           coupon_id: string | null
           created_at: string
           document_sha256: string | null
           freelancer_id: string
+          freelancer_start_confirmed: boolean
           id: string
           objection_window_days: number
+          planned_start_date: string | null
           platform_fee_bps: number
+          product_type: string
           reference: string
+          rejection_reason: string | null
+          revision_note: string | null
           scope_of_work: string
           status: Database["public"]["Enums"]["contract_status"]
           stopaj_bps: number
           title: string
           updated_at: string
+          work_started_at: string | null
         }
         Insert: {
-          client_id: string
-          company_id: string
+          client_email: string
+          client_id?: string | null
+          client_start_confirmed?: boolean
+          company_id?: string | null
           coupon_id?: string | null
           created_at?: string
           document_sha256?: string | null
           freelancer_id: string
+          freelancer_start_confirmed?: boolean
           id?: string
           objection_window_days?: number
+          planned_start_date?: string | null
           platform_fee_bps?: number
+          product_type?: string
           reference: string
+          rejection_reason?: string | null
+          revision_note?: string | null
           scope_of_work: string
           status?: Database["public"]["Enums"]["contract_status"]
           stopaj_bps?: number
           title: string
           updated_at?: string
+          work_started_at?: string | null
         }
         Update: {
-          client_id?: string
-          company_id?: string
+          client_email?: string
+          client_id?: string | null
+          client_start_confirmed?: boolean
+          company_id?: string | null
           coupon_id?: string | null
           created_at?: string
           document_sha256?: string | null
           freelancer_id?: string
+          freelancer_start_confirmed?: boolean
           id?: string
           objection_window_days?: number
+          planned_start_date?: string | null
           platform_fee_bps?: number
+          product_type?: string
           reference?: string
+          rejection_reason?: string | null
+          revision_note?: string | null
           scope_of_work?: string
           status?: Database["public"]["Enums"]["contract_status"]
           stopaj_bps?: number
           title?: string
           updated_at?: string
+          work_started_at?: string | null
         }
         Relationships: [
           {
@@ -213,6 +288,136 @@ export type Database = {
           redemption_count?: number
           valid_from?: string
           valid_until?: string | null
+        }
+        Relationships: []
+      }
+      deliveries: {
+        Row: {
+          client_note: string | null
+          client_review_deadline: string | null
+          contract_id: string
+          decided_at: string | null
+          id: string
+          milestone_id: string | null
+          notes: string | null
+          pr_url: string | null
+          staging_url: string
+          status: Database["public"]["Enums"]["delivery_status"]
+          submitted_at: string
+          submitted_by: string
+        }
+        Insert: {
+          client_note?: string | null
+          client_review_deadline?: string | null
+          contract_id: string
+          decided_at?: string | null
+          id?: string
+          milestone_id?: string | null
+          notes?: string | null
+          pr_url?: string | null
+          staging_url: string
+          status?: Database["public"]["Enums"]["delivery_status"]
+          submitted_at?: string
+          submitted_by: string
+        }
+        Update: {
+          client_note?: string | null
+          client_review_deadline?: string | null
+          contract_id?: string
+          decided_at?: string | null
+          id?: string
+          milestone_id?: string | null
+          notes?: string | null
+          pr_url?: string | null
+          staging_url?: string
+          status?: Database["public"]["Enums"]["delivery_status"]
+          submitted_at?: string
+          submitted_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deliveries_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deliveries_milestone_id_fkey"
+            columns: ["milestone_id"]
+            isOneToOne: false
+            referencedRelation: "milestones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deliveries_submitted_by_fkey"
+            columns: ["submitted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      delivery_events: {
+        Row: {
+          actor_id: string | null
+          actor_kind: string
+          created_at: string
+          delivery_id: string
+          from_status: Database["public"]["Enums"]["delivery_status"] | null
+          id: string
+          reason: string | null
+          to_status: Database["public"]["Enums"]["delivery_status"]
+        }
+        Insert: {
+          actor_id?: string | null
+          actor_kind: string
+          created_at?: string
+          delivery_id: string
+          from_status?: Database["public"]["Enums"]["delivery_status"] | null
+          id?: string
+          reason?: string | null
+          to_status: Database["public"]["Enums"]["delivery_status"]
+        }
+        Update: {
+          actor_id?: string | null
+          actor_kind?: string
+          created_at?: string
+          delivery_id?: string
+          from_status?: Database["public"]["Enums"]["delivery_status"] | null
+          id?: string
+          reason?: string | null
+          to_status?: Database["public"]["Enums"]["delivery_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delivery_events_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "delivery_events_delivery_id_fkey"
+            columns: ["delivery_id"]
+            isOneToOne: false
+            referencedRelation: "deliveries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      delivery_status_transitions: {
+        Row: {
+          from_status: Database["public"]["Enums"]["delivery_status"]
+          to_status: Database["public"]["Enums"]["delivery_status"]
+        }
+        Insert: {
+          from_status: Database["public"]["Enums"]["delivery_status"]
+          to_status: Database["public"]["Enums"]["delivery_status"]
+        }
+        Update: {
+          from_status?: Database["public"]["Enums"]["delivery_status"]
+          to_status?: Database["public"]["Enums"]["delivery_status"]
         }
         Relationships: []
       }
@@ -486,6 +691,60 @@ export type Database = {
           },
         ]
       }
+      platform_invoices: {
+        Row: {
+          amount_kurus: number
+          client_id: string
+          contract_id: string
+          created_at: string
+          description: string | null
+          id: string
+          invoice_type: string
+          issued_at: string
+          paid_at: string | null
+          status: string
+        }
+        Insert: {
+          amount_kurus?: number
+          client_id: string
+          contract_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          invoice_type: string
+          issued_at?: string
+          paid_at?: string | null
+          status?: string
+        }
+        Update: {
+          amount_kurus?: number
+          client_id?: string
+          contract_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          invoice_type?: string
+          issued_at?: string
+          paid_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_invoices_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "platform_invoices_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
@@ -493,6 +752,7 @@ export type Database = {
           full_name: string
           iban: string | null
           id: string
+          public_id: string
           role: Database["public"]["Enums"]["user_role"]
           tckn: string | null
           updated_at: string
@@ -503,6 +763,7 @@ export type Database = {
           full_name: string
           iban?: string | null
           id: string
+          public_id: string
           role?: Database["public"]["Enums"]["user_role"]
           tckn?: string | null
           updated_at?: string
@@ -513,11 +774,202 @@ export type Database = {
           full_name?: string
           iban?: string | null
           id?: string
+          public_id?: string
           role?: Database["public"]["Enums"]["user_role"]
           tckn?: string | null
           updated_at?: string
         }
         Relationships: []
+      }
+      qa_reports: {
+        Row: {
+          client_review_deadline: string
+          delivery_id: string
+          document_sha256: string
+          generated_at: string
+          id: string
+          pdf_storage_path: string | null
+          results: Json
+          status: string
+          tier_order_id: string
+        }
+        Insert: {
+          client_review_deadline: string
+          delivery_id: string
+          document_sha256: string
+          generated_at?: string
+          id?: string
+          pdf_storage_path?: string | null
+          results: Json
+          status: string
+          tier_order_id: string
+        }
+        Update: {
+          client_review_deadline?: string
+          delivery_id?: string
+          document_sha256?: string
+          generated_at?: string
+          id?: string
+          pdf_storage_path?: string | null
+          results?: Json
+          status?: string
+          tier_order_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "qa_reports_delivery_id_fkey"
+            columns: ["delivery_id"]
+            isOneToOne: false
+            referencedRelation: "deliveries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "qa_reports_tier_order_id_fkey"
+            columns: ["tier_order_id"]
+            isOneToOne: false
+            referencedRelation: "qa_tier_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      qa_reviewers: {
+        Row: {
+          active: boolean
+          avatar_storage_path: string | null
+          bio: string | null
+          created_at: string
+          id: string
+          level: string
+          profile_id: string
+          specialties: string[]
+          years_experience: number
+        }
+        Insert: {
+          active?: boolean
+          avatar_storage_path?: string | null
+          bio?: string | null
+          created_at?: string
+          id?: string
+          level: string
+          profile_id: string
+          specialties?: string[]
+          years_experience: number
+        }
+        Update: {
+          active?: boolean
+          avatar_storage_path?: string | null
+          bio?: string | null
+          created_at?: string
+          id?: string
+          level?: string
+          profile_id?: string
+          specialties?: string[]
+          years_experience?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "qa_reviewers_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      qa_tier_orders: {
+        Row: {
+          created_at: string
+          delivery_id: string
+          fee_kurus: number
+          id: string
+          payment_status: string
+          provider_reference: string | null
+          reviewer_id: string | null
+          tier: string
+        }
+        Insert: {
+          created_at?: string
+          delivery_id: string
+          fee_kurus?: number
+          id?: string
+          payment_status?: string
+          provider_reference?: string | null
+          reviewer_id?: string | null
+          tier: string
+        }
+        Update: {
+          created_at?: string
+          delivery_id?: string
+          fee_kurus?: number
+          id?: string
+          payment_status?: string
+          provider_reference?: string | null
+          reviewer_id?: string | null
+          tier?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "qa_tier_orders_delivery_id_fkey"
+            columns: ["delivery_id"]
+            isOneToOne: false
+            referencedRelation: "deliveries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "qa_tier_orders_reviewer_id_fkey"
+            columns: ["reviewer_id"]
+            isOneToOne: false
+            referencedRelation: "qa_reviewers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workflow_phases: {
+        Row: {
+          completed_at: string | null
+          contract_id: string
+          created_at: string
+          description: string | null
+          estimated_days: number | null
+          id: string
+          is_completed: boolean
+          notes: string | null
+          sequence_no: number
+          title: string
+        }
+        Insert: {
+          completed_at?: string | null
+          contract_id: string
+          created_at?: string
+          description?: string | null
+          estimated_days?: number | null
+          id?: string
+          is_completed?: boolean
+          notes?: string | null
+          sequence_no: number
+          title: string
+        }
+        Update: {
+          completed_at?: string | null
+          contract_id?: string
+          created_at?: string
+          description?: string | null
+          estimated_days?: number | null
+          id?: string
+          is_completed?: boolean
+          notes?: string | null
+          sequence_no?: number
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_phases_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
@@ -536,6 +988,99 @@ export type Database = {
         }
         Returns: boolean
       }
+      can_actor_transition_delivery: {
+        Args: {
+          p_from_status: Database["public"]["Enums"]["delivery_status"]
+          p_is_admin: boolean
+          p_is_client: boolean
+          p_is_freelancer: boolean
+          p_is_system: boolean
+          p_to_status: Database["public"]["Enums"]["delivery_status"]
+        }
+        Returns: boolean
+      }
+      choose_qa_tier: {
+        Args: {
+          p_delivery_id: string
+          p_reviewer_id?: string | null
+          p_tier: string
+        }
+        Returns: {
+          client_note: string | null
+          client_review_deadline: string | null
+          contract_id: string
+          decided_at: string | null
+          id: string
+          milestone_id: string | null
+          notes: string | null
+          pr_url: string | null
+          staging_url: string
+          status: Database["public"]["Enums"]["delivery_status"]
+          submitted_at: string
+          submitted_by: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "deliveries"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      complete_phase: {
+        Args: { p_phase_id: string }
+        Returns: {
+          completed_at: string | null
+          contract_id: string
+          created_at: string
+          description: string | null
+          estimated_days: number | null
+          id: string
+          is_completed: boolean
+          notes: string | null
+          sequence_no: number
+          title: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "workflow_phases"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      confirm_start_date: {
+        Args: { p_contract_id: string }
+        Returns: {
+          client_email: string
+          client_id: string | null
+          client_start_confirmed: boolean
+          company_id: string | null
+          coupon_id: string | null
+          created_at: string
+          document_sha256: string | null
+          freelancer_id: string
+          freelancer_start_confirmed: boolean
+          id: string
+          objection_window_days: number
+          planned_start_date: string | null
+          platform_fee_bps: number
+          product_type: string
+          reference: string
+          rejection_reason: string | null
+          revision_note: string | null
+          scope_of_work: string
+          status: Database["public"]["Enums"]["contract_status"]
+          stopaj_bps: number
+          title: string
+          updated_at: string
+          work_started_at: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "contracts"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       contract_company: {
         Args: { p_contract_id: string }
         Returns: {
@@ -546,9 +1091,31 @@ export type Database = {
           vkn: string
         }[]
       }
+      contract_parties_differ: {
+        Args: {
+          p_client_email: string
+          p_client_id: string
+          p_freelancer_id: string
+        }
+        Returns: boolean
+      }
+      criterion_config_valid: {
+        Args: { p_check_type: string; p_config: Json }
+        Returns: boolean
+      }
       current_user_role: {
         Args: never
         Returns: Database["public"]["Enums"]["user_role"]
+      }
+      find_by_public_id: {
+        Args: { p_public_id: string }
+        Returns: {
+          companies: Json
+          full_name: string
+          id: string
+          public_id: string
+          role: Database["public"]["Enums"]["user_role"]
+        }[]
       }
       find_counterparty: {
         Args: { p_email: string }
@@ -559,6 +1126,7 @@ export type Database = {
           role: Database["public"]["Enums"]["user_role"]
         }[]
       }
+      generate_public_id: { Args: never; Returns: string }
       is_admin: { Args: never; Returns: boolean }
       is_contract_party: { Args: { p_contract_id: string }; Returns: boolean }
       is_milestone_party: { Args: { p_milestone_id: string }; Returns: boolean }
@@ -569,7 +1137,111 @@ export type Database = {
         Returns: {
           full_name: string
           id: string
+          public_id: string
         }[]
+      }
+      process_expired_deliveries: { Args: never; Returns: number }
+      reject_contract: {
+        Args: { p_contract_id: string; p_reason: string }
+        Returns: {
+          client_email: string
+          client_id: string | null
+          client_start_confirmed: boolean
+          company_id: string | null
+          coupon_id: string | null
+          created_at: string
+          document_sha256: string | null
+          freelancer_id: string
+          freelancer_start_confirmed: boolean
+          id: string
+          objection_window_days: number
+          planned_start_date: string | null
+          platform_fee_bps: number
+          product_type: string
+          reference: string
+          rejection_reason: string | null
+          revision_note: string | null
+          scope_of_work: string
+          status: Database["public"]["Enums"]["contract_status"]
+          stopaj_bps: number
+          title: string
+          updated_at: string
+          work_started_at: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "contracts"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      request_revision: {
+        Args: { p_contract_id: string; p_note: string }
+        Returns: {
+          client_email: string
+          client_id: string | null
+          client_start_confirmed: boolean
+          company_id: string | null
+          coupon_id: string | null
+          created_at: string
+          document_sha256: string | null
+          freelancer_id: string
+          freelancer_start_confirmed: boolean
+          id: string
+          objection_window_days: number
+          planned_start_date: string | null
+          platform_fee_bps: number
+          product_type: string
+          reference: string
+          rejection_reason: string | null
+          revision_note: string | null
+          scope_of_work: string
+          status: Database["public"]["Enums"]["contract_status"]
+          stopaj_bps: number
+          title: string
+          updated_at: string
+          work_started_at: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "contracts"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      resubmit_contract: {
+        Args: { p_contract_id: string }
+        Returns: {
+          client_email: string
+          client_id: string | null
+          client_start_confirmed: boolean
+          company_id: string | null
+          coupon_id: string | null
+          created_at: string
+          document_sha256: string | null
+          freelancer_id: string
+          freelancer_start_confirmed: boolean
+          id: string
+          objection_window_days: number
+          planned_start_date: string | null
+          platform_fee_bps: number
+          product_type: string
+          reference: string
+          rejection_reason: string | null
+          revision_note: string | null
+          scope_of_work: string
+          status: Database["public"]["Enums"]["contract_status"]
+          stopaj_bps: number
+          title: string
+          updated_at: string
+          work_started_at: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "contracts"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       sign_contract: {
         Args: {
@@ -579,25 +1251,89 @@ export type Database = {
           p_user_agent: string
         }
         Returns: {
-          client_id: string
-          company_id: string
+          client_email: string
+          client_id: string | null
+          client_start_confirmed: boolean
+          company_id: string | null
           coupon_id: string | null
           created_at: string
           document_sha256: string | null
           freelancer_id: string
+          freelancer_start_confirmed: boolean
           id: string
           objection_window_days: number
+          planned_start_date: string | null
           platform_fee_bps: number
+          product_type: string
           reference: string
+          rejection_reason: string | null
+          revision_note: string | null
           scope_of_work: string
           status: Database["public"]["Enums"]["contract_status"]
           stopaj_bps: number
           title: string
           updated_at: string
+          work_started_at: string | null
         }
         SetofOptions: {
           from: "*"
           to: "contracts"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      submit_qa_report: {
+        Args: {
+          p_contract_id: string
+          p_delivery_id: string
+          p_document_sha256: string
+          p_findings: string
+          p_status: string
+        }
+        Returns: {
+          client_note: string | null
+          client_review_deadline: string | null
+          contract_id: string
+          decided_at: string | null
+          id: string
+          milestone_id: string | null
+          notes: string | null
+          pr_url: string | null
+          staging_url: string
+          status: Database["public"]["Enums"]["delivery_status"]
+          submitted_at: string
+          submitted_by: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "deliveries"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      transition_delivery: {
+        Args: {
+          p_delivery_id: string
+          p_reason?: string
+          p_to_status: Database["public"]["Enums"]["delivery_status"]
+        }
+        Returns: {
+          client_note: string | null
+          client_review_deadline: string | null
+          contract_id: string
+          decided_at: string | null
+          id: string
+          milestone_id: string | null
+          notes: string | null
+          pr_url: string | null
+          staging_url: string
+          status: Database["public"]["Enums"]["delivery_status"]
+          submitted_at: string
+          submitted_by: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "deliveries"
           isOneToOne: true
           isSetofReturn: false
         }
@@ -644,10 +1380,20 @@ export type Database = {
       contract_party: "FREELANCER" | "CLIENT" | "PLATFORM"
       contract_status:
         | "DRAFT"
+        | "PENDING_REVIEW"
+        | "REVISION_REQUESTED"
+        | "REJECTED"
         | "PENDING_SIGNATURES"
         | "ACTIVE"
         | "TERMINATED"
         | "FULFILLED"
+      delivery_status:
+        | "SUBMITTED"
+        | "QA_QUEUED"
+        | "QA_DONE"
+        | "AWAITING_CLIENT"
+        | "ACCEPTED"
+        | "REJECTED"
       dispute_status: "OPEN" | "UNDER_REVIEW" | "RESOLVED"
       escrow_status:
         | "DRAFT"
@@ -790,10 +1536,21 @@ export const Constants = {
       contract_party: ["FREELANCER", "CLIENT", "PLATFORM"],
       contract_status: [
         "DRAFT",
+        "PENDING_REVIEW",
+        "REVISION_REQUESTED",
+        "REJECTED",
         "PENDING_SIGNATURES",
         "ACTIVE",
         "TERMINATED",
         "FULFILLED",
+      ],
+      delivery_status: [
+        "SUBMITTED",
+        "QA_QUEUED",
+        "QA_DONE",
+        "AWAITING_CLIENT",
+        "ACCEPTED",
+        "REJECTED",
       ],
       dispute_status: ["OPEN", "UNDER_REVIEW", "RESOLVED"],
       escrow_status: [

@@ -4,7 +4,16 @@ import { NextResponse, type NextRequest } from "next/server";
 import { env, isSupabaseConfigured } from "@/lib/env";
 import type { Database } from "@/lib/supabase/database.types";
 
-const PUBLIC_ROUTES = ["/", "/login", "/register", "/auth"];
+// /nasil-calisir is marketing, linked from the landing footer. It was missing
+// here, so the one page explaining the system asked visitors to log in first.
+const PUBLIC_ROUTES = [
+  "/",
+  "/login",
+  "/register",
+  "/auth",
+  "/nasil-calisir",
+  "/profile",
+];
 
 export async function updateSession(request: NextRequest) {
   // Development-only escape hatch so the app boots before Supabase is wired up.

@@ -251,9 +251,12 @@ create table public.companies (
   id uuid primary key default gen_random_uuid(),
   owner_id uuid not null references public.profiles(id) on delete restrict,
   legal_name text not null check (length(btrim(legal_name)) between 2 and 255),
-  vkn text not null check (public.is_valid_vkn(vkn)),
-  tax_office text not null,
-  address text not null,
+  -- vkn/tax_office/address are required before an e-fatura/SMM can be issued
+  -- against this company (Faz 2), but not before a QA-only contract can be
+  -- drafted against it (Faz 1) -- see 20260901000000_optional_company_billing_fields.sql.
+  vkn text check (vkn is null or public.is_valid_vkn(vkn)),
+  tax_office text,
+  address text,
   created_at timestamptz not null default now()
 );
 
