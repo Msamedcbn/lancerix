@@ -103,6 +103,55 @@ export type Database = {
           },
         ]
       }
+      contract_messages: {
+        Row: {
+          body: string
+          contract_id: string
+          created_at: string
+          id: string
+          phase_id: string | null
+          sender_id: string
+        }
+        Insert: {
+          body: string
+          contract_id: string
+          created_at?: string
+          id?: string
+          phase_id?: string | null
+          sender_id: string
+        }
+        Update: {
+          body?: string
+          contract_id?: string
+          created_at?: string
+          id?: string
+          phase_id?: string | null
+          sender_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contract_messages_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contract_messages_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_phases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contract_messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contract_signatures: {
         Row: {
           contract_id: string
@@ -112,6 +161,7 @@ export type Database = {
           party: Database["public"]["Enums"]["contract_party"]
           signed_at: string
           signer_id: string | null
+          terms_version: string | null
           user_agent: string
         }
         Insert: {
@@ -122,6 +172,7 @@ export type Database = {
           party: Database["public"]["Enums"]["contract_party"]
           signed_at?: string
           signer_id?: string | null
+          terms_version?: string | null
           user_agent: string
         }
         Update: {
@@ -132,6 +183,7 @@ export type Database = {
           party?: Database["public"]["Enums"]["contract_party"]
           signed_at?: string
           signer_id?: string | null
+          terms_version?: string | null
           user_agent?: string
         }
         Relationships: [
@@ -167,6 +219,7 @@ export type Database = {
           planned_start_date: string | null
           platform_fee_bps: number
           product_type: string
+          project_category: Database["public"]["Enums"]["project_category"]
           reference: string
           rejection_reason: string | null
           revision_note: string | null
@@ -192,6 +245,7 @@ export type Database = {
           planned_start_date?: string | null
           platform_fee_bps?: number
           product_type?: string
+          project_category?: Database["public"]["Enums"]["project_category"]
           reference: string
           rejection_reason?: string | null
           revision_note?: string | null
@@ -217,6 +271,7 @@ export type Database = {
           planned_start_date?: string | null
           platform_fee_bps?: number
           product_type?: string
+          project_category?: Database["public"]["Enums"]["project_category"]
           reference?: string
           rejection_reason?: string | null
           revision_note?: string | null
@@ -1000,11 +1055,7 @@ export type Database = {
         Returns: boolean
       }
       choose_qa_tier: {
-        Args: {
-          p_delivery_id: string
-          p_reviewer_id?: string | null
-          p_tier: string
-        }
+        Args: { p_delivery_id: string; p_reviewer_id?: string; p_tier: string }
         Returns: {
           client_note: string | null
           client_review_deadline: string | null
@@ -1064,6 +1115,7 @@ export type Database = {
           planned_start_date: string | null
           platform_fee_bps: number
           product_type: string
+          project_category: Database["public"]["Enums"]["project_category"]
           reference: string
           rejection_reason: string | null
           revision_note: string | null
@@ -1158,6 +1210,7 @@ export type Database = {
           planned_start_date: string | null
           platform_fee_bps: number
           product_type: string
+          project_category: Database["public"]["Enums"]["project_category"]
           reference: string
           rejection_reason: string | null
           revision_note: string | null
@@ -1192,6 +1245,7 @@ export type Database = {
           planned_start_date: string | null
           platform_fee_bps: number
           product_type: string
+          project_category: Database["public"]["Enums"]["project_category"]
           reference: string
           rejection_reason: string | null
           revision_note: string | null
@@ -1226,6 +1280,7 @@ export type Database = {
           planned_start_date: string | null
           platform_fee_bps: number
           product_type: string
+          project_category: Database["public"]["Enums"]["project_category"]
           reference: string
           rejection_reason: string | null
           revision_note: string | null
@@ -1248,6 +1303,7 @@ export type Database = {
           p_contract_id: string
           p_document_sha256: string
           p_ip: unknown
+          p_terms_version?: string
           p_user_agent: string
         }
         Returns: {
@@ -1265,6 +1321,7 @@ export type Database = {
           planned_start_date: string | null
           platform_fee_bps: number
           product_type: string
+          project_category: Database["public"]["Enums"]["project_category"]
           reference: string
           rejection_reason: string | null
           revision_note: string | null
@@ -1405,6 +1462,13 @@ export type Database = {
         | "DISPUTED"
         | "CANCELLED"
       payout_status: "PENDING" | "PROCESSING" | "PAID" | "FAILED"
+      project_category:
+        | "SOFTWARE"
+        | "DESIGN"
+        | "VIDEO"
+        | "CONTENT"
+        | "MARKETING"
+        | "OTHER"
       user_role: "FREELANCER" | "CLIENT" | "ADMIN"
     }
     CompositeTypes: {
@@ -1564,6 +1628,14 @@ export const Constants = {
         "CANCELLED",
       ],
       payout_status: ["PENDING", "PROCESSING", "PAID", "FAILED"],
+      project_category: [
+        "SOFTWARE",
+        "DESIGN",
+        "VIDEO",
+        "CONTENT",
+        "MARKETING",
+        "OTHER",
+      ],
       user_role: ["FREELANCER", "CLIENT", "ADMIN"],
     },
   },

@@ -16,7 +16,12 @@ import {
 import { Money } from "@/components/money";
 import { PageHeading, Panel } from "@/components/page-shell";
 import { StatusBadge } from "@/components/status-badge";
+import { MessageThread } from "@/app/(dashboard)/contracts/[id]/message-thread";
 import { WorkflowDiagram } from "@/components/workflow-diagram";
+import {
+  PROJECT_CATEGORY_INFO,
+  type ProjectCategory,
+} from "@/lib/validations/project-category";
 import { requireSession } from "@/lib/auth/session";
 import {
   getContract,
@@ -33,6 +38,7 @@ import {
   type QaReport,
   type QaReviewer,
 } from "@/lib/data/deliveries";
+import { listMessages } from "@/lib/data/messages";
 import { deliveryStatusLabel } from "@/lib/qa/delivery-state-machine";
 import type { Enums } from "@/lib/supabase/database.types";
 
@@ -218,6 +224,7 @@ function ReviewCountdown({ deadline }: Readonly<{ deadline: string }>) {
 
 function DeliveryPanel({
   contractId,
+  projectCategory,
   side,
   deliveries,
   events,
@@ -225,6 +232,7 @@ function DeliveryPanel({
   signedByBoth,
 }: Readonly<{
   contractId: string;
+  projectCategory: ProjectCategory;
   side: Side;
   deliveries: DeliveryRow[];
   events: DeliveryEvent[];
@@ -256,7 +264,10 @@ function DeliveryPanel({
         ) : null}
 
         {isFreelancer ? (
-          <DeliveryForm contractId={contractId} />
+          <DeliveryForm
+            contractId={contractId}
+            projectCategory={projectCategory}
+          />
         ) : (
           <p className="text-sm leading-relaxed text-zinc-500 dark:text-zinc-400">
             {latest
@@ -449,6 +460,8 @@ export default async function ContractPage({
       ])
     : [[], []];
 
+  const messages = await listMessages(contract.id, session.userId);
+
   // Contract lifecycle: can the client reject/revise?
   const canClientAct =
     side === "client" &&
@@ -485,6 +498,9 @@ export default async function ContractPage({
         }
         action={
           <div className="flex items-center gap-3">
+            <span className="rounded-full border border-zinc-200 bg-zinc-50 px-2.5 py-0.5 text-xs font-medium text-zinc-600 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400">
+              {PROJECT_CATEGORY_INFO[contract.project_category].label}
+            </span>
             <ContractStatusBadge status={contract.status} />
             <Link
               href={`/contracts/${contract.id}/record`}
@@ -648,6 +664,7 @@ export default async function ContractPage({
             <>
               <DeliveryPanel
                 contractId={contract.id}
+                projectCategory={contract.project_category}
                 side={side}
                 deliveries={deliveries}
                 events={events}
@@ -661,6 +678,10 @@ export default async function ContractPage({
               <MilestoneCard key={m.id} milestone={m} side={side} />
             ))
           )}
+
+          <Panel title="Mesajlar">
+            <MessageThread contractId={contract.id} messages={messages} />
+          </Panel>
         </div>
       </div>
     </>

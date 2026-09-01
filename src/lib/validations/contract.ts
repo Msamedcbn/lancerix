@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { criterionDraftSchema } from "@/lib/validations/acceptance-criteria";
+import { projectCategorySchema } from "@/lib/validations/project-category";
 import { MIN_MILESTONE_GROSS_KURUS, parseTryToKurus } from "@/lib/escrow/money";
 
 /**
@@ -83,6 +84,7 @@ export const phaseDraftSchema = z.object({
 });
 
 const baseContractFields = {
+  projectCategory: projectCategorySchema,
   title: z
     .string()
     .trim()

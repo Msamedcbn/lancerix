@@ -15,6 +15,7 @@ import type {
   EscrowStatus,
 } from "@/lib/data/contracts";
 import { hashDocument, renderContractDocument } from "@/lib/contracts/document";
+import { TERMS_VERSION } from "@/lib/contracts/terms";
 import { getContract } from "@/lib/data/contracts";
 import { DEFAULT_STOPAJ_BPS } from "@/lib/tax/stopaj";
 import { FAIL, firstIssue, OK, type FormState } from "@/lib/forms";
@@ -184,6 +185,7 @@ export async function previewContract(
 
   const shared = {
     productType,
+    projectCategory: formData.get("projectCategory"),
     title: formData.get("title"),
     scopeOfWork: formData.get("scopeOfWork"),
     clientPublicId: formData.get("clientPublicId"),
@@ -257,6 +259,7 @@ export async function createContract(
 
   const shared = {
     productType,
+    projectCategory: formData.get("projectCategory"),
     title: formData.get("title"),
     scopeOfWork: formData.get("scopeOfWork"),
     clientPublicId: formData.get("clientPublicId"),
@@ -300,6 +303,7 @@ export async function createContract(
       freelancer_id: session.userId,
       company_id: parsed.data.companyId,
       product_type: parsed.data.productType,
+      project_category: parsed.data.projectCategory,
       planned_start_date: parsed.data.plannedStartDate ?? null,
     })
     .select("id")
@@ -607,6 +611,13 @@ export async function signContract(
   const contractId = String(formData.get("contractId") ?? "");
   if (!contractId) return FAIL("Missing contract.");
 
+  // The terms box is a real gate, not decoration: without it the signature
+  // row would record a document hash but no evidence the party accepted
+  // Lancerix's own terms, which is the half that covers the platform.
+  if (formData.get("acceptTerms") !== "on") {
+    return FAIL("Devam etmek için hizmet koşullarını kabul etmelisin.");
+  }
+
   const contract = await getContract(contractId, session.userId);
   if (!contract) return FAIL("Contract not found.");
 
@@ -635,6 +646,7 @@ export async function signContract(
     p_document_sha256: hashDocument(document),
     p_ip: ip,
     p_user_agent: userAgent,
+    p_terms_version: TERMS_VERSION,
   });
 
   if (error) return FAIL(error.message);

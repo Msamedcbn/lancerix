@@ -93,7 +93,10 @@ export async function chooseQaTier(
   const { error } = await supabase.rpc("choose_qa_tier", {
     p_delivery_id: deliveryId,
     p_tier: tier.data,
-    p_reviewer_id: reviewerId,
+    // The RPC defaults this to null; PostgREST types the optional arg as
+    // undefined, so "no reviewer" is an absent key rather than an explicit
+    // null. Tier 1/2 take this path.
+    ...(reviewerId ? { p_reviewer_id: reviewerId } : {}),
   });
 
   if (error) return FAIL(error.message);

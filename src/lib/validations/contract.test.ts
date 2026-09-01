@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { contractSchema } from "@/lib/validations/contract";
 
 const base = {
+  projectCategory: "SOFTWARE",
   title: "Landing page redesign",
   scopeOfWork: "Redesign the marketing landing page and ship it.",
   clientPublicId: "A3K9F2B1",
@@ -33,6 +34,26 @@ describe("contractSchema (QA_ONLY)", () => {
     });
     expect(result.success).toBe(true);
     if (result.success) expect(result.data.companyId).toBeNull();
+  });
+
+  it("rejects a project category that is not one of the known kinds", () => {
+    const result = contractSchema.safeParse({
+      ...base,
+      projectCategory: "ASTROLOGY",
+      productType: "QA_ONLY",
+      criteria: [criterion],
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("requires a project category -- it decides what delivery asks for", () => {
+    const { projectCategory: _omitted, ...withoutCategory } = base;
+    const result = contractSchema.safeParse({
+      ...withoutCategory,
+      productType: "QA_ONLY",
+      criteria: [criterion],
+    });
+    expect(result.success).toBe(false);
   });
 
   it("rejects an empty criteria list", () => {

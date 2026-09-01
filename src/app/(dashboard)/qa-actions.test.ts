@@ -88,9 +88,11 @@ describe("chooseQaTier", () => {
       formData({ deliveryId: DELIVERY_ID, contractId: CONTRACT_ID, tier: "TIER1" }),
     );
     expect(result.error).toBeNull();
+    // No reviewer means the key is absent, not null: the RPC defaults the
+    // argument, and PostgREST types an optional arg as undefined.
     expect(capturedCall).toEqual({
       name: "choose_qa_tier",
-      args: { p_delivery_id: DELIVERY_ID, p_tier: "TIER1", p_reviewer_id: null },
+      args: { p_delivery_id: DELIVERY_ID, p_tier: "TIER1" },
     });
   });
 

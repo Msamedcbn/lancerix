@@ -16,6 +16,10 @@ import {
   QA_TIER_INFO,
   type QaTier,
 } from "@/lib/validations/delivery";
+import {
+  PROJECT_CATEGORY_INFO,
+  type ProjectCategory,
+} from "@/lib/validations/project-category";
 
 const INITIAL: FormState = { error: null };
 
@@ -24,36 +28,45 @@ const LEVEL_LABEL: Record<string, string> = {
   SENIOR: "Senior",
 };
 
-/** The freelancer hands the work over. */
-export function DeliveryForm({ contractId }: Readonly<{ contractId: string }>) {
+/**
+ * The freelancer hands the work over.
+ *
+ * The two URL fields are the same columns for every contract; only what they
+ * are CALLED changes with the project category. Asking a video editor for a
+ * "staging address" is the kind of detail that tells a user the product was
+ * not built for them.
+ */
+export function DeliveryForm({
+  contractId,
+  projectCategory,
+}: Readonly<{ contractId: string; projectCategory: ProjectCategory }>) {
   const [state, action] = useActionState(submitQaDelivery, INITIAL);
+  const info = PROJECT_CATEGORY_INFO[projectCategory];
 
   return (
     <form action={action} className="flex flex-col gap-4">
       <input type="hidden" name="contractId" value={contractId} />
 
-      <Field
-        label="Staging adresi"
-        htmlFor="stagingUrl"
-        hint="Kabul kriterleri bu adres üzerinden doğrulanır."
-      >
+      <Field label={info.deliveryLabel} htmlFor="stagingUrl" hint={info.deliveryHint}>
         <TextInput
           id="stagingUrl"
           name="stagingUrl"
-          placeholder="https://staging.ornek.com"
+          placeholder={info.deliveryPlaceholder}
           inputMode="url"
           required
         />
       </Field>
 
-      <Field label="PR linki" htmlFor="prUrl" hint="İsteğe bağlı.">
-        <TextInput
-          id="prUrl"
-          name="prUrl"
-          placeholder="https://github.com/kullanici/repo/pull/12"
-          inputMode="url"
-        />
-      </Field>
+      {info.secondaryLabel ? (
+        <Field label={info.secondaryLabel} htmlFor="prUrl" hint="İsteğe bağlı.">
+          <TextInput
+            id="prUrl"
+            name="prUrl"
+            placeholder={info.secondaryPlaceholder}
+            inputMode="url"
+          />
+        </Field>
+      ) : null}
 
       <Field label="Not" htmlFor="notes" hint="İsteğe bağlı.">
         <TextArea

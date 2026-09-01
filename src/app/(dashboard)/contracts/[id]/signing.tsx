@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState } from "react";
+import Link from "next/link";
+import { useActionState, useState } from "react";
 
 import { signContract, type FormState } from "@/app/(dashboard)/actions";
 import { FormFeedback, SubmitButton } from "@/components/form-feedback";
@@ -8,9 +9,13 @@ import { FormFeedback, SubmitButton } from "@/components/form-feedback";
 const INITIAL: FormState = { error: null };
 
 /**
- * Signing is a single button on purpose: what is being agreed to is the
- * document, not a checkbox. The hash of that exact text is what gets stored,
- * so the record can prove which words were on screen.
+ * Two things are being agreed to here and they are separate agreements: the
+ * contract with the other party (the document, whose exact hash is stored)
+ * and Lancerix's own terms (the checkbox, whose version is stored).
+ *
+ * The box is unchecked by default and the button stays disabled until it is
+ * ticked. A pre-checked box is not consent, and the server re-checks it
+ * anyway -- this only makes the gate visible.
  */
 export function SignContract({
   contractId,
@@ -22,6 +27,7 @@ export function SignContract({
   otherPartySigned: boolean;
 }>) {
   const [state, action] = useActionState(signContract, INITIAL);
+  const [accepted, setAccepted] = useState(false);
 
   if (alreadySigned) {
     return (
@@ -45,8 +51,39 @@ export function SignContract({
         parmak izini kayda geçirir. Şartlar sonradan değiştirilirse o parmak izi
         tutmaz ve değişiklik kayıtta görünür.
       </p>
+
+      <label
+        htmlFor="acceptTerms"
+        className="has-checked:border-brand has-checked:bg-brand-muted flex cursor-pointer items-start gap-3 rounded-xl border border-zinc-200 px-3.5 py-3 transition-colors hover:bg-zinc-50 dark:border-zinc-800 dark:hover:bg-zinc-900"
+      >
+        <input
+          id="acceptTerms"
+          name="acceptTerms"
+          type="checkbox"
+          checked={accepted}
+          onChange={(e) => setAccepted(e.target.checked)}
+          className="accent-brand mt-0.5 size-4 shrink-0"
+        />
+        <span className="text-sm leading-relaxed text-zinc-700 dark:text-zinc-300">
+          Lancerix{" "}
+          <Link
+            href="/sartlar"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-brand font-medium underline underline-offset-4"
+          >
+            hizmet koşullarını
+          </Link>{" "}
+          okudum ve kabul ediyorum.
+        </span>
+      </label>
+
       <FormFeedback state={state} />
-      <SubmitButton className="self-start" pendingLabel="İmzalanıyor...">
+      <SubmitButton
+        className="self-start"
+        pendingLabel="İmzalanıyor..."
+        disabled={!accepted}
+      >
         Sözleşmeyi imzala
       </SubmitButton>
     </form>

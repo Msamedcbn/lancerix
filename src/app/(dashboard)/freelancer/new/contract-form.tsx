@@ -12,6 +12,11 @@ import {
 } from "@/app/(dashboard)/actions";
 import { Field, TextArea, TextInput } from "@/components/field";
 import { FormFeedback, SubmitButton } from "@/components/form-feedback";
+import {
+  PROJECT_CATEGORIES,
+  PROJECT_CATEGORY_INFO,
+  type ProjectCategory,
+} from "@/lib/validations/project-category";
 
 const LOOKUP_INITIAL: CounterpartyResult = { error: null };
 const FORM_INITIAL: FormState = { error: null };
@@ -118,6 +123,7 @@ function CounterpartyCard({
 /* ───────────────── Hidden Draft Fields for Forms ────────────── */
 function DraftFields({
   productType,
+  projectCategory,
   clientPublicId,
   companyId,
   title,
@@ -127,6 +133,7 @@ function DraftFields({
   plannedStartDate,
 }: Readonly<{
   productType: ProductType;
+  projectCategory: ProjectCategory;
   clientPublicId: string;
   companyId: string;
   title: string;
@@ -138,6 +145,7 @@ function DraftFields({
   return (
     <>
       <input type="hidden" name="productType" value={productType} />
+      <input type="hidden" name="projectCategory" value={projectCategory} />
       <input type="hidden" name="clientPublicId" value={clientPublicId} />
       <input type="hidden" name="companyId" value={companyId} />
       <input type="hidden" name="title" value={title} />
@@ -182,6 +190,7 @@ export function ContractForm({
 
   const [step, setStep] = useState(0);
   const [productType] = useState<ProductType>("QA_ONLY");
+  const [projectCategory, setProjectCategory] = useState<ProjectCategory>("SOFTWARE");
   const [clientPublicId, setClientPublicId] = useState("");
   const [companyId, setCompanyId] = useState("");
   const [title, setTitle] = useState("");
@@ -201,6 +210,7 @@ export function ContractForm({
 
   const draft = {
     productType,
+    projectCategory,
     clientPublicId: lookup.resolved?.publicId ?? clientPublicId,
     companyId,
     title,
@@ -286,6 +296,54 @@ export function ContractForm({
       {/* ═══ STEP 1 — Proje & Kapsam ═══ */}
       {step === 1 && (
         <div className="fade-in flex max-w-2xl flex-col gap-6">
+          {/* Category first: it decides what the delivery step will ask for,
+              so choosing it after writing the scope would mean rewriting the
+              criteria against a different idea of "delivered". */}
+          <fieldset className="flex flex-col gap-3">
+            <legend className="text-sm font-medium text-zinc-950 dark:text-zinc-50">
+              Ne tür bir iş?
+            </legend>
+            <p className="-mt-1 text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">
+              Teslimde neyin isteneceğini bu belirler — yazılımda staging
+              adresi, tasarımda Figma linki.
+            </p>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {PROJECT_CATEGORIES.map((value) => {
+                const info = PROJECT_CATEGORY_INFO[value];
+                const isSelected = projectCategory === value;
+                return (
+                  <label
+                    key={value}
+                    htmlFor={`category-${value}`}
+                    className={`flex cursor-pointer items-start gap-2.5 rounded-xl border px-3.5 py-3 transition-all ${
+                      isSelected
+                        ? "border-brand bg-brand/5 ring-brand/20 shadow-sm ring-2 dark:bg-brand/10"
+                        : "border-zinc-200/80 hover:border-zinc-300 hover:bg-zinc-50 dark:border-zinc-800/80 dark:hover:bg-zinc-900"
+                    }`}
+                  >
+                    <input
+                      id={`category-${value}`}
+                      type="radio"
+                      name="projectCategoryChoice"
+                      value={value}
+                      checked={isSelected}
+                      onChange={() => setProjectCategory(value)}
+                      className="accent-brand mt-0.5 size-4 shrink-0"
+                    />
+                    <span className="min-w-0">
+                      <span className="block text-sm font-semibold text-zinc-950 dark:text-zinc-50">
+                        {info.label}
+                      </span>
+                      <span className="block text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">
+                        {info.tagline}
+                      </span>
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+          </fieldset>
+
           <Field label="Proje Başlığı" htmlFor="title">
             <TextInput
               id="title"
@@ -462,7 +520,7 @@ export function ContractForm({
                     value={row.description}
                     onChange={(e) => updateCriterion(row.id, e.target.value)}
                     rows={2}
-                    placeholder="Örn: Ana sayfa tüm cihazlarda düzgün görünmeli ve 3 saniye içinde yüklenmeli"
+                    placeholder={PROJECT_CATEGORY_INFO[projectCategory].criterionPlaceholder}
                   />
                 </Field>
               </div>
