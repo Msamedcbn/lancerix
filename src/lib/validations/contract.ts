@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { criterionDraftSchema } from "@/lib/validations/acceptance-criteria";
 import { MIN_MILESTONE_GROSS_KURUS, parseTryToKurus } from "@/lib/escrow/money";
 
 /**
@@ -42,23 +43,116 @@ export const milestoneDraftSchema = z.object({
     ),
 });
 
-export const contractSchema = z.object({
+/**
+ * Mirrors the default on contracts.objection_window_days
+ * (supabase/migrations/20260830210000_signing_and_objection_clock.sql).
+ * Only used to render a preview before the row exists; once it does, the
+ * value on the row is the one that counts.
+ *
+ * The Hobby-plan crons that close this window (expire-objections,
+ * expire-deliveries) only run once a day and can fire anywhere in the
+ * scheduled hour, so a window can run ~1-2 days over in the worst case.
+ * A default this size safely absorbs that; do not drop it much below this
+ * without also tightening the cron schedule (needs a Pro plan) or accepting
+ * that a short window's real deadline is fuzzier than its label says.
+ */
+export const DEFAULT_OBJECTION_WINDOW_DAYS = 5;
+
+/** Workflow phase draft — freelancer defines project phases during contract creation */
+export const phaseDraftSchema = z.object({
   title: z
     .string()
     .trim()
-    .min(3, "Give the project a title.")
-    .max(255, "That title is too long."),
+    .min(3, "Faz başlığı en az 3 karakter olmalı.")
+    .max(255, "Bu başlık çok uzun."),
+  description: z
+    .string()
+    .trim()
+    .max(1000, "Açıklama çok uzun.")
+    .optional()
+    .default(""),
+  estimatedDays: z
+    .string()
+    .trim()
+    .transform((v) => (v === "" ? null : Number(v)))
+    .nullable()
+    .refine(
+      (v) => v === null || (Number.isInteger(v) && v > 0),
+      "Geçerli bir gün sayısı gir.",
+    ),
+});
+
+const baseContractFields = {
+  title: z
+    .string()
+    .trim()
+    .min(3, "Projeye bir başlık ver.")
+    .max(255, "Bu başlık çok uzun."),
   scopeOfWork: z
     .string()
     .trim()
-    .min(20, "Describe what is being delivered, in at least a sentence."),
-  clientEmail: z.email("Enter the client's email address."),
-  companyId: z.uuid("Choose the company to invoice."),
-  milestones: z
-    .array(milestoneDraftSchema)
-    .min(1, "A contract needs at least one milestone.")
-    .max(20, "Twenty milestones is the limit."),
-});
+    .min(20, "Ne teslim edileceğini en az bir cümleyle anlat."),
+  /** Now uses public_id instead of email */
+  clientPublicId: z
+    .string()
+    .trim()
+    .min(1, "Müşterinin Lancerix ID'sini gir."),
+  // Optional because a QA_ONLY contract is not invoiced, and because the client
+  // may not have registered yet. Required in practice only once e-invoicing is live.
+  companyId: z
+    .string()
+    .trim()
+    .transform((v) => (v === "" ? null : v))
+    .nullable()
+    .refine(
+      (v) => v === null || z.uuid().safeParse(v).success,
+      "Fatura edilecek şirketi seç.",
+    ),
+  /** Planned start date — both parties must confirm before work begins */
+  plannedStartDate: z
+    .string()
+    .trim()
+    .transform((v) => (v === "" ? null : v))
+    .nullable()
+    .refine(
+      (v) => v === null || !Number.isNaN(Date.parse(v)),
+      "Geçerli bir tarih gir.",
+    ),
+};
+
+/**
+ * QA_ONLY: free-text criteria + optional workflow phases.
+ * QA_PLUS_ESCROW: milestones (Faz 2, disabled).
+ */
+export const contractSchema = z.discriminatedUnion("productType", [
+  z.object({
+    productType: z.literal("QA_ONLY"),
+    ...baseContractFields,
+    criteria: z
+      .array(criterionDraftSchema)
+      .min(1, "En az bir kabul kriteri gir.")
+      .max(50, "Elli kriter sınırı var."),
+    phases: z
+      .array(phaseDraftSchema)
+      .max(30, "Otuz faz sınırı var.")
+      .optional()
+      .default([]),
+  }),
+  z
+    .object({
+      productType: z.literal("QA_PLUS_ESCROW"),
+      ...baseContractFields,
+      milestones: z
+        .array(milestoneDraftSchema)
+        .min(1, "Sözleşmede en az bir aşama olmalı.")
+        .max(20, "Yirmi aşama sınırı var."),
+    })
+    .refine(
+      (v) => v.companyId !== null,
+      { message: "Fatura edilecek şirketi seç.", path: ["companyId"] },
+    ),
+]);
 
 export type ContractInput = z.infer<typeof contractSchema>;
 export type MilestoneDraft = z.infer<typeof milestoneDraftSchema>;
+export type PhaseDraft = z.infer<typeof phaseDraftSchema>;

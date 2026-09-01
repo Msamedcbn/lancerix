@@ -13,6 +13,8 @@ export type Session = {
   email: string;
   fullName: string;
   role: UserRole;
+  /** The 8-character code the other side needs to find this account. */
+  publicId: string;
 };
 
 /** Where each role lands after signing in, and what /dashboard redirects to. */
@@ -39,7 +41,7 @@ export async function requireSession(): Promise<Session> {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role, full_name, email")
+    .select("role, full_name, email, public_id")
     .eq("id", user.id)
     .single();
 
@@ -53,6 +55,7 @@ export async function requireSession(): Promise<Session> {
     email: profile.email,
     fullName: profile.full_name,
     role: profile.role,
+    publicId: profile.public_id,
   };
 }
 

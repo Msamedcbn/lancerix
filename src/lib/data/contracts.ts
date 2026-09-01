@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 export type EscrowStatus = Enums<"escrow_status">;
 export type Milestone = Tables<"milestones">;
 export type Contract = Tables<"contracts">;
+export type AcceptanceCriterion = Tables<"acceptance_criteria">;
 
 /**
  * Statuses whose money is already held by the gateway. Mirrors FUNDED_STATUSES
@@ -22,7 +23,10 @@ export type Signature = Tables<"contract_signatures">;
 
 export type ContractRow = Contract & {
   milestones: Milestone[];
+  criteria: AcceptanceCriterion[];
+  phases: Tables<"workflow_phases">[];
   counterpartyName: string;
+  counterpartyPublicId: string | null;
 };
 
 /**
@@ -38,7 +42,7 @@ export async function listContracts(
 
   let query = supabase
     .from("contracts")
-    .select("*, milestones(*)")
+    .select("*, milestones(*), acceptance_criteria(*), workflow_phases(*)")
     .order("created_at", { ascending: false });
 
   if (side === "freelancer") query = query.eq("freelancer_id", userId);
@@ -52,13 +56,40 @@ export async function listContracts(
     rows.flatMap((c) => [c.client_id, c.freelancer_id]),
   );
 
-  return rows.map((c) => ({
-    ...c,
-    milestones: sortMilestones(c.milestones),
-    counterpartyName:
-      names.get(c.freelancer_id === userId ? c.client_id : c.freelancer_id) ??
-      "Unknown",
-  }));
+  return rows.map((c) => {
+    const counterparty = counterpartyName(c, userId, names);
+    return {
+      ...c,
+      milestones: sortMilestones(c.milestones),
+      criteria: [...(c.acceptance_criteria ?? [])].sort((a, b) => a.sequence_no - b.sequence_no),
+      phases: [...(c.workflow_phases ?? [])].sort((a, b) => a.sequence_no - b.sequence_no),
+      counterpartyName: counterparty.name,
+      counterpartyPublicId: counterparty.publicId,
+    };
+  });
+}
+
+/**
+ * Who the other side is, by name if they have an account and by address if
+ * they do not. An invited client has no profile row yet -- the contract was
+ * drafted against their email -- so the address IS their identity until they
+ * register, and showing "Unknown" would hide who the contract is even with.
+ */
+function counterpartyName(
+  contract: Pick<Contract, "client_id" | "freelancer_id" | "client_email">,
+  userId: string,
+  names: Map<string, { name: string; publicId: string }>,
+): { name: string; publicId: string | null } {
+  if (contract.freelancer_id === userId) {
+    const client = contract.client_id ? names.get(contract.client_id) : null;
+    return client
+      ? { name: client.name, publicId: client.publicId }
+      : { name: contract.client_email, publicId: null };
+  }
+  const freelancer = names.get(contract.freelancer_id);
+  return freelancer
+    ? { name: freelancer.name, publicId: freelancer.publicId }
+    : { name: "Bilinmiyor", publicId: null };
 }
 
 export async function getContract(
@@ -67,11 +98,12 @@ export async function getContract(
 ): Promise<
   | (ContractRow & {
       signatures: Signature[];
+      criteria: AcceptanceCriterion[];
       company: {
         legal_name: string;
-        vkn: string;
-        tax_office: string;
-        address: string;
+        vkn: string | null;
+        tax_office: string | null;
+        address: string | null;
       } | null;
     })
   | null
@@ -80,7 +112,7 @@ export async function getContract(
 
   const { data, error } = await supabase
     .from("contracts")
-    .select("*, milestones(*), contract_signatures(*)")
+    .select("*, milestones(*), contract_signatures(*), acceptance_criteria(*), workflow_phases(*)")
     .eq("id", contractId)
     .maybeSingle();
 
@@ -92,13 +124,16 @@ export async function getContract(
     supabase.rpc("contract_company", { p_contract_id: contractId }).maybeSingle(),
   ]);
 
+  const counterparty = counterpartyName(data, userId, names);
+
   return {
     ...data,
     milestones: sortMilestones(data.milestones),
     signatures: data.contract_signatures,
-    counterpartyName:
-      names.get(data.freelancer_id === userId ? data.client_id : data.freelancer_id) ??
-      "Unknown",
+    criteria: [...data.acceptance_criteria].sort((a, b) => a.sequence_no - b.sequence_no),
+    phases: [...(data.workflow_phases ?? [])].sort((a, b) => a.sequence_no - b.sequence_no),
+    counterpartyName: counterparty.name,
+    counterpartyPublicId: counterparty.publicId,
     company: company
       ? {
           legal_name: company.legal_name,
@@ -115,7 +150,7 @@ export async function listMilestones(
   statuses: readonly EscrowStatus[],
   side: "freelancer" | "client",
   userId: string,
-): Promise<Array<Milestone & { contract: Contract; counterpartyName: string }>> {
+): Promise<Array<Milestone & { contract: Contract; counterpartyName: string; counterpartyPublicId: string | null }>> {
   const supabase = await createClient();
 
   const column = side === "freelancer" ? "freelancer_id" : "client_id";
@@ -133,15 +168,14 @@ export async function listMilestones(
     rows.flatMap((m) => [m.contract.client_id, m.contract.freelancer_id]),
   );
 
-  return rows.map((m) => ({
-    ...m,
-    counterpartyName:
-      names.get(
-        m.contract.freelancer_id === userId
-          ? m.contract.client_id
-          : m.contract.freelancer_id,
-      ) ?? "Unknown",
-  }));
+  return rows.map((m) => {
+    const counterparty = counterpartyName(m.contract, userId, names);
+    return {
+      ...m,
+      counterpartyName: counterparty.name,
+      counterpartyPublicId: counterparty.publicId,
+    };
+  });
 }
 
 export type EarningsSummary = {
@@ -203,12 +237,15 @@ export async function listDisputes() {
 }
 
 /**
- * Names for a set of profile ids, through the definer function that returns
- * only id and full_name. Selecting the profiles table directly would be
+ * Names and public IDs for a set of profile ids, through the definer function that returns
+ * only id, full_name, and public_id. Selecting the profiles table directly would be
  * refused for a counterparty, and widening that policy would expose their TCKN.
  */
-async function displayNames(ids: string[]): Promise<Map<string, string>> {
-  const unique = [...new Set(ids)];
+async function displayNames(
+  ids: Array<string | null>,
+): Promise<Map<string, { name: string; publicId: string }>> {
+  // An unclaimed contract has a null client_id, which is not a lookup key.
+  const unique = [...new Set(ids.filter((id): id is string => id !== null))];
   if (unique.length === 0) return new Map();
 
   const supabase = await createClient();
@@ -217,7 +254,7 @@ async function displayNames(ids: string[]): Promise<Map<string, string>> {
   });
   if (error) throw error;
 
-  return new Map((data ?? []).map((p) => [p.id, p.full_name]));
+  return new Map((data ?? []).map((p) => [p.id, { name: p.full_name, publicId: p.public_id }]));
 }
 
 const sum = (values: number[]) => values.reduce((total, v) => total + v, 0);
