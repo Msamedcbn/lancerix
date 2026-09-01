@@ -60,8 +60,13 @@
 }
 
 @theme inline {
+  /* Plain on purpose. No "designed" geometric sans competing with the serif
+     display face below -- the operating system's own UI font, the same
+     honest choice Arial used to be before every platform grew a better one. */
   --font-sans:
-    "Satoshi", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica,
+    Arial, sans-serif;
+  --font-display: var(--font-fraunces), Georgia, "Times New Roman", serif;
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -89,9 +94,27 @@
   --color-brand-foreground: var(--brand-foreground);
   --color-brand-muted: var(--brand-muted);
 
+  --font-mono: var(--font-mono-plex), ui-monospace, "SF Mono", monospace;
+
   /* One easing curve for the whole interface. Mixing curves is what makes a
      UI feel assembled rather than designed. */
   --ease-out-quint: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* --- The marketing surface -------------------------------------------
+     A near-black ground so glass panels have something to separate from --
+     glassmorphism on a mid-grey background just reads as grey-on-grey.
+  --------------------------------------------------------------------- */
+  --color-ink: oklch(0.155 0.008 264);
+  --color-ink-2: oklch(0.196 0.009 264);
+  --color-rule: oklch(1 0 0 / 11%);
+
+  /* The second beam colour. Cool where --brand is warm-neutral, so the pair
+     reads as two studio lights rather than a hue wheel. */
+  --accent-violet: oklch(0.62 0.19 288);
+  --color-accent-violet: var(--accent-violet);
+
+  --color-glass: oklch(1 0 0 / 6%);
+  --color-glass-border: oklch(1 0 0 / 12%);
 }
 
 @layer base {
@@ -131,6 +154,12 @@
   }
 }
 
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
 @keyframes shimmer {
   from {
     transform: translate3d(-100%, 0, 0);
@@ -141,9 +170,12 @@
 }
 
 @layer utilities {
-  /* Applied with an inline --i index so a list reveals as a cascade rather
-     than all at once. The delay is capped so a long list never leaves the
-     reader waiting on the last row. */
+  /* MARKETING ONLY. A cascade is worth a moment of the reader's time on a page
+     they see once. It is not worth it on a page they open forty times a day,
+     which is why the dashboard uses .fade-in instead.
+
+     Applied with an inline --i index. The delay is capped so a long list never
+     leaves the reader waiting on the last row. */
   .reveal {
     animation: reveal 0.5s var(--ease-out-quint) backwards;
     animation-delay: calc(min(var(--i, 0) * 60ms, 480ms));
@@ -152,8 +184,18 @@
   /* For a line inside an overflow-hidden mask. Separate from .reveal because
      it must not touch opacity: the mask does the hiding. */
   .reveal-up {
-    animation: reveal-up 0.9s var(--ease-out-quint) backwards;
-    animation-delay: calc(var(--i, 0) * 90ms);
+    animation: reveal-up 0.7s var(--ease-out-quint) backwards;
+    animation-delay: calc(var(--i, 0) * 80ms);
+  }
+
+  /* PRODUCT UI. Opacity only, no movement, no stagger, short enough to read as
+     "the content settled" rather than as an animation.
+
+     The skeleton already covers the wait, so anything longer here is a second
+     delay stacked on data that has already arrived. What is left is only to
+     stop the swap from popping, which a brief fade does on its own. */
+  .fade-in {
+    animation: fade-in 0.12s var(--ease-out-quint) backwards;
   }
 
   .skeleton {
@@ -171,7 +213,9 @@
       color-mix(in oklab, var(--foreground) 6%, transparent),
       transparent
     );
-    animation: shimmer 1.6s var(--ease-out-quint) infinite;
+    /* Linear because the loop is constant motion. An eased infinite animation
+       hesitates at every seam. */
+    animation: shimmer 1.6s linear infinite;
   }
 
   /* Tabular figures line up in a column. In a table of amounts this is the
@@ -184,11 +228,13 @@
 @media (prefers-reduced-motion: reduce) {
   .reveal,
   .reveal-up,
+  .fade-in,
   .skeleton::after {
     animation: none;
   }
   .reveal,
-  .reveal-up {
+  .reveal-up,
+  .fade-in {
     opacity: 1;
     transform: none;
   }
@@ -208,5 +254,218 @@
       border-color 0.2s var(--ease-out-quint),
       transform 0.2s var(--ease-out-quint),
       box-shadow 0.2s var(--ease-out-quint);
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Marketing surface
+   Only the landing page uses what follows. The product UI stays on .fade-in
+   and the transition block above; nothing here leaks into a screen someone
+   opens forty times a day.
+--------------------------------------------------------------------------- */
+
+@layer utilities {
+  /* The machine voice. Tabular by default because most of what it sets is a
+     column of numbers that must not jitter as it counts. */
+  .mono {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "ss01";
+  }
+
+  /* The macOS spring: a slight overshoot before settling, the way a dock icon
+     or a sheet in a real window manager comes to rest. Scoped to the
+     marketing surface only -- the product UI's buttons and cards keep the
+     quieter --ease-out-quint above, because a screen someone opens forty
+     times a day should not bounce at them. */
+  .mac-spring {
+    transition-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  /* A section label: hairline rule, mono index, tracked caps. The same object
+     appears five times down the page, which is what makes it feel like one
+     document rather than five slides. */
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+  }
+
+  /* Film grain. Three percent of a turbulence tile, fixed to the viewport so it
+     does not swim while the page scrolls. This is the single cheapest thing on
+     the page and it does more for the "not generated" feeling than any of the
+     animation: a perfectly flat fill is the tell.
+
+     pointer-events:none and aria-hidden on the element; it is decoration. */
+  .grain::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    pointer-events: none;
+    opacity: 0.035;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  /* A hairline that draws itself instead of fading in. Rules are the page's
+     structural motif, so the way they arrive is worth getting right: a fade
+     makes them decoration, a draw makes them a line being ruled. */
+  .rule-x {
+    transform: scaleX(var(--rx, 1));
+    transform-origin: left center;
+  }
+
+  /* Vertical mask for a swap: two states stacked, the box clips, one slides out
+     as the other slides in. Used for the badge that flips from Teslim edildi to
+     Onaylandi without either state ever fading through the other. */
+  .swap {
+    position: relative;
+    display: grid;
+    overflow: hidden;
+  }
+  .swap > * {
+    grid-area: 1 / 1;
+  }
+
+  /* The glass surface. One definition, reused by nav, cards and the footer bar
+     so every panel in the interface is cut from the same material. Backdrop
+     blur alone looks like frosted plastic; the 1px inset highlight is what
+     sells it as glass catching a light source above the page. */
+  .glass {
+    background: var(--color-glass);
+    border: 1px solid var(--color-glass-border);
+    backdrop-filter: blur(20px) saturate(140%);
+    -webkit-backdrop-filter: blur(20px) saturate(140%);
+    box-shadow:
+      inset 0 1px 0 oklch(1 0 0 / 10%),
+      0 20px 60px -20px oklch(0 0 0 / 55%);
+  }
+}
+
+/* The hero headline arrives in masked lines. The mask is the parent's
+   overflow:hidden; this class only moves the line, so a failed animation still
+   leaves readable text sitting at its final position. */
+@keyframes line-in {
+  from {
+    transform: translate3d(0, 105%, 0);
+  }
+}
+
+@layer utilities {
+  .line-in {
+    animation: line-in 0.9s var(--ease-out-quint) backwards;
+    animation-delay: calc(var(--i, 0) * 90ms);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .line-in {
+    animation: none;
+    transform: none;
+  }
+  .grain::after {
+    /* Grain is static, so it stays. Removing texture is not an accessibility
+       win; removing movement is. */
+    opacity: 0.03;
+  }
+}
+
+/* Anchor scrolling has to clear the fixed masthead, or every in-page link lands
+   with its heading tucked underneath it. */
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  [id] {
+    scroll-margin-top: 6rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Beams, marquee, bento, accordion
+   Everything below is scoped to the landing page's hero and Interest/Desire
+   sections. Constant, predetermined loops (beams, marquee) are CSS so they
+   keep running on the compositor while the rest of the page hydrates;
+   scroll-driven and interruptible motion stays in GSAP inside page.tsx.
+--------------------------------------------------------------------------- */
+
+@keyframes drift-a {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) rotate(0deg);
+  }
+  50% {
+    transform: translate3d(4%, 6%, 0) rotate(8deg);
+  }
+}
+
+@keyframes drift-b {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) rotate(0deg);
+  }
+  50% {
+    transform: translate3d(-5%, 4%, 0) rotate(-6deg);
+  }
+}
+
+@keyframes drift-c {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(-3%, -5%, 0) scale(1.08);
+  }
+}
+
+@layer utilities {
+  .beam-a {
+    animation: drift-a 22s var(--ease-out-quint) infinite;
+  }
+  .beam-b {
+    animation: drift-b 26s var(--ease-out-quint) infinite;
+  }
+  .beam-c {
+    animation: drift-c 30s var(--ease-out-quint) infinite;
+  }
+}
+
+@keyframes marquee-x {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+@layer utilities {
+  /* The track is the content doubled; translating it exactly -50% loops with
+     no seam, which is the only version of a marquee worth shipping. */
+  .marquee-track {
+    animation: marquee-x 26s linear infinite;
+  }
+
+  .bento {
+    grid-auto-flow: dense;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .beam-a,
+  .beam-b,
+  .beam-c {
+    animation: none;
+  }
+  .marquee-track {
+    animation-duration: 90s;
   }
 }

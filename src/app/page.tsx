@@ -1,103 +1,149 @@
 "use client";
 
-import { useRef } from "react";
-import Image from "next/image";
+import { useRef, type ReactNode } from "react";
 import Link from "next/link";
-
-import { Money } from "@/components/money";
-import { StatusBadge } from "@/components/status-badge";
-import { gsap, ScrollTrigger, useGSAP } from "@/lib/gsap";
 import {
-  computeEscrowSplit,
-  DEFAULT_PLATFORM_FEE_BPS,
-  formatKurus,
-} from "@/lib/escrow/money";
-import { DEFAULT_STOPAJ_BPS } from "@/lib/tax/stopaj";
+  ArrowRight,
+  Ban,
+  CheckCircle2,
+  Clock,
+  FileCheck2,
+  FileSignature,
+  House,
+  Link as LinkIcon,
+  LogIn,
+  ScanSearch,
+  ShieldCheck,
+  Tags,
+  UserCheck,
+  UserPlus,
+} from "lucide-react";
+
+import { Mark } from "@/components/brand/mark";
+import { HorizontalAccordion } from "@/components/home/horizontal-accordion";
+import { FloatingDockDesktop } from "@/components/ui/floating-dock";
+import { gsap, useGSAP } from "@/lib/gsap";
+import { deliveryStatusLabel, type DeliveryStatus } from "@/lib/qa/delivery-state-machine";
+import { QA_TIER_INFO } from "@/lib/validations/delivery";
 
 const BRAND = "Lancerix";
 
-/**
- * The worked example is computed by the same function the ledger uses, so the
- * figures on the marketing page cannot drift from the ones in the product.
- * Ten thousand lira, in kurus.
- */
-const SPLIT = computeEscrowSplit({
-  grossKurus: 1_000_000,
-  platformFeeBps: DEFAULT_PLATFORM_FEE_BPS,
-  stopajBps: DEFAULT_STOPAJ_BPS,
-});
+const HASH =
+  "9f2c41ab7e0d5386c1b4a9f70e2d8c35b6a147f9e0c283d5a6b7c8d9e0f1a2b3";
 
-const NAV = [
-  { href: "#nasil", label: "Nasıl çalışır" },
-  { href: "#hesap", label: "Rakamlar" },
-  { href: "#durum", label: "Neler hazır" },
-] as const;
+/** The real delivery lifecycle, not an escrow one Faz 1 doesn't run. */
+const DELIVERY_FLOW: readonly DeliveryStatus[] = [
+  "SUBMITTED",
+  "QA_QUEUED",
+  "QA_DONE",
+  "AWAITING_CLIENT",
+  "ACCEPTED",
+];
 
-/**
- * The mechanism, in the order it happens. Nothing here describes holding money:
- * every step is something the product does today.
- */
+const FLOW_TONE: Record<DeliveryStatus, string> = {
+  SUBMITTED: "bg-slate-100 text-slate-600",
+  QA_QUEUED: "bg-amber-50 text-amber-700",
+  QA_DONE: "bg-sky-50 text-sky-700",
+  AWAITING_CLIENT: "bg-violet-50 text-violet-700",
+  ACCEPTED: "bg-emerald-50 text-emerald-700",
+  REJECTED: "bg-rose-50 text-rose-700",
+};
+
 const STEPS = [
   {
     title: "Sözleşme imzalanır",
-    body: "İki taraf aynı metni imzalar. Tutar, aşamalar, stopaj oranı ve itiraz süresi imza anında dondurulur. İmzayla birlikte metnin parmak izi de kayda geçer; şartlar sonradan değişirse bu tutmaz ve değişiklik görünür.",
+    body: "Kabul kriterleri, teslim tarihi ve itiraz süresi metne yazılır. İki taraf da aynı metni imzalar; imza SHA-256 özetiyle kayda geçer.",
+    icon: FileSignature,
   },
   {
-    title: "İş aşama aşama teslim edilir",
-    body: "Proje tek bir büyük teslim değil, sırayla kapanan aşamalardır. Her aşama kendi başına ilerler; birindeki tıkanma diğerlerini bekletmez.",
+    title: "Teslim edilir",
+    body: "Freelancer bir staging adresi veya PR linki gönderir. Teslim, kabul kriterlerinin karşılanıp karşılanmadığının test edileceği yerdir.",
+    icon: LinkIcon,
   },
   {
-    title: "Geri sayım başlar",
-    body: "Teslimatla birlikte müşteriye bildirim gider ve sözleşmede yazan itiraz süresi işlemeye başlar. Süre, tahmine değil imzalanan metne dayanır.",
+    title: "Bağımsız QA çalışır",
+    body: "Seçilen pakete göre: müşteri kendi kontrol eder, otonom bir ajan tarar, veya kıdemli bir mühendis elden inceler.",
+    icon: ScanSearch,
   },
   {
-    title: "Sessizlik kabul sayılır",
-    body: "Müşteri süre içinde itiraz etmezse teslimat sözleşme uyarınca kabul edilmiş sayılır ve kabul, zaman damgasıyla silinemeyen bir deftere yazılır. Beklemek varsayılan değildir.",
+    title: "Zaman damgalı rapor çıkar",
+    body: "Sonuç PASS / FAIL / PARTIAL olarak, silinemeyen bir kayda yazılır. Rapor müşterinin karar vermesi için gönderilir.",
+    icon: FileCheck2,
+  },
+  {
+    title: "5 günlük pencere kapanır",
+    body: "Müşteri süre içinde itiraz etmezse teslim kabul edilmiş sayılır. Ödeme, iki taraf arasında doğrudan gerçekleşir.",
+    icon: Clock,
   },
 ] as const;
 
-/** Shipped. Every line here can be opened on a screen today. */
-const NOW = [
-  {
-    title: "İmzalı sözleşme ve belge parmak izi",
-    body: "İki taraflı imza; her imza, imzalandığı metnin SHA-256 özetiyle birlikte saklanır.",
-  },
-  {
-    title: "Aşama ve durum akışı",
-    body: "Taslaktan ödemeye kadar sekiz durum, ve aralarında yalnızca izin verilen geçişler.",
-  },
-  {
-    title: "İtiraz süresi ve otomatik kabul",
-    body: "Süre dolduğunda kabul kendiliğinden gerçekleşir; kim onayladı, kim itiraz etmedi ayrı ayrı görünür.",
-  },
-  {
-    title: "Değiştirilemeyen kayıt defteri",
-    body: "Her durum değişikliği aynı işlem içinde bir satır yazar. Satırlar güncellenmez, silinmez.",
-  },
-  {
-    title: "Stopaj ve SMM matrahı",
-    body: "Her aşamanın kesintisi ve makbuz matrahı kuruşu kuruşuna hesaplanır, yuvarlamada kayıp olmaz.",
-  },
-] as const;
+const TIERS = ["TIER1", "TIER2", "TIER3"] as const;
+const TIER_ICON = {
+  TIER1: UserCheck,
+  TIER2: ScanSearch,
+  TIER3: ShieldCheck,
+} as const;
 
-/** Not shipped. Labelled as such, on purpose. */
-const SOON = [
-  {
-    title: "Escrow: paranın kilitlenmesi",
-    body: "Müşterinin yatırdığı tutarın lisanslı bir ödeme kuruluşunda tutulması. Kurum başvurusu ve entegrasyon sürecinde; bugün para platform üzerinden geçmiyor.",
-  },
-  {
-    title: "e-SMM otomatik düzenleme",
-    body: "Makbuzun aşama serbest kaldığı anda otomatik kesilmesi. Matrah bugün hazır, entegrasyon değil.",
-  },
-  {
-    title: "Otomatik ödeme çıkışı",
-    body: "Net tutarın freelancerın hesabına otomatik aktarılması. Ödeme altyapısına bağlı.",
-  },
-] as const;
+/**
+ * A button that leans toward the cursor before it arrives and springs back
+ * when it leaves. The transform lives on this wrapping span so the
+ * interactive element inside (Link) keeps its own normal hit-box.
+ */
+function Magnetic({
+  children,
+  strength = 0.3,
+}: Readonly<{ children: ReactNode; strength?: number }>) {
+  const ref = useRef<HTMLSpanElement>(null);
 
-const REVEAL =
-  "Kurumsal müşteriler ödemeyi reddetmiyor. Sadece geciktiriyorlar. Altmış gün, doksan gün, bazen daha fazla. Bu bir güven sorunu değil, bir zamanlama sorunu ve çözümü sözleşmenin içinde yazılı olmalı.";
+  return (
+    <span
+      ref={ref}
+      className="inline-block"
+      onMouseMove={(e) => {
+        const el = ref.current;
+        if (!el) return;
+        const rect = el.getBoundingClientRect();
+        gsap.to(el, {
+          x: (e.clientX - rect.left - rect.width / 2) * strength,
+          y: (e.clientY - rect.top - rect.height / 2) * strength,
+          duration: 0.4,
+          ease: "power3.out",
+        });
+      }}
+      onMouseLeave={() => {
+        const el = ref.current;
+        if (!el) return;
+        gsap.to(el, { x: 0, y: 0, duration: 0.6, ease: "elastic.out(1, 0.4)" });
+      }}
+    >
+      {children}
+    </span>
+  );
+}
+
+/** The light-mode glass surface every panel on this page shares. */
+function GlassCard({
+  className = "",
+  children,
+  ...rest
+}: Readonly<{ className?: string; children: ReactNode } & React.HTMLAttributes<HTMLDivElement>>) {
+  return (
+    <div
+      className={`rounded-2xl border border-slate-200 bg-white/70 shadow-[0_1px_2px_rgba(15,23,42,0.04)] backdrop-blur-xl ${className}`}
+      {...rest}
+    >
+      {children}
+    </div>
+  );
+}
+
+const DOCK_ITEMS = [
+  { title: "Ana sayfa", href: "/", icon: House },
+  { title: "Nasıl çalışır", href: "#nasil", icon: ScanSearch },
+  { title: "Fiyatlandırma", href: "#fiyat", icon: Tags },
+  { title: "Giriş yap", href: "/login", icon: LogIn },
+  { title: "Hesap oluştur", href: "/register", icon: UserPlus },
+] as const;
 
 export default function HomePage() {
   const root = useRef<HTMLElement>(null);
@@ -106,416 +152,328 @@ export default function HomePage() {
     () => {
       if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
-      // The hero entrance is CSS, not GSAP, on purpose. A gsap.from() that
-      // never plays leaves its target at opacity 0 -- an invisible hero is a
-      // worse failure than an unanimated one, and it is exactly what happened
-      // here. A CSS animation that does not run leaves the content visible.
+      const q = gsap.utils.selector(root);
 
-      // The argument resolves as the reader scrolls through it rather than
-      // arriving all at once.
-      gsap.to("[data-word]", {
-        opacity: 1,
-        stagger: 1,
+      q("[data-bento-card]").forEach((el, i) => {
+        gsap.from(el, {
+          opacity: 0,
+          y: 24,
+          duration: 0.6,
+          delay: i * 0.06,
+          ease: "power3.out",
+          clearProps: "transform",
+          scrollTrigger: { trigger: el, start: "top 88%", once: true },
+        });
+      });
+
+      gsap.to("[data-hash]", {
+        duration: 1.4,
         ease: "none",
-        scrollTrigger: {
-          trigger: "[data-reveal]",
-          start: "top 72%",
-          end: "bottom 55%",
-          scrub: 0.6,
-        },
-      });
-
-      const cards = gsap.utils.toArray<HTMLElement>("[data-step]");
-      cards.forEach((card, i) => {
-        const pinAt = `top ${14 + i * 3}%`;
-        ScrollTrigger.create({
-          trigger: card,
-          start: pinAt,
-          endTrigger: "[data-steps]",
-          end: "bottom 80%",
-          pin: true,
-          pinSpacing: false,
-        });
-        gsap.to(card, {
-          scale: 1 - (cards.length - 1 - i) * 0.024,
-          filter: "brightness(0.66)",
-          ease: "none",
-          scrollTrigger: {
-            trigger: card,
-            start: pinAt,
-            end: "bottom 14%",
-            scrub: true,
-          },
-        });
-      });
-
-      gsap.from("[data-tile]", {
-        opacity: 0,
-        y: 40,
-        duration: 0.8,
-        ease: "power3.out",
-        stagger: 0.07,
-        scrollTrigger: { trigger: "[data-tiles]", start: "top 78%" },
+        scrambleText: { text: HASH, chars: "0123456789abcdef", speed: 0.45 },
+        scrollTrigger: { trigger: "[data-hash]", start: "top 85%", once: true },
       });
     },
     { scope: root },
   );
 
   return (
-    <main
-      ref={root}
-      className="w-full max-w-full overflow-x-hidden bg-zinc-950 text-zinc-100"
-    >
-      <header className="fixed inset-x-0 top-5 z-30 flex justify-center px-4">
-        <nav className="flex w-full max-w-3xl items-center gap-2 rounded-full border border-white/10 bg-zinc-900/60 px-3 py-2 backdrop-blur-xl">
-          <Link href="/" className="px-3 text-[0.95rem] font-semibold tracking-tight text-white">
+    <main ref={root} className="w-full max-w-full overflow-x-hidden bg-white">
+      {/* --- hero ------------------------------------------------------------ */}
+      <section className="relative overflow-hidden px-6 pt-28 pb-24 text-center md:pt-36 md:pb-32">
+        <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
+          <div className="from-brand/20 absolute -top-32 left-1/4 size-[36rem] rounded-full bg-gradient-to-br to-transparent blur-3xl" />
+          <div className="absolute top-1/3 right-1/4 size-[30rem] rounded-full bg-gradient-to-br from-sky-200/40 to-transparent blur-3xl" />
+        </div>
+
+        <div className="relative mx-auto flex max-w-3xl flex-col items-center">
+          <span className="mb-3 flex items-center gap-2 text-sm font-medium text-slate-500">
+            <Mark className="text-brand size-4" title={BRAND} />
             {BRAND}
-          </Link>
-          <div className="hidden items-center gap-1 sm:flex">
-            {NAV.map((link) => (
-              <a
-                key={link.href}
-                href={link.href}
-                className="rounded-full px-3 py-1.5 text-sm text-zinc-400 hover:bg-white/5 hover:text-white"
-              >
-                {link.label}
-              </a>
-            ))}
-            <Link
-              href="/nasil-calisir"
-              className="rounded-full px-3 py-1.5 text-sm text-zinc-400 hover:bg-white/5 hover:text-white"
-            >
-              Şema
-            </Link>
-          </div>
-          <Link
-            href="/register"
-            className="ml-auto rounded-full bg-white px-4 py-1.5 text-sm font-medium whitespace-nowrap text-zinc-950 hover:bg-zinc-200 active:translate-y-px"
+          </span>
+
+          <span className="mb-8 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/80 px-4 py-1.5 text-xs font-medium text-slate-600 shadow-sm backdrop-blur">
+            <span className="bg-brand size-1.5 rounded-full" aria-hidden />
+            B2B teslim doğrulama · Türkiye
+          </span>
+
+          <h1
+            className="font-display max-w-2xl font-medium tracking-[-0.01em] text-slate-900"
+            style={{ fontSize: "clamp(2.5rem, 5vw, 4.25rem)", lineHeight: 1.1 }}
           >
-            Hesap oluştur
-          </Link>
-        </nav>
-      </header>
+            Teslim ettiğini bağımsız birinin
+            doğruladığını kanıtla.
+          </h1>
 
-      {/* Asymmetric hero: text on the left, the image floating off the right
-          edge. A centred headline wastes the eye's starting position. */}
-      <section className="relative overflow-hidden px-6 pt-28 pb-20 md:pt-24 md:pb-28">
-        <div
-          aria-hidden
-          className="absolute -top-32 -left-40 h-[36rem] w-[36rem] rounded-full bg-emerald-500/10 blur-[150px]"
-        />
-        <div className="relative mx-auto max-w-6xl">
-          <div className="relative z-10 max-w-3xl lg:max-w-[34rem] xl:max-w-3xl">
-            <h1
-              className="font-semibold leading-[1.06] tracking-[-0.03em] text-white"
-              style={{ fontSize: "clamp(2.4rem, 5vw, 4.5rem)" }}
-            >
-              <span className="-mb-[0.12em] block overflow-hidden pb-[0.12em]">
-                <span className="reveal-up block">
-                  Teslim ettin. İtiraz gelmedi.
-                </span>
-              </span>
-              <span className="-mb-[0.12em] block overflow-hidden pb-[0.12em]">
-                <span className="reveal-up block" style={{ "--i": 1 } as React.CSSProperties}>
-                  Kabul edilmiş sayılır.
-                </span>
-              </span>
-            </h1>
+          <p className="mt-6 max-w-xl text-lg leading-relaxed text-slate-500">
+            Freelancer ile kurumsal müşteri arasında imzalı sözleşme, kriterlere
+            karşı bağımsız QA doğrulaması ve zaman damgalı, silinemeyen bir kabul
+            kaydı. Parayı biz tutmuyoruz — ödeme taraflar arasında doğrudan
+            gerçekleşir.
+          </p>
 
-            <p
-              className="reveal mt-8 max-w-xl text-lg leading-relaxed text-zinc-400"
-              style={{ "--i": 4 } as React.CSSProperties}
-            >
-              Sözleşmeye yazılan süre dolduğunda onay kendiliğinden gerçekleşir
-              ve zaman damgasıyla kayda geçer. Kurumsal müşteriyi aramak,
-              hatırlatmak, beklemek gerekmez.
-            </p>
-
-            <div
-              className="reveal mt-10 flex flex-wrap gap-3"
-              style={{ "--i": 6 } as React.CSSProperties}
-            >
+          <div className="mt-9 flex flex-wrap justify-center gap-3">
+            <Magnetic>
               <Link
                 href="/register"
-                className="rounded-xl bg-white px-7 py-3.5 text-base font-medium text-zinc-950 hover:bg-zinc-200 active:translate-y-px"
+                className="mac-spring bg-brand text-brand-foreground inline-block rounded-xl px-7 py-3.5 text-base font-medium transition-colors hover:opacity-90 active:scale-[0.98]"
               >
                 Hesap oluştur
               </Link>
+            </Magnetic>
+            <Magnetic>
               <a
                 href="#nasil"
-                className="rounded-xl border border-white/15 px-7 py-3.5 text-base font-medium text-white hover:bg-white/5 active:translate-y-px"
+                className="mac-spring inline-block rounded-xl border border-slate-200 bg-white px-7 py-3.5 text-base font-medium text-slate-700 transition-colors hover:bg-slate-50 active:scale-[0.98]"
               >
-                Nasıl çalıştığını gör
+                Nasıl çalışır
               </a>
-            </div>
-          </div>
-
-          {/* The real components, not a drawing of them. StatusBadge and Money
-              are the same modules the dashboard renders, so this preview cannot
-              drift from the product and is not a fake screenshot built out of
-              divs. */}
-          <div
-            style={{ "--i": 8 } as React.CSSProperties}
-            className="reveal relative z-0 mt-12 w-full max-w-sm rounded-2xl border border-white/10 bg-zinc-900/80 p-5 backdrop-blur md:ml-auto lg:absolute lg:right-0 lg:bottom-4 lg:mt-0 xl:-right-8"
-          >
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-sm font-medium text-white">
-                  2. Arayüz tasarımı
-                </p>
-                <p className="mt-0.5 text-xs text-zinc-500">
-                  LX-8FQ2K · Vega Dijital A.Ş.
-                </p>
-              </div>
-              <StatusBadge status="SUBMITTED" />
-            </div>
-
-            <dl className="mt-5 grid grid-cols-2 gap-y-3 text-sm">
-              <div>
-                <dt className="text-xs text-zinc-500">Sözleşme bedeli</dt>
-                <dd className="mt-0.5 text-zinc-200">
-                  <Money kurus={SPLIT.grossKurus} />
-                </dd>
-              </div>
-              <div>
-                <dt className="text-xs text-zinc-500">Eline geçecek</dt>
-                <dd className="text-brand mt-0.5 font-medium">
-                  <Money kurus={SPLIT.freelancerNetKurus} />
-                </dd>
-              </div>
-            </dl>
-
-            <div className="mt-5 border-t border-white/10 pt-4">
-              <p className="text-sm font-medium text-amber-400">
-                3 gün içinde otomatik kabul
-              </p>
-              <p className="mt-1 text-xs leading-relaxed text-zinc-500">
-                Müşteri itiraz etmezse teslimat kabul edilmiş sayılacak ve kabul
-                kayda geçecek.
-              </p>
-            </div>
+            </Magnetic>
           </div>
         </div>
       </section>
 
-      {/* The strongest fact about the pricing, stated with real figures. */}
-      <section id="hesap" className="px-6 py-24 md:py-32">
-        <div className="mx-auto max-w-6xl">
-          <div className="grid gap-10 md:grid-cols-[1fr_1.1fr] md:items-center">
-            <div>
-              <h2 className="text-3xl font-semibold leading-[1.15] tracking-tight text-white md:text-4xl">
-                Ücreti sen ödemiyorsun.
-              </h2>
-              <p className="mt-5 max-w-md text-base leading-relaxed text-zinc-400">
-                Hizmet bedeli senin bedelinden kesilmez, üstüne eklenir ve
-                kurumsal müşteri öder. Eline geçen tutar, bu platformu hiç
-                kullanmasaydın alacağın tutarın aynısıdır. Tek fark, doksan gün
-                önce geçmesi.
-              </p>
-            </div>
-
-            <dl className="divide-y divide-white/10 rounded-2xl border border-white/10">
-              <div className="flex items-baseline justify-between px-6 py-4">
-                <dt className="text-sm text-zinc-400">Müşterinin yatırdığı</dt>
-                <dd className="text-lg font-medium text-white tabular-nums">
-                  {formatKurus(SPLIT.clientChargeKurus)}
-                </dd>
-              </div>
-              <div className="flex items-baseline justify-between px-6 py-4">
-                <dt className="text-sm text-zinc-400">
-                  Hizmet bedeli (müşteri öder)
-                </dt>
-                <dd className="text-lg text-zinc-300 tabular-nums">
-                  {formatKurus(SPLIT.platformFeeKurus)}
-                </dd>
-              </div>
-              <div className="flex items-baseline justify-between px-6 py-4">
-                <dt className="text-sm text-zinc-400">
-                  Senin sözleşme bedelin
-                </dt>
-                <dd className="text-lg text-zinc-300 tabular-nums">
-                  {formatKurus(SPLIT.grossKurus)}
-                </dd>
-              </div>
-              <div className="flex items-baseline justify-between px-6 py-4">
-                <dt className="text-sm text-zinc-400">
-                  Stopaj (kanun gereği, kaynakta)
-                </dt>
-                <dd className="text-lg text-zinc-300 tabular-nums">
-                  {formatKurus(SPLIT.taxWithholdingKurus)}
-                </dd>
-              </div>
-              <div className="flex items-baseline justify-between bg-white/[0.03] px-6 py-5">
-                <dt className="text-sm font-medium text-white">
-                  Eline geçen
-                </dt>
-                <dd className="text-2xl font-semibold text-emerald-400 tabular-nums">
-                  {formatKurus(SPLIT.freelancerNetKurus)}
-                </dd>
-              </div>
-            </dl>
+      {/* --- marquee: the real delivery lifecycle ----------------------------- */}
+      <div className="relative border-y border-slate-200 bg-slate-50/60 py-5">
+        <div className="flex overflow-hidden">
+          <div className="marquee-track flex shrink-0 items-center gap-8 pr-8">
+            {[...DELIVERY_FLOW, ...DELIVERY_FLOW].map((s, i) => (
+              <span key={`${s}-${i}`} className="mono flex items-center gap-3 text-sm text-slate-500">
+                <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${FLOW_TONE[s]}`}>
+                  {deliveryStatusLabel(s)}
+                </span>
+                <span aria-hidden className="text-slate-300">
+                  ·
+                </span>
+              </span>
+            ))}
+          </div>
+          <div className="marquee-track flex shrink-0 items-center gap-8 pr-8" aria-hidden>
+            {[...DELIVERY_FLOW, ...DELIVERY_FLOW].map((s, i) => (
+              <span key={`dup-${s}-${i}`} className="mono flex items-center gap-3 text-sm text-slate-500">
+                <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${FLOW_TONE[s]}`}>
+                  {deliveryStatusLabel(s)}
+                </span>
+                <span aria-hidden className="text-slate-300">
+                  ·
+                </span>
+              </span>
+            ))}
           </div>
         </div>
-      </section>
+      </div>
 
-      <section data-reveal className="mx-auto max-w-4xl px-6 py-24 md:py-32">
-        <p className="text-2xl leading-[1.45] font-medium tracking-tight text-white md:text-3xl md:leading-[1.4]">
-          {REVEAL.split(" ").map((word, i) => (
-            <span key={`${word}-${i}`} data-word className="opacity-[0.14]">
-              {word}{" "}
-            </span>
-          ))}
+      {/* --- what this is, in one direct paragraph --------------------------- */}
+      <section className="mx-auto max-w-3xl px-6 py-24 text-center md:py-32">
+        <p className="text-2xl leading-relaxed font-medium tracking-tight text-slate-800 md:text-[1.75rem]">
+          Lancerix escrow hesabı açmıyor, para toplamıyor, fatura kesmiyor.
+          Yaptığımız tek şey: teslim edilen işi sözleşmedeki kriterlere karşı
+          bağımsız biçimde test etmek ve sonucu zaman damgalı bir rapora yazmak.
         </p>
       </section>
 
-      {/* TODO: replace with real photography, 1920x1080, a Turkish freelancer at
-          work or a signing moment. The picsum seed below is a placeholder and
-          the service is not reliable enough to demo on -- it was returning 503
-          when this was written.
-
-          A full-bleed photographic band. It is a layout family the page does not
-          otherwise use, and it gives the argument above somewhere to land before
-          the mechanism starts. The container carries its own background and
-          gradient so a failed load degrades to a deliberate dark band rather
-          than an empty box. */}
-      <section className="relative h-[42vh] min-h-[18rem] w-full overflow-hidden bg-zinc-900 md:h-[52vh]">
-        <Image
-          src="https://picsum.photos/seed/istanbul-studio-desk-work/1920/1080"
-          alt="Bir çalışma masasında sözleşme ve dizüstü bilgisayar"
-          fill
-          sizes="100vw"
-          className="object-cover opacity-45 grayscale"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/30 to-zinc-950" />
-      </section>
-
-      {/* The mechanism, as a stack that builds up while you read it. */}
-      <section id="nasil" data-steps className="px-6 pb-24 md:pb-32">
-        <div className="mx-auto max-w-4xl">
-          {STEPS.map((step) => (
-            <article
-              key={step.title}
-              data-step
-              className="mb-5 origin-top rounded-3xl border border-white/10 bg-zinc-900 p-8 md:p-12"
-            >
-              <h3 className="text-2xl font-semibold tracking-tight text-white md:text-3xl">
-                {step.title}
-              </h3>
-              <p className="mt-4 max-w-2xl text-base leading-relaxed text-zinc-400">
-                {step.body}
-              </p>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      {/* Shipped and not shipped, separated and labelled. Mixing the two is how
-          an early product loses the trust it is trying to build. */}
-      <section id="durum" data-tiles className="px-6 py-24 md:py-32">
-        <div className="mx-auto max-w-6xl">
-          <div className="grid gap-12 lg:grid-cols-[1fr_1fr]">
-            <div>
-              <div className="mb-8 flex items-center gap-3">
-                <span className="size-2 rounded-full bg-emerald-400" aria-hidden />
-                <h2 className="text-xl font-semibold tracking-tight text-white">
-                  Şimdi çalışıyor
-                </h2>
-              </div>
-              <dl className="divide-y divide-white/10 border-t border-white/10">
-                {NOW.map((item) => (
-                  <div key={item.title} data-tile className="py-5">
-                    <dt className="text-base font-medium text-white">
-                      {item.title}
-                    </dt>
-                    <dd className="mt-1.5 text-sm leading-relaxed text-zinc-400">
-                      {item.body}
-                    </dd>
-                  </div>
-                ))}
-              </dl>
-            </div>
-
-            <div>
-              <div className="mb-8 flex items-center gap-3">
-                <span className="size-2 rounded-full bg-zinc-600" aria-hidden />
-                <h2 className="text-xl font-semibold tracking-tight text-zinc-400">
-                  Yakında
-                </h2>
-              </div>
-              <dl className="divide-y divide-white/10 border-t border-white/10">
-                {SOON.map((item) => (
-                  <div key={item.title} data-tile className="py-5">
-                    <dt className="text-base font-medium text-zinc-300">
-                      {item.title}
-                    </dt>
-                    <dd className="mt-1.5 text-sm leading-relaxed text-zinc-500">
-                      {item.body}
-                    </dd>
-                  </div>
-                ))}
-              </dl>
-              <p className="mt-6 max-w-md text-xs leading-relaxed text-zinc-600">
-                Bu ayrımı bilerek yapıyoruz. Bugün para platform üzerinden
-                geçmiyor; sözleşme, teslim ve kabul süreci geçiyor.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="relative overflow-hidden px-6 py-24 md:py-36">
-        <div
-          aria-hidden
-          className="absolute top-1/2 left-1/2 h-[28rem] w-[48rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-emerald-500/10 blur-[150px]"
-        />
-        <div className="relative mx-auto max-w-3xl">
-          <h2
-            className="font-semibold leading-[1.1] tracking-[-0.03em] text-white"
-            style={{ fontSize: "clamp(2rem, 4.4vw, 3.5rem)" }}
+      {/* --- bento: what you actually get ------------------------------------ */}
+      <section className="px-6 pb-24 md:pb-32">
+        <div className="mx-auto grid max-w-6xl grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {/* big card: a sample report */}
+          <GlassCard
+            data-bento-card
+            className="col-span-1 flex flex-col justify-between p-6 sm:col-span-2 lg:col-span-2"
           >
-            Bir sonraki işin süresi baştan yazılsın.
-          </h2>
-          <div className="mt-9 flex flex-wrap gap-3">
-            <Link
-              href="/register"
-              className="rounded-xl bg-white px-7 py-3.5 text-base font-medium text-zinc-950 hover:bg-zinc-200 active:translate-y-px"
-            >
-              Hesap oluştur
-            </Link>
-            <Link
-              href="/login"
-              className="rounded-xl border border-white/15 px-7 py-3.5 text-base font-medium text-white hover:bg-white/5 active:translate-y-px"
-            >
-              Giriş yap
-            </Link>
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="mono text-[0.68rem] tracking-[0.1em] text-slate-400">
+                  LX-8FQ2K · QA RAPORU
+                </p>
+                <p className="mt-1.5 text-base font-medium text-slate-900">
+                  Ödeme sayfası — kriter doğrulaması
+                </p>
+              </div>
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+                <CheckCircle2 className="size-3.5" aria-hidden />
+                PASS
+              </span>
+            </div>
+
+            <dl className="mt-6 grid grid-cols-2 gap-y-3 text-sm">
+              <div>
+                <dt className="text-xs text-slate-400">Paket</dt>
+                <dd className="mt-0.5 text-slate-700">Agentic QA</dd>
+              </div>
+              <div>
+                <dt className="text-xs text-slate-400">Kriter</dt>
+                <dd className="mt-0.5 text-slate-700">6 / 6 karşılandı</dd>
+              </div>
+            </dl>
+
+            <div className="mt-6 border-t border-slate-100 pt-4">
+              <p className="mono text-[0.7rem] break-all text-slate-400" data-hash>
+                {HASH}
+              </p>
+              <p className="mt-1.5 text-xs text-slate-400">
+                Belge özeti · rapor bu haliyle silinemez
+              </p>
+            </div>
+          </GlassCard>
+
+          <GlassCard data-bento-card className="col-span-1 flex flex-col justify-between p-6">
+            <Ban className="text-brand size-7" aria-hidden strokeWidth={1.75} />
+            <div>
+              <p className="text-sm font-semibold text-slate-900">Para tutmuyoruz</p>
+              <p className="mt-1 text-sm leading-snug text-slate-500">
+                Ödeme taraflar arasında doğrudan gerçekleşir. Escrow yok.
+              </p>
+            </div>
+          </GlassCard>
+
+          <GlassCard data-bento-card className="col-span-1 flex flex-col justify-between p-6">
+            <ShieldCheck className="text-brand size-7" aria-hidden strokeWidth={1.75} />
+            <div>
+              <p className="text-sm font-semibold text-slate-900">Bağımsız QA</p>
+              <p className="mt-1 text-sm leading-snug text-slate-500">
+                Sözleşmenin tarafı değiliz, sadece kriterlere karşı test ederiz.
+              </p>
+            </div>
+          </GlassCard>
+
+          <GlassCard
+            data-bento-card
+            className="col-span-1 flex flex-col justify-center p-6 sm:col-span-2 lg:col-span-2"
+          >
+            <FileCheck2 className="text-brand mb-3 size-7" aria-hidden strokeWidth={1.75} />
+            <p className="text-sm font-semibold text-slate-900">Zaman damgalı, silinemeyen kayıt</p>
+            <p className="mt-1 max-w-md text-sm leading-snug text-slate-500">
+              Her durum değişikliği kendi satırını yazar. O satır bir daha
+              güncellenmez veya silinmez — anlaşmazlıkta ibraz edilen budur.
+            </p>
+          </GlassCard>
+        </div>
+      </section>
+
+      {/* --- how it works, five steps ------------------------------------- */}
+      <section id="nasil" className="px-6 pb-24 md:pb-32">
+        <div className="mx-auto max-w-6xl">
+          <div className="mb-8 max-w-lg">
+            <p className="text-brand mono mb-2 text-xs tracking-[0.14em]">NASIL ÇALIŞIR</p>
+            <h2 className="font-display text-3xl font-medium tracking-tight text-slate-900 md:text-4xl">
+              Beş adım, tek karar noktası.
+            </h2>
+            <p className="mt-3 text-base leading-relaxed text-slate-500">
+              Her adımın ne yaptığını görmek için üzerine gel.
+            </p>
+          </div>
+          <HorizontalAccordion slices={STEPS} theme="light" />
+        </div>
+      </section>
+
+      {/* --- pricing: the real tiers ---------------------------------------- */}
+      <section id="fiyat" className="px-6 pb-24 md:pb-32">
+        <div className="mx-auto max-w-6xl">
+          <div className="mb-10 text-center">
+            <p className="text-brand mono mb-2 text-xs tracking-[0.14em]">DOĞRULAMA PAKETLERİ</p>
+            <h2 className="font-display text-3xl font-medium tracking-tight text-slate-900 md:text-4xl">
+              Testi kim yapsın, sen seç.
+            </h2>
+          </div>
+
+          <div className="grid gap-5 md:grid-cols-3">
+            {TIERS.map((tier) => {
+              const info = QA_TIER_INFO[tier];
+              const Icon = TIER_ICON[tier];
+              const featured = tier === "TIER2";
+              return (
+                <GlassCard
+                  key={tier}
+                  className={`flex flex-col gap-4 p-6 ${featured ? "border-brand/40 ring-brand/15 ring-2" : ""}`}
+                >
+                  <Icon className="text-brand size-6" aria-hidden strokeWidth={1.75} />
+                  <div>
+                    <p className="text-base font-semibold text-slate-900">{info.label}</p>
+                    <p className="mono mt-1 text-sm text-slate-500">{info.price}</p>
+                  </div>
+                  <p className="text-sm leading-relaxed text-slate-500">{info.hint}</p>
+                  <ul className="mt-1 flex flex-col gap-1.5 border-t border-slate-100 pt-4">
+                    {info.details.map((d) => (
+                      <li key={d} className="flex items-start gap-1.5 text-xs text-slate-500">
+                        <CheckCircle2 className="text-brand mt-0.5 size-3.5 shrink-0" aria-hidden />
+                        {d}
+                      </li>
+                    ))}
+                  </ul>
+                </GlassCard>
+              );
+            })}
           </div>
         </div>
       </section>
 
-      <footer className="border-t border-white/10 px-6 py-12">
-        <div className="mx-auto flex max-w-6xl flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-          <span className="text-base font-semibold tracking-tight text-white">
+      {/* --- close ------------------------------------------------------------ */}
+      <section className="relative overflow-hidden px-6 py-24 text-center md:py-32">
+        <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
+          <div className="from-brand/15 absolute top-0 left-1/2 size-[40rem] -translate-x-1/2 rounded-full bg-gradient-to-br to-transparent blur-3xl" />
+        </div>
+        <div className="relative mx-auto max-w-2xl">
+          <h2
+            className="font-display font-medium tracking-[-0.01em] text-slate-900"
+            style={{ fontSize: "clamp(1.9rem, 4vw, 3rem)", lineHeight: 1.15 }}
+          >
+            Bir sonraki teslimini kanıtla.
+          </h2>
+          <div className="mt-8 flex flex-wrap justify-center gap-3">
+            <Magnetic>
+              <Link
+                href="/register"
+                className="mac-spring bg-brand text-brand-foreground inline-flex items-center gap-2 rounded-xl px-7 py-3.5 text-base font-medium transition-colors hover:opacity-90 active:scale-[0.98]"
+              >
+                Hesap oluştur
+                <ArrowRight className="size-4" aria-hidden />
+              </Link>
+            </Magnetic>
+            <Magnetic>
+              <Link
+                href="/login"
+                className="mac-spring inline-block rounded-xl border border-slate-200 bg-white px-7 py-3.5 text-base font-medium text-slate-700 transition-colors hover:bg-slate-50 active:scale-[0.98]"
+              >
+                Giriş yap
+              </Link>
+            </Magnetic>
+          </div>
+        </div>
+      </section>
+
+      <footer className="relative border-t border-slate-200 px-6 py-10">
+        <div className="mx-auto flex max-w-6xl flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <span className="flex items-center gap-2 text-sm font-semibold tracking-tight text-slate-900">
+            <Mark className="text-brand size-4" />
             {BRAND}
           </span>
-          <div className="flex flex-wrap gap-x-7 gap-y-2 text-sm text-zinc-500">
-            <a href="#nasil" className="hover:text-white">
+          <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-slate-500">
+            <a href="#nasil" className="hover:text-slate-900">
               Nasıl çalışır
             </a>
-            <a href="#durum" className="hover:text-white">
-              Neler hazır
-            </a>
-            <Link href="/nasil-calisir" className="hover:text-white">
+            <Link href="/nasil-calisir" className="hover:text-slate-900">
               Sistem şeması
             </Link>
-            <Link href="/login" className="hover:text-white">
+            <Link href="/login" className="hover:text-slate-900">
               Giriş yap
             </Link>
           </div>
-          <span className="text-sm text-zinc-600">
+          <span className="mono text-xs text-slate-400">
             {new Date().getFullYear()} {BRAND}
           </span>
         </div>
       </footer>
+
+      {/* --- dock: nav, header removed for now -------------------------------- */}
+      <div className="fixed inset-x-0 bottom-6 z-50 hidden justify-center px-4 md:flex">
+        <FloatingDockDesktop
+          className="border border-slate-200 bg-white/80 shadow-lg backdrop-blur-xl"
+          items={DOCK_ITEMS.map(({ title, href, icon: Icon }) => ({
+            title,
+            href,
+            icon: <Icon className="h-full w-full text-slate-600" />,
+          }))}
+        />
+      </div>
     </main>
   );
 }

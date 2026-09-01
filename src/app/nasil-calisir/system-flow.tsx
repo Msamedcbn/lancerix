@@ -9,7 +9,22 @@ import { DEFAULT_STOPAJ_BPS } from "@/lib/tax/stopaj";
 
 const BRAND = "Lancerix";
 
-const img = (seed: string) => `https://picsum.photos/seed/${seed}/1920/1080`;
+/**
+ * Authored textures rather than stock photography.
+ *
+ * These panels used to pull from picsum.photos, which was answering 503 and is
+ * not something to demo on. A drawn texture also says more about the product
+ * than a grayscale desk photo: one is a schematic, the other a stack of records.
+ */
+const TEXTURE = {
+  blueprint:
+    "linear-gradient(rgb(255 255 255 / 0.05) 1px, transparent 1px) 0 0 / 34px 34px," +
+    "linear-gradient(90deg, rgb(255 255 255 / 0.05) 1px, transparent 1px) 0 0 / 34px 34px," +
+    "radial-gradient(120% 90% at 70% 10%, rgb(16 185 129 / 0.16), transparent 62%)",
+  ledger:
+    "repeating-linear-gradient(0deg, rgb(255 255 255 / 0.07) 0 1px, transparent 1px 13px)," +
+    "radial-gradient(100% 80% at 20% 0%, rgb(16 185 129 / 0.13), transparent 60%)",
+} as const;
 
 /**
  * The worked example is computed by the same function the escrow ledger uses,
@@ -517,8 +532,8 @@ export function SystemFlow() {
             className="group pointer-events-none relative z-0 mt-16 ml-auto h-64 w-full max-w-md overflow-hidden rounded-3xl border border-white/10 md:absolute md:-right-6 md:bottom-[-3rem] md:mt-0 md:h-[22rem] md:w-[26rem]"
           >
             <div
-              className="absolute inset-0 bg-cover bg-center opacity-55 mix-blend-luminosity contrast-125"
-              style={{ backgroundImage: `url(${img("blueprint-schematic-desk")})` }}
+              className="absolute inset-0 opacity-90"
+              style={{ background: TEXTURE.blueprint }}
             />
             <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-neutral-950/40 to-transparent" />
           </div>
@@ -704,8 +719,8 @@ export function SystemFlow() {
               className="group relative col-span-2 row-span-2 overflow-hidden rounded-3xl border border-white/10 md:col-span-4"
             >
               <div
-                className="absolute inset-0 bg-cover bg-center opacity-40 mix-blend-luminosity transition-transform duration-700 ease-out group-hover:scale-105"
-                style={{ backgroundImage: `url(${img("ledger-archive-shelf")})` }}
+                className="absolute inset-0 opacity-90 transition-transform duration-700 ease-out group-hover:scale-105"
+                style={{ background: TEXTURE.ledger }}
               />
               <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-neutral-950/75 to-transparent" />
               <div className="relative flex h-full flex-col justify-end p-9 md:p-12">
