@@ -32,6 +32,46 @@ export const profileSchema = z.object({
 
 export type ProfileInput = z.infer<typeof profileSchema>;
 
+/**
+ * The public half of a profile: what a counterparty reads before deciding to
+ * work with someone. Separate from profileSchema because these fields have a
+ * different audience and a different risk -- getting an IBAN wrong stops a
+ * payout, getting a bio wrong is just a bio.
+ */
+export const publicProfileSchema = z.object({
+  headline: optionalText
+    .nullable()
+    .refine(
+      (v) => v === null || (v.length >= 2 && v.length <= 120),
+      "Başlık 2-120 karakter arasında olmalı.",
+    ),
+  bio: optionalText
+    .nullable()
+    .refine((v) => v === null || v.length <= 2000, "Bu tanıtım çok uzun."),
+  location: optionalText
+    .nullable()
+    .refine((v) => v === null || v.length <= 120, "Konum çok uzun."),
+  websiteUrl: optionalText
+    .nullable()
+    .refine(
+      (v) => v === null || /^https?:\/\/\S+$/.test(v),
+      "Adres http:// veya https:// ile başlamalı.",
+    ),
+  // Comma-separated in the form, an array in the column. Capped so the tag
+  // list stays a summary rather than a keyword dump.
+  skills: z
+    .string()
+    .transform((v) =>
+      v
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean)
+        .slice(0, 12),
+    ),
+});
+
+export type PublicProfileInput = z.infer<typeof publicProfileSchema>;
+
 /** What a freelancer still has to supply before money can be sent to them. */
 export function payoutBlockers(profile: {
   tckn: string | null;

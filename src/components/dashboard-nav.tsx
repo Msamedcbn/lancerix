@@ -13,6 +13,7 @@ import {
   Receipt,
   ScrollText,
   Settings,
+  UserRound,
   Users,
   Wallet,
 } from "lucide-react";
@@ -40,7 +41,8 @@ export type NavIcon =
   | "users"
   | "contact"
   | "alert-triangle"
-  | "scroll";
+  | "scroll"
+  | "user";
 
 export type NavItem = { href: Route; label: string; icon: NavIcon };
 
@@ -58,6 +60,7 @@ const ICONS: Record<NavIcon, typeof Briefcase> = {
   contact: Contact,
   "alert-triangle": AlertTriangle,
   scroll: ScrollText,
+  user: UserRound,
 };
 
 /**

@@ -658,6 +658,7 @@ export default async function ContractPage({
             productType={contract.product_type} 
             criteriaCount={contract.criteria.length} 
             side={side}
+            messages={messages}
           />
 
           {isQaOnly ? (
@@ -679,8 +680,14 @@ export default async function ContractPage({
             ))
           )}
 
+          {/* Phase-scoped notes live on their phase in the flowchart, so the
+              general thread shows only what was said about the contract as a
+              whole -- otherwise every phase note would appear twice. */}
           <Panel title="Mesajlar">
-            <MessageThread contractId={contract.id} messages={messages} />
+            <MessageThread
+              contractId={contract.id}
+              messages={messages.filter((m) => !m.phase_id)}
+            />
           </Panel>
         </div>
       </div>

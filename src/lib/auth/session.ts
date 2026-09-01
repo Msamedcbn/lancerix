@@ -60,6 +60,38 @@ export async function requireSession(): Promise<Session> {
 }
 
 /**
+ * The session if there is one, null if there is not. Never redirects.
+ *
+ * For pages that are public but should not pretend a signed-in visitor is a
+ * stranger -- the public profile page offering "Giriş Yap" to someone who is
+ * already signed in is exactly the seam this exists to close.
+ */
+export async function optionalSession(): Promise<Session | null> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) return null;
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role, full_name, email, public_id")
+    .eq("id", user.id)
+    .single();
+
+  if (!profile) return null;
+
+  return {
+    userId: user.id,
+    email: profile.email,
+    fullName: profile.full_name,
+    role: profile.role,
+    publicId: profile.public_id,
+  };
+}
+
+/**
  * Session plus a role check. Not a security boundary -- RLS is, and it is
  * enforced in the database for every query. This keeps someone from landing on
  * a page built for a role they do not have, which would otherwise render as a

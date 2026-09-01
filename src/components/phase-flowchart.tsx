@@ -1,5 +1,7 @@
 import { PhaseNotesForm, PhaseNotesReadOnly } from "@/components/forms/phase-notes-form";
 import { TogglePhaseForm } from "@/components/forms/toggle-phase-form";
+import { PhaseThread } from "@/components/phase-thread";
+import type { MessageRow } from "@/lib/data/messages";
 import type { Tables } from "@/lib/supabase/database.types";
 
 type Phase = Tables<"workflow_phases">;
@@ -12,19 +14,32 @@ type Phase = Tables<"workflow_phases">;
  * The rail is the spine: it fills to the last completed phase, so progress
  * is readable at a glance without counting checkmarks.
  *
- * Layout is a vertical rail on mobile and a horizontal one from `md` up.
- * Horizontal-on-mobile would either overflow or shrink each node past
- * legibility, and a plan you cannot read is not a plan.
+ * The rail runs vertically at every width. A horizontal flow reads well when
+ * a node is just a label, but these nodes carry a description, a notes field
+ * and a per-phase thread: at three columns the thread wrapped to one word per
+ * line. Top-to-bottom still says "this comes after that", and it gives each
+ * phase the full width its controls need.
  */
 export function PhaseFlowchart({
   contractId,
   phases,
   side,
+  messages = [],
 }: Readonly<{
   contractId: string;
   phases: Phase[];
   side?: "freelancer" | "client";
+  messages?: MessageRow[];
 }>) {
+  // One pass to bucket messages by phase, rather than filtering inside the
+  // render loop once per phase.
+  const byPhase = new Map<string, MessageRow[]>();
+  for (const m of messages) {
+    if (!m.phase_id) continue;
+    const bucket = byPhase.get(m.phase_id);
+    if (bucket) bucket.push(m);
+    else byPhase.set(m.phase_id, [m]);
+  }
   const ordered = [...phases].sort((a, b) => a.sequence_no - b.sequence_no);
   const doneCount = ordered.filter((p) => p.is_completed).length;
   const totalDays = ordered.reduce((sum, p) => sum + (p.estimated_days ?? 0), 0);
@@ -64,21 +79,17 @@ export function PhaseFlowchart({
         />
       </div>
 
-      <ol className="flex flex-col gap-0 md:flex-row md:items-stretch md:gap-0">
+      <ol className="flex flex-col">
         {ordered.map((phase, index) => {
           const isDone = phase.is_completed;
           const isCurrent = index === currentIndex;
           const isLast = index === ordered.length - 1;
 
           return (
-            <li
-              key={phase.id}
-              className="relative flex flex-1 gap-4 pb-6 md:flex-col md:gap-0 md:pb-0"
-            >
-              {/* Node + connector. On mobile the connector is a vertical line
-                  down the left gutter; from md it is a horizontal line on the
-                  node row. */}
-              <div className="flex flex-col items-center md:w-full md:flex-row">
+            <li key={phase.id} className="relative flex gap-4">
+              {/* The rail: node, then a connector filling the rest of the row
+                  so consecutive phases join into one continuous line. */}
+              <div className="flex flex-col items-center">
                 <span
                   className={`relative z-10 flex size-8 shrink-0 items-center justify-center rounded-full border-2 text-xs font-bold transition-colors ${
                     isDone
@@ -94,16 +105,14 @@ export function PhaseFlowchart({
                 {!isLast ? (
                   <span
                     aria-hidden
-                    className={`w-0.5 flex-1 md:h-0.5 md:w-auto ${
+                    className={`w-0.5 flex-1 ${
                       isDone ? "bg-brand" : "bg-zinc-200 dark:bg-zinc-700"
                     }`}
                   />
-                ) : (
-                  <span aria-hidden className="w-0.5 flex-1 md:hidden" />
-                )}
+                ) : null}
               </div>
 
-              <div className="min-w-0 flex-1 pb-2 md:pt-4 md:pr-6">
+              <div className={`min-w-0 flex-1 ${isLast ? "" : "pb-8"}`}>
                 <p
                   className={`text-sm font-semibold ${
                     isDone || isCurrent
@@ -132,7 +141,7 @@ export function PhaseFlowchart({
                   </span>
                 ) : null}
 
-                <div className="mt-3 flex flex-col gap-2">
+                <div className="mt-3 flex max-w-2xl flex-col gap-2">
                   {side === "freelancer" ? (
                     <>
                       <PhaseNotesForm
@@ -149,6 +158,12 @@ export function PhaseFlowchart({
                   ) : (
                     <PhaseNotesReadOnly notes={phase.notes} />
                   )}
+
+                  <PhaseThread
+                    contractId={contractId}
+                    phaseId={phase.id}
+                    messages={byPhase.get(phase.id) ?? []}
+                  />
                 </div>
               </div>
             </li>

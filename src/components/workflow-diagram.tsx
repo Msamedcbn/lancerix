@@ -4,12 +4,14 @@ import type { ContractRow } from "@/lib/data/contracts";
 import { StatusBadge } from "@/components/status-badge";
 import { Money } from "@/components/money";
 import { PhaseFlowchart } from "@/components/phase-flowchart";
+import type { MessageRow } from "@/lib/data/messages";
 
 type WorkflowDiagramProps = {
   contract: ContractRow;
   productType: string;
   criteriaCount?: number;
   side?: "freelancer" | "client";
+  messages?: MessageRow[];
 };
 
 export function WorkflowDiagram({
@@ -17,6 +19,7 @@ export function WorkflowDiagram({
   productType,
   criteriaCount = 0,
   side,
+  messages = [],
 }: Readonly<WorkflowDiagramProps>) {
   if (productType === "QA_ONLY") {
     const phases = contract.phases ?? [];
@@ -24,7 +27,12 @@ export function WorkflowDiagram({
     if (phases.length > 0) {
       // A real plan with named phases deserves a flow, not a card grid.
       return (
-        <PhaseFlowchart contractId={contract.id} phases={phases} side={side} />
+        <PhaseFlowchart
+          contractId={contract.id}
+          phases={phases}
+          side={side}
+          messages={messages}
+        />
       );
     }
 

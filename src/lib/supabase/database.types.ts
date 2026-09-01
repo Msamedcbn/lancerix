@@ -802,37 +802,52 @@ export type Database = {
       }
       profiles: {
         Row: {
+          bio: string | null
           created_at: string
           email: string
           full_name: string
+          headline: string | null
           iban: string | null
           id: string
+          location: string | null
           public_id: string
           role: Database["public"]["Enums"]["user_role"]
+          skills: string[]
           tckn: string | null
           updated_at: string
+          website_url: string | null
         }
         Insert: {
+          bio?: string | null
           created_at?: string
           email: string
           full_name: string
+          headline?: string | null
           iban?: string | null
           id: string
+          location?: string | null
           public_id: string
           role?: Database["public"]["Enums"]["user_role"]
+          skills?: string[]
           tckn?: string | null
           updated_at?: string
+          website_url?: string | null
         }
         Update: {
+          bio?: string | null
           created_at?: string
           email?: string
           full_name?: string
+          headline?: string | null
           iban?: string | null
           id?: string
+          location?: string | null
           public_id?: string
           role?: Database["public"]["Enums"]["user_role"]
+          skills?: string[]
           tckn?: string | null
           updated_at?: string
+          website_url?: string | null
         }
         Relationships: []
       }
@@ -1193,6 +1208,22 @@ export type Database = {
         }[]
       }
       process_expired_deliveries: { Args: never; Returns: number }
+      public_profile: {
+        Args: { p_public_id: string }
+        Returns: {
+          bio: string
+          companies: Json
+          completed_contracts: number
+          created_at: string
+          full_name: string
+          headline: string
+          location: string
+          public_id: string
+          role: Database["public"]["Enums"]["user_role"]
+          skills: string[]
+          website_url: string
+        }[]
+      }
       reject_contract: {
         Args: { p_contract_id: string; p_reason: string }
         Returns: {
