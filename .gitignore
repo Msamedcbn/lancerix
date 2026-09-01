@@ -20,3 +20,10 @@ next-env.d.ts
 
 supabase/.temp/
 supabase/.branches/
+
+# Vendored agent tooling, fetched per machine rather than committed: ~7.5MB of
+# third-party skill files that are not this project's source.
+.agents/
+.claude/skills/
+skills-lock.json
+.gstack/
