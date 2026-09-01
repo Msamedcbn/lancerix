@@ -379,12 +379,20 @@ export default function HomePage() {
             {TIERS.map((tier) => {
               const info = QA_TIER_INFO[tier];
               const Icon = TIER_ICON[tier];
-              const featured = tier === "TIER2";
+              // Only ever feature an orderable tier -- a highlighted ring
+              // around something the app itself refuses to sell reads as a
+              // broken promise, not a recommendation.
+              const featured = tier === "TIER2" && info.available;
               return (
                 <GlassCard
                   key={tier}
-                  className={`flex flex-col gap-4 p-6 ${featured ? "border-brand/40 ring-brand/15 ring-2" : ""}`}
+                  className={`relative flex flex-col gap-4 p-6 ${featured ? "border-brand/40 ring-brand/15 ring-2" : ""} ${!info.available ? "opacity-60" : ""}`}
                 >
+                  {!info.available ? (
+                    <span className="absolute top-4 right-4 rounded-full bg-slate-100 px-2 py-0.5 text-[0.65rem] font-medium tracking-wide text-slate-500 uppercase">
+                      Yakında
+                    </span>
+                  ) : null}
                   <Icon className="text-brand size-6" aria-hidden strokeWidth={1.75} />
                   <div>
                     <p className="text-base font-semibold text-slate-900">{info.label}</p>
