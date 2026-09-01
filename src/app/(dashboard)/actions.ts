@@ -5,25 +5,32 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { requireRole, requireSession } from "@/lib/auth/session";
-import { assertMilestoneGross } from "@/lib/escrow/money";
-import type { EscrowStatus } from "@/lib/data/contracts";
+import {
+  assertMilestoneGross,
+  DEFAULT_PLATFORM_FEE_BPS,
+} from "@/lib/escrow/money";
+import type {
+  AcceptanceCriterion,
+  Contract,
+  EscrowStatus,
+} from "@/lib/data/contracts";
 import { hashDocument, renderContractDocument } from "@/lib/contracts/document";
 import { getContract } from "@/lib/data/contracts";
-import { notifyDelivery, notifySignatureRequested } from "@/lib/notify/email";
+import { DEFAULT_STOPAJ_BPS } from "@/lib/tax/stopaj";
+import { FAIL, firstIssue, OK, type FormState } from "@/lib/forms";
 import { createClient } from "@/lib/supabase/server";
+import {
+  toCheckConfig,
+  type CriterionDraft,
+} from "@/lib/validations/acceptance-criteria";
 import { companySchema } from "@/lib/validations/company";
-import { contractSchema } from "@/lib/validations/contract";
+import {
+  contractSchema,
+  DEFAULT_OBJECTION_WINDOW_DAYS,
+} from "@/lib/validations/contract";
 import { profileSchema } from "@/lib/validations/profile";
 
-export type FormState = { error: string | null; ok?: string };
-
-const OK = (message: string): FormState => ({ error: null, ok: message });
-const FAIL = (error: string): FormState => ({ error });
-
-/** First issue only: a form shows one message at a time. */
-function firstIssue(error: { issues: Array<{ message: string }> }): string {
-  return error.issues[0]?.message ?? "Check the form and try again.";
-}
+export type { FormState };
 
 // ---------------------------------------------------------------------------
 // Settings
@@ -52,8 +59,6 @@ export async function saveProfile(
     })
     .eq("id", session.userId);
 
-  // A duplicate TCKN is the one failure a user can cause and fix, so it is
-  // named rather than surfaced as a database error string.
   if (error) {
     return FAIL(
       error.code === "23505"
@@ -94,7 +99,10 @@ export async function saveCompany(
   const { error } =
     typeof companyId === "string" && companyId !== ""
       ? await supabase.from("companies").update(values).eq("id", companyId)
-      : await supabase.from("companies").insert(values);
+      : await supabase.from("companies").insert({
+          ...values,
+          public_id: Math.random().toString(36).slice(2, 10).toUpperCase(),
+        });
 
   if (error) return FAIL(error.message);
 
@@ -103,23 +111,22 @@ export async function saveCompany(
 }
 
 // ---------------------------------------------------------------------------
-// Contracts
+// Counterparty lookup — by public ID instead of email
 // ---------------------------------------------------------------------------
 
 export type CounterpartyResult = {
   error: string | null;
-  client?: {
+  resolved?: {
+    publicId: string;
     id: string;
     fullName: string;
-    companies: Array<{ id: string; legal_name: string; vkn: string }>;
+    companies: Array<{ id: string; legal_name: string; vkn: string | null; public_id: string }>;
   };
 };
 
 /**
- * Resolves the client side of a contract from an exact email address. The
- * freelancer cannot read profiles or companies directly -- RLS forbids it --
- * so this goes through find_counterparty(), which returns only what has to
- * appear on the contract.
+ * Finds a contract counterparty by their Lancerix public ID.
+ * Replaces the old email-based lookup.
  */
 export async function findCounterparty(
   _prev: CounterpartyResult,
@@ -127,39 +134,114 @@ export async function findCounterparty(
 ): Promise<CounterpartyResult> {
   await requireRole("FREELANCER");
 
-  const email = String(formData.get("clientEmail") ?? "").trim();
-  if (!email) return { error: "Enter the client's email address." };
+  const publicId = String(formData.get("clientPublicId") ?? "").trim();
+  if (!publicId) return { error: "Müşterinin Lancerix ID'sini gir." };
 
   const supabase = await createClient();
   const { data, error } = await supabase
-    .rpc("find_counterparty", { p_email: email })
+    .rpc("find_by_public_id", { p_public_id: publicId })
     .maybeSingle();
 
   if (error) return { error: error.message };
+
   if (!data) {
-    return {
-      error:
-        "No account uses that address yet. Ask the client to register first, then try again.",
-    };
+    return { error: "Bu ID ile kayıtlı kullanıcı bulunamadı." };
   }
+
   if (data.role !== "CLIENT") {
-    return { error: "That account is not registered as a client." };
+    return { error: "Bu hesap işveren (firma) olarak kayıtlı değil." };
   }
 
   const companies = Array.isArray(data.companies)
-    ? (data.companies as Array<{ id: string; legal_name: string; vkn: string }>)
+    ? (data.companies as Array<{ id: string; legal_name: string; vkn: string | null; public_id: string }>)
     : [];
-
-  if (companies.length === 0) {
-    return {
-      error:
-        "That client has not added a company yet. A contract has to be billed to one.",
-    };
-  }
 
   return {
     error: null,
-    client: { id: data.id, fullName: data.full_name, companies },
+    resolved: {
+      publicId: data.public_id,
+      id: data.id,
+      fullName: data.full_name,
+      companies,
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Contracts
+// ---------------------------------------------------------------------------
+
+export type PreviewResult = { error: string | null; document?: string };
+
+export async function previewContract(
+  _prev: PreviewResult,
+  formData: FormData,
+): Promise<PreviewResult> {
+  const session = await requireRole("FREELANCER");
+
+  const productType =
+    formData.get("productType") === "QA_PLUS_ESCROW" ? "QA_PLUS_ESCROW" : "QA_ONLY";
+
+  const shared = {
+    productType,
+    title: formData.get("title"),
+    scopeOfWork: formData.get("scopeOfWork"),
+    clientPublicId: formData.get("clientPublicId"),
+    companyId: formData.get("companyId"),
+    plannedStartDate: formData.get("plannedStartDate"),
+  };
+
+  const parsed =
+    productType === "QA_ONLY"
+      ? contractSchema.safeParse({
+          ...shared,
+          criteria: readCriteria(formData),
+          phases: readPhases(formData),
+        })
+      : contractSchema.safeParse({ ...shared, milestones: readMilestones(formData) });
+  if (!parsed.success) return { error: firstIssue(parsed.error) };
+
+  const supabase = await createClient();
+  const { data: company } = parsed.data.companyId
+    ? await supabase
+        .from("companies")
+        .select("legal_name, vkn, tax_office, address")
+        .eq("id", parsed.data.companyId)
+        .maybeSingle()
+    : { data: null };
+
+  const draftContract = {
+    reference: "(kaydedildiğinde atanır)",
+    title: parsed.data.title,
+    scope_of_work: parsed.data.scopeOfWork,
+    product_type: parsed.data.productType,
+    objection_window_days: DEFAULT_OBJECTION_WINDOW_DAYS,
+    platform_fee_bps: DEFAULT_PLATFORM_FEE_BPS,
+    stopaj_bps: DEFAULT_STOPAJ_BPS,
+  } as Contract;
+
+  const criteria =
+    parsed.data.productType === "QA_ONLY"
+      ? parsed.data.criteria.map((c, index) => ({
+          sequence_no: index + 1,
+          description: c.description,
+          check_type: "MANUAL",
+          check_config: toCheckConfig(c),
+        }))
+      : [];
+
+  return {
+    error: null,
+    document: renderContractDocument(
+      draftContract,
+      [],
+      {
+        freelancerName: session.fullName,
+        clientName: parsed.data.clientPublicId,
+        company,
+      },
+      criteria as AcceptanceCriterion[],
+    ),
   };
 }
 
@@ -169,27 +251,42 @@ export async function createContract(
 ): Promise<FormState> {
   const session = await requireRole("FREELANCER");
 
-  const milestones = readMilestones(formData);
-  const parsed = contractSchema.safeParse({
+  const productType = formData.get("productType") === "QA_PLUS_ESCROW"
+    ? "QA_PLUS_ESCROW"
+    : "QA_ONLY";
+
+  const shared = {
+    productType,
     title: formData.get("title"),
     scopeOfWork: formData.get("scopeOfWork"),
-    clientEmail: formData.get("clientEmail"),
+    clientPublicId: formData.get("clientPublicId"),
     companyId: formData.get("companyId"),
-    milestones,
-  });
+    plannedStartDate: formData.get("plannedStartDate"),
+  };
+
+  const parsed =
+    productType === "QA_ONLY"
+      ? contractSchema.safeParse({
+          ...shared,
+          criteria: readCriteria(formData),
+          phases: readPhases(formData),
+        })
+      : contractSchema.safeParse({ ...shared, milestones: readMilestones(formData) });
   if (!parsed.success) return FAIL(firstIssue(parsed.error));
 
   const supabase = await createClient();
+
+  // Look up the client by their public ID
   const { data: client, error: lookupError } = await supabase
-    .rpc("find_counterparty", { p_email: parsed.data.clientEmail })
+    .rpc("find_by_public_id", { p_public_id: parsed.data.clientPublicId })
     .maybeSingle();
 
   if (lookupError) return FAIL(lookupError.message);
-  if (!client) return FAIL("No account uses that email address.");
-  if (client.role !== "CLIENT") return FAIL("That account is not a client.");
+  if (!client) return FAIL("Bu ID ile kayıtlı kullanıcı bulunamadı.");
+  if (client.role !== "CLIENT") {
+    return FAIL("Bu hesap işveren olarak kayıtlı değil.");
+  }
 
-  // The reference is what both parties quote to each other, so it is short and
-  // readable rather than a UUID.
   const reference = `LX-${Date.now().toString(36).toUpperCase()}`;
 
   const { data: contract, error } = await supabase
@@ -199,18 +296,49 @@ export async function createContract(
       title: parsed.data.title,
       scope_of_work: parsed.data.scopeOfWork,
       client_id: client.id,
+      client_email: "", // no longer used for lookup, kept for schema compat
       freelancer_id: session.userId,
       company_id: parsed.data.companyId,
+      product_type: parsed.data.productType,
+      planned_start_date: parsed.data.plannedStartDate ?? null,
     })
     .select("id")
     .single();
 
   if (error) return FAIL(error.message);
 
-  // The rates are read back from the row the database just wrote rather than
-  // assumed from the defaults, and copied onto every milestone. That is what
-  // freezes the terms: a later change to the platform fee cannot reach a
-  // contract that is already signed.
+  if (parsed.data.productType === "QA_ONLY") {
+    // Insert criteria
+    const { error: criteriaError } = await supabase.from("acceptance_criteria").insert(
+      parsed.data.criteria.map((c, index) => ({
+        contract_id: contract.id,
+        sequence_no: index + 1,
+        description: c.description,
+        check_type: "MANUAL",
+        check_config: toCheckConfig(c),
+      })),
+    );
+    if (criteriaError) return FAIL(criteriaError.message);
+
+    // Insert workflow phases if any
+    if (parsed.data.phases && parsed.data.phases.length > 0) {
+      const { error: phasesError } = await supabase.from("workflow_phases").insert(
+        parsed.data.phases.map((p, index) => ({
+          contract_id: contract.id,
+          sequence_no: index + 1,
+          title: p.title,
+          description: p.description || null,
+          estimated_days: p.estimatedDays,
+        })),
+      );
+      if (phasesError) return FAIL(phasesError.message);
+    }
+
+    revalidatePath("/freelancer");
+    redirect(`/contracts/${contract.id}`);
+  }
+
+  // QA_PLUS_ESCROW path (Faz 2)
   const { data: terms, error: termsError } = await supabase
     .from("contracts")
     .select("platform_fee_bps, stopaj_bps")
@@ -260,15 +388,147 @@ function readMilestones(formData: FormData) {
     .filter((row) => row.title !== "" || row.amount !== "");
 }
 
+/** Free-text criteria: only description field. */
+function readCriteria(formData: FormData): CriterionDraft[] {
+  const byIndex = new Map<number, { description: string }>();
+
+  for (const [key, value] of formData.entries()) {
+    const match = /^criteria\[(\d+)]\[description]$/.exec(key);
+    if (!match) continue;
+
+    const index = Number(match[1]);
+    byIndex.set(index, { description: String(value) });
+  }
+
+  return [...byIndex.entries()]
+    .sort(([a], [b]) => a - b)
+    .map(([, row]) => row)
+    .filter((row) => row.description.trim() !== "");
+}
+
+/** Workflow phases: title, description, estimatedDays */
+function readPhases(formData: FormData) {
+  const byIndex = new Map<number, { title: string; description: string; estimatedDays: string }>();
+
+  for (const [key, value] of formData.entries()) {
+    const match = /^phases\[(\d+)]\[(title|description|estimatedDays)]$/.exec(key);
+    if (!match) continue;
+
+    const index = Number(match[1]);
+    const field = match[2] as "title" | "description" | "estimatedDays";
+    const row = byIndex.get(index) ?? { title: "", description: "", estimatedDays: "" };
+    row[field] = String(value);
+    byIndex.set(index, row);
+  }
+
+  return [...byIndex.entries()]
+    .sort(([a], [b]) => a - b)
+    .map(([, row]) => row)
+    .filter((row) => row.title.trim() !== "");
+}
+
+// ---------------------------------------------------------------------------
+// Contract lifecycle: reject, request revision, confirm start date
+// ---------------------------------------------------------------------------
+
+export async function rejectContract(
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  await requireSession();
+
+  const contractId = String(formData.get("contractId") ?? "");
+  const reason = String(formData.get("reason") ?? "").trim();
+
+  if (!contractId) return FAIL("Sözleşme bulunamadı.");
+  if (reason.length < 5) return FAIL("Red gerekçesini en az 5 karakter olarak yaz.");
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("reject_contract", {
+    p_contract_id: contractId,
+    p_reason: reason,
+  });
+
+  if (error) return FAIL(error.message);
+
+  revalidatePath(`/contracts/${contractId}`);
+  return OK("Sözleşme reddedildi.");
+}
+
+export async function requestRevision(
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  await requireSession();
+
+  const contractId = String(formData.get("contractId") ?? "");
+  const note = String(formData.get("note") ?? "").trim();
+
+  if (!contractId) return FAIL("Sözleşme bulunamadı.");
+  if (note.length < 5) return FAIL("Revizyon notunu en az 5 karakter olarak yaz.");
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("request_revision", {
+    p_contract_id: contractId,
+    p_note: note,
+  });
+
+  if (error) return FAIL(error.message);
+
+  revalidatePath(`/contracts/${contractId}`);
+  return OK("Revizyon talebi gönderildi.");
+}
+
+export async function confirmStartDate(
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  await requireSession();
+
+  const contractId = String(formData.get("contractId") ?? "");
+  if (!contractId) return FAIL("Sözleşme bulunamadı.");
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("confirm_start_date", {
+    p_contract_id: contractId,
+  });
+
+  if (error) return FAIL(error.message);
+
+  revalidatePath(`/contracts/${contractId}`);
+  return OK("Başlangıç tarihi onaylandı.");
+}
+
+/**
+ * The freelancer's answer to a revision request: send it back for another
+ * look. Closes the REVISION_REQUESTED dead end -- resubmit_contract() moves
+ * the contract to PENDING_REVIEW, which sign_contract() also accepts, so the
+ * client can sign directly from there without a second resubmit step.
+ */
+export async function resubmitContract(
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  await requireSession();
+
+  const contractId = String(formData.get("contractId") ?? "");
+  if (!contractId) return FAIL("Sözleşme bulunamadı.");
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("resubmit_contract", {
+    p_contract_id: contractId,
+  });
+
+  if (error) return FAIL(error.message);
+
+  revalidatePath(`/contracts/${contractId}`);
+  return OK("Sözleşme yeniden gönderildi. Karşı taraf tekrar inceleyecek.");
+}
+
 // ---------------------------------------------------------------------------
 // Milestone transitions
 // ---------------------------------------------------------------------------
 
-/**
- * Every status change goes through transition_milestone(), which writes the
- * ledger row in the same transaction. Nothing here updates a status directly --
- * a trigger would reject it if it tried.
- */
 export async function transitionMilestone(
   _prev: FormState,
   formData: FormData,
@@ -277,8 +537,6 @@ export async function transitionMilestone(
 
   const milestoneId = String(formData.get("milestoneId") ?? "");
   const to = String(formData.get("toStatus") ?? "") as EscrowStatus;
-  // The RPC takes an optional reason; an empty box means "no reason given",
-  // which is undefined rather than a null the database would have to store.
   const reason = String(formData.get("reason") ?? "").trim() || undefined;
 
   if (!milestoneId || !to) return FAIL("Missing milestone or target status.");
@@ -317,8 +575,6 @@ export async function raiseDispute(
   });
   if (disputeError) return FAIL(disputeError.message);
 
-  // The dispute row is the record; the milestone still has to move, and only
-  // transition_milestone() may move it.
   const { error } = await supabase.rpc("transition_milestone", {
     p_milestone_id: milestoneId,
     p_to_status: "DISPUTED",
@@ -334,12 +590,6 @@ export async function raiseDispute(
 // Signing
 // ---------------------------------------------------------------------------
 
-/**
- * The request's origin, for the signature record. Vercel sets
- * x-forwarded-for; the fallback is a documented placeholder rather than a
- * guess, because ip_address is not nullable and a wrong address would be worse
- * than an obviously absent one.
- */
 async function requestOrigin(): Promise<{ ip: string; userAgent: string }> {
   const h = await headers();
   const forwarded = h.get("x-forwarded-for")?.split(",")[0]?.trim();
@@ -360,20 +610,22 @@ export async function signContract(
   const contract = await getContract(contractId, session.userId);
   if (!contract) return FAIL("Contract not found.");
 
-  // The hash is taken from the text the server renders right now, which is the
-  // text the page showed. If the terms change afterwards, this stored hash no
-  // longer matches and the mismatch is visible on the record.
-  const document = renderContractDocument(contract, contract.milestones, {
-    freelancerName:
-      contract.freelancer_id === session.userId
-        ? session.fullName
-        : contract.counterpartyName,
-    clientName:
-      contract.client_id === session.userId
-        ? session.fullName
-        : contract.counterpartyName,
-    company: contract.company,
-  });
+  const document = renderContractDocument(
+    contract,
+    contract.milestones,
+    {
+      freelancerName:
+        contract.freelancer_id === session.userId
+          ? session.fullName
+          : contract.counterpartyName,
+      clientName:
+        contract.client_id === session.userId
+          ? session.fullName
+          : contract.counterpartyName,
+      company: contract.company,
+    },
+    contract.criteria,
+  );
 
   const { ip, userAgent } = await requestOrigin();
   const supabase = await createClient();
@@ -387,67 +639,29 @@ export async function signContract(
 
   if (error) return FAIL(error.message);
 
-  const otherParty =
-    contract.freelancer_id === session.userId
-      ? contract.client_id
-      : contract.freelancer_id;
-
-  const sent = await notifySignatureRequested({
-    toUserId: otherParty,
-    contractId,
-    contractTitle: contract.title,
-    signerName: session.fullName,
-  });
-
   revalidatePath(`/contracts/${contractId}`);
-
-  return sent.ok
-    ? OK("Signed. The other party has been notified.")
-    : OK(`Signed, but the other party could not be emailed: ${sent.reason}`);
+  return OK("İmzalandı.");
 }
 
 /**
- * Marking a delivery is the one transition that starts a clock, so it is not
- * folded into transitionMilestone(): the client has to be told, and the message
- * has to carry the deadline the database just wrote.
+ * Marking a delivery is the one transition that starts a clock.
  */
 export async function submitDelivery(
   _prev: FormState,
   formData: FormData,
 ): Promise<FormState> {
-  const session = await requireRole("FREELANCER");
+  await requireRole("FREELANCER");
   const milestoneId = String(formData.get("milestoneId") ?? "");
   if (!milestoneId) return FAIL("Missing milestone.");
 
   const supabase = await createClient();
-  // The function returns the updated row, so the deadline it just wrote is read
-  // from the same call rather than fetched again and possibly raced.
-  const { data: milestone, error } = await supabase.rpc("transition_milestone", {
+  const { error } = await supabase.rpc("transition_milestone", {
     p_milestone_id: milestoneId,
     p_to_status: "SUBMITTED",
   });
 
   if (error) return FAIL(error.message);
-  if (!milestone) return FAIL("The milestone did not come back from the transition.");
-
-  const contract = await getContract(milestone.contract_id, session.userId);
-  if (!contract) return OK("Delivered.");
-
-  const sent = await notifyDelivery({
-    toUserId: contract.client_id,
-    contractId: contract.id,
-    milestoneTitle: milestone.title,
-    windowDays: contract.objection_window_days,
-    deadline: (milestone.auto_accept_at ?? "").slice(0, 10),
-  });
 
   revalidatePath("/", "layout");
-
-  // An unnotified clock is not a fair clock, so a failure to send is stated
-  // rather than swallowed: the freelancer needs to know to chase it by hand.
-  return sent.ok
-    ? OK("Delivered. The client has been notified and the objection window has started.")
-    : OK(
-        `Delivered and the window has started, but the client could not be emailed: ${sent.reason}`,
-      );
+  return OK("Teslim edildi.");
 }

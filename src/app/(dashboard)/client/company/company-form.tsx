@@ -11,9 +11,9 @@ const INITIAL: FormState = { error: null };
 export type CompanyValues = {
   id: string;
   legal_name: string;
-  vkn: string;
-  tax_office: string;
-  address: string;
+  vkn: string | null;
+  tax_office: string | null;
+  address: string | null;
 } | null;
 
 export function CompanyForm({ company }: Readonly<{ company: CompanyValues }>) {
@@ -35,7 +35,7 @@ export function CompanyForm({ company }: Readonly<{ company: CompanyValues }>) {
       <Field
         label="VKN"
         htmlFor="vkn"
-        hint="On hane. Kontrol algoritması hem burada hem veritabanında doğrulanır."
+        hint="On hane. Fatura kesilmeye başlanmadan önce gerekir, QA testi için şart değil. Kontrol algoritması hem burada hem veritabanında doğrulanır."
       >
         <TextInput
           id="vkn"
@@ -43,29 +43,30 @@ export function CompanyForm({ company }: Readonly<{ company: CompanyValues }>) {
           defaultValue={company?.vkn ?? ""}
           inputMode="numeric"
           maxLength={10}
-          required
         />
       </Field>
 
-      <Field label="Vergi dairesi" htmlFor="taxOffice">
+      <Field
+        label="Vergi dairesi"
+        htmlFor="taxOffice"
+        hint="Fatura kesilmeye başlanmadan önce gerekir."
+      >
         <TextInput
           id="taxOffice"
           name="taxOffice"
           defaultValue={company?.tax_office ?? ""}
-          required
         />
       </Field>
 
       <Field
         label="Fatura adresi"
         htmlFor="address"
-        hint="Faturada basılacağı şekliyle, açık adres."
+        hint="Faturada basılacağı şekliyle, açık adres. Fatura kesilmeye başlanmadan önce gerekir."
       >
         <TextInput
           id="address"
           name="address"
           defaultValue={company?.address ?? ""}
-          required
         />
       </Field>
 

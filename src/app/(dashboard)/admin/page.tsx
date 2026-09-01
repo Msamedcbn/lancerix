@@ -1,67 +1,52 @@
 import Link from "next/link";
 
-import { Money } from "@/components/money";
 import { EmptyState, PageHeading, Row, Rows } from "@/components/page-shell";
-import { StatusBadge } from "@/components/status-badge";
 import { requireRole } from "@/lib/auth/session";
-import { listDisputes } from "@/lib/data/contracts";
+import { listRejectedDeliveries } from "@/lib/data/admin-qa";
 
-export default async function AdminDisputesPage() {
+export default async function AdminHomePage() {
   await requireRole("ADMIN");
-  const disputes = await listDisputes();
+  const rejected = await listRejectedDeliveries();
 
   return (
     <>
       <PageHeading
-        title="İtirazlar"
-        subtitle="Taraflardan birinin süreci durdurduğu aşamalar"
+        title="İtiraz edilen teslimler"
+        subtitle="Faz 1'de bir itiraz, admin arabuluculuğu değil -- müşterinin gerekçeli reddi. Freelancer yeniden teslim eder, süreç oradan devam eder."
       />
 
-      {disputes.length === 0 ? (
+      {rejected.length === 0 ? (
         <EmptyState
           title="Açık itiraz yok"
-          description="İtiraz edilmiş bir aşama yalnızca serbest bırakma veya iptalle sonuçlanabilir ve yalnızca bir yönetici çözebilir. Açık itirazlar burada iki tarafın beyanıyla listelenir."
+          description="Reddedilmiş bir teslim yalnızca freelancer'ın yeniden göndermesiyle ilerler. Reddedilenler burada müşterinin gerekçesiyle listelenir."
         />
       ) : (
         <Rows>
-          {disputes.map((d, index) => (
-            <Row key={d.id} index={index}>
+          {rejected.map((d) => (
+            <Row key={d.id}>
               <div className="flex flex-col gap-3">
                 <div className="grid gap-2 sm:grid-cols-[1fr_auto] sm:items-start">
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium text-zinc-950 dark:text-zinc-50">
-                      {d.milestone ? (
-                        <Link
-                          href={`/contracts/${d.milestone.contract_id}`}
-                          className="hover:underline"
-                        >
-                          {d.milestone.title}
-                        </Link>
-                      ) : (
-                        "Aşama"
-                      )}
+                      <Link href={`/contracts/${d.contract.id}`} className="hover:underline">
+                        {d.contract.title}
+                      </Link>
                     </p>
                     <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
-                      {d.created_at.slice(0, 10)} tarihinde açıldı
+                      {(d.decided_at ?? d.submitted_at).slice(0, 10)} tarihinde reddedildi
                     </p>
                   </div>
 
-                  <div className="flex items-center gap-4">
-                    {d.milestone ? (
-                      <StatusBadge status={d.milestone.status} />
-                    ) : null}
-                    {d.milestone ? (
-                      <Money
-                        kurus={d.milestone.gross_amount_kurus}
-                        className="text-sm font-medium text-zinc-950 dark:text-zinc-50"
-                      />
-                    ) : null}
-                  </div>
+                  <span className="rounded-full bg-rose-50 px-2.5 py-1 text-xs font-semibold text-rose-700 dark:bg-rose-950/40 dark:text-rose-300">
+                    İtiraz edildi
+                  </span>
                 </div>
 
-                <p className="max-w-[70ch] border-l-2 border-rose-200 pl-3 text-sm leading-relaxed whitespace-pre-wrap text-zinc-600 dark:border-rose-900 dark:text-zinc-300">
-                  {d.reason}
-                </p>
+                {d.client_note ? (
+                  <p className="max-w-[70ch] border-l-2 border-rose-200 pl-3 text-sm leading-relaxed whitespace-pre-wrap text-zinc-600 dark:border-rose-900 dark:text-zinc-300">
+                    {d.client_note}
+                  </p>
+                ) : null}
               </div>
             </Row>
           ))}

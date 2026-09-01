@@ -1,0 +1,155 @@
+"use client";
+
+import { useActionState, useState } from "react";
+
+import {
+  confirmStartDate,
+  rejectContract,
+  requestRevision,
+  resubmitContract,
+  type FormState,
+} from "@/app/(dashboard)/actions";
+import { FormFeedback, SubmitButton } from "@/components/form-feedback";
+
+const INITIAL: FormState = { error: null };
+
+/** Client can reject a contract with a reason */
+export function ContractActions({
+  contractId,
+}: Readonly<{ contractId: string }>) {
+  const [rejectState, rejectAction] = useActionState(rejectContract, INITIAL);
+  const [revisionState, revisionAction] = useActionState(requestRevision, INITIAL);
+  const [mode, setMode] = useState<"idle" | "reject" | "revise">("idle");
+
+  if (mode === "idle") {
+    return (
+      <div className="flex flex-col gap-3">
+        <p className="text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">
+          Sözleşme şartlarını inceledikten sonra revizyon talep edebilir veya reddedebilirsiniz.
+        </p>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setMode("revise")}
+            className="rounded-xl border border-orange-200 bg-orange-50 px-4 py-2 text-xs font-semibold text-orange-700 hover:bg-orange-100 active:scale-[0.98] transition-colors dark:border-orange-800/60 dark:bg-orange-950/40 dark:text-orange-300 dark:hover:bg-orange-950/60"
+          >
+            ✏️ Revizyon İste
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode("reject")}
+            className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-xs font-semibold text-rose-700 hover:bg-rose-100 active:scale-[0.98] transition-colors dark:border-rose-800/60 dark:bg-rose-950/40 dark:text-rose-300 dark:hover:bg-rose-950/60"
+          >
+            ❌ Reddet
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (mode === "reject") {
+    return (
+      <form action={rejectAction} className="flex flex-col gap-3">
+        <input type="hidden" name="contractId" value={contractId} />
+        <p className="text-xs font-semibold text-rose-700 dark:text-rose-300">
+          Sözleşmeyi Reddet
+        </p>
+        <textarea
+          name="reason"
+          required
+          minLength={5}
+          rows={3}
+          placeholder="Red gerekçenizi yazın..."
+          className="w-full rounded-xl border border-zinc-200/80 bg-white px-3.5 py-2.5 text-sm text-zinc-950 shadow-xs focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20 dark:border-zinc-800/80 dark:bg-zinc-900 dark:text-zinc-50"
+        />
+        <FormFeedback state={rejectState} />
+        <div className="flex items-center gap-2">
+          <SubmitButton tone="danger" pendingLabel="Reddediliyor...">
+            Sözleşmeyi Reddet
+          </SubmitButton>
+          <button
+            type="button"
+            onClick={() => setMode("idle")}
+            className="rounded-xl px-3 py-2 text-xs font-semibold text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+          >
+            Vazgeç
+          </button>
+        </div>
+      </form>
+    );
+  }
+
+  // mode === "revise"
+  return (
+    <form action={revisionAction} className="flex flex-col gap-3">
+      <input type="hidden" name="contractId" value={contractId} />
+      <p className="text-xs font-semibold text-orange-700 dark:text-orange-300">
+        Revizyon Talep Et
+      </p>
+      <textarea
+        name="note"
+        required
+        minLength={5}
+        rows={3}
+        placeholder="Hangi maddelerin değişmesini istiyorsunuz?"
+        className="w-full rounded-xl border border-zinc-200/80 bg-white px-3.5 py-2.5 text-sm text-zinc-950 shadow-xs focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20 dark:border-zinc-800/80 dark:bg-zinc-900 dark:text-zinc-50"
+      />
+      <FormFeedback state={revisionState} />
+      <div className="flex items-center gap-2">
+        <SubmitButton pendingLabel="Gönderiliyor...">
+          Revizyon Talebi Gönder
+        </SubmitButton>
+        <button
+          type="button"
+          onClick={() => setMode("idle")}
+          className="rounded-xl px-3 py-2 text-xs font-semibold text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+        >
+          Vazgeç
+        </button>
+      </div>
+    </form>
+  );
+}
+
+/**
+ * The freelancer's answer to a revision request -- send it back to the
+ * client for another look. Shown only while the contract is
+ * REVISION_REQUESTED; the actual editing of terms happens outside this
+ * screen for now (see contract-lifecycle.sql's resubmit_contract comment).
+ */
+export function ResubmitContract({
+  contractId,
+}: Readonly<{ contractId: string }>) {
+  const [state, action] = useActionState(resubmitContract, INITIAL);
+
+  return (
+    <form action={action} className="flex flex-col gap-3">
+      <input type="hidden" name="contractId" value={contractId} />
+      <p className="text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">
+        Talep edilen değişiklikleri yaptıysan sözleşmeyi karşı tarafın
+        incelemesine tekrar gönder.
+      </p>
+      <FormFeedback state={state} />
+      <SubmitButton className="self-start" pendingLabel="Gönderiliyor...">
+        Tekrar Gönder
+      </SubmitButton>
+    </form>
+  );
+}
+
+/** Both parties confirm the start date */
+export function StartDateConfirm({
+  contractId,
+}: Readonly<{ contractId: string }>) {
+  const [state, action] = useActionState(confirmStartDate, INITIAL);
+
+  return (
+    <form action={action} className="flex flex-col items-end gap-2">
+      <input type="hidden" name="contractId" value={contractId} />
+      <SubmitButton pendingLabel="Onaylanıyor...">
+        Başlangıcı Onayla
+      </SubmitButton>
+      <FormFeedback state={state} />
+    </form>
+  );
+}

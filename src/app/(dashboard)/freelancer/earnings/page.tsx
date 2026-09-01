@@ -30,19 +30,19 @@ export default async function FreelancerEarningsPage() {
               label="Hesabına geçen"
               value={formatKurus(summary.releasedKurus)}
               hint="Serbest kalmış ve ödenmiş aşamalar"
-              index={0}
+             
             />
             <Stat
               label="Escrow'da bekleyen"
               value={formatKurus(summary.lockedKurus)}
               hint="Fonlanmış, henüz serbest kalmamış"
-              index={1}
+             
             />
             <Stat
               label="Kesilen stopaj"
               value={formatKurus(summary.withheldKurus)}
               hint="Vergi dairesine yatırıldı"
-              index={2}
+             
             />
           </div>
 

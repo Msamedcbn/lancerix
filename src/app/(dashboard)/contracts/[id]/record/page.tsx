@@ -39,17 +39,22 @@ export default async function ContractRecordPage({
 
   if (!contract) notFound();
 
-  const document = renderContractDocument(contract, contract.milestones, {
-    freelancerName:
-      contract.freelancer_id === session.userId
-        ? session.fullName
-        : contract.counterpartyName,
-    clientName:
-      contract.client_id === session.userId
-        ? session.fullName
-        : contract.counterpartyName,
-    company: contract.company,
-  });
+  const document = renderContractDocument(
+    contract,
+    contract.milestones,
+    {
+      freelancerName:
+        contract.freelancer_id === session.userId
+          ? session.fullName
+          : contract.counterpartyName,
+      clientName:
+        contract.client_id === session.userId
+          ? session.fullName
+          : contract.counterpartyName,
+      company: contract.company,
+    },
+    contract.criteria,
+  );
   const currentHash = hashDocument(document);
 
   const supabase = await createClient();
@@ -70,7 +75,7 @@ export default async function ContractRecordPage({
         action={
           <Link
             href={`/contracts/${contract.id}`}
-            className="inline-flex items-center rounded-lg border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-950 hover:bg-zinc-50 active:translate-y-px dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-50 dark:hover:bg-zinc-900"
+            className="inline-flex items-center rounded-lg border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-950 hover:bg-zinc-50 active:scale-[0.98] dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-50 dark:hover:bg-zinc-900"
           >
             Sözleşmeye dön
           </Link>
@@ -87,7 +92,7 @@ export default async function ContractRecordPage({
           </p>
         </Panel>
 
-        <Panel title="İmzalar" index={1}>
+        <Panel title="İmzalar">
           {contract.signatures.length === 0 ? (
             <p className="text-sm text-zinc-500 dark:text-zinc-400">
               Henüz imzalanmadı.
@@ -129,7 +134,7 @@ export default async function ContractRecordPage({
         </Panel>
       </div>
 
-      <Panel title="Geçmiş" index={2}>
+      <Panel title="Geçmiş">
         {!ledger || ledger.length === 0 ? (
           <p className="text-sm text-zinc-500 dark:text-zinc-400">
             Henüz bir hareket olmadı.
@@ -157,12 +162,8 @@ export default async function ContractRecordPage({
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
-                {ledger.map((row, index) => (
-                  <tr
-                    key={row.id}
-                    className="reveal align-top"
-                    style={{ "--i": index } as React.CSSProperties}
-                  >
+                {ledger.map((row) => (
+                  <tr key={row.id} className="fade-in align-top">
                     <td className="tnum py-3 pr-4 whitespace-nowrap text-zinc-500 dark:text-zinc-400">
                       {when(row.created_at)}
                     </td>

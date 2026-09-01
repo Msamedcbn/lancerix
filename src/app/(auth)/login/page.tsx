@@ -78,7 +78,7 @@ function LoginForm() {
             Giriş yap
           </h1>
           <p className="mt-1 mb-8 text-sm text-zinc-500">
-            Sözleşmelerine, escrow bakiyene ve makbuzlarına eriş.
+            Sözleşmelerine, teslimlerine ve makbuzlarına eriş.
           </p>
 
           <Suspense fallback={null}>
@@ -106,7 +106,7 @@ function LoginForm() {
             <button
               type="submit"
               disabled={pending}
-              className="bg-brand text-brand-foreground inline-flex items-center justify-center rounded-lg px-4 py-2.5 text-sm font-medium hover:opacity-90 active:translate-y-px disabled:opacity-50"
+              className="bg-brand text-brand-foreground inline-flex items-center justify-center rounded-lg px-4 py-2.5 text-sm font-medium hover:opacity-90 active:scale-[0.98] disabled:opacity-50"
             >
               {pending ? "Giriş yapılıyor..." : "Giriş yap"}
             </button>

@@ -55,19 +55,22 @@ export function SubmitButton({
   pendingLabel,
   tone = "primary",
   className = "",
+  disabled = false,
 }: Readonly<{
   children: React.ReactNode;
   pendingLabel?: string;
   tone?: ButtonTone;
   className?: string;
+  /** For a form that is incomplete in a way only the caller can judge. */
+  disabled?: boolean;
 }>) {
   const { pending } = useFormStatus();
 
   return (
     <button
       type="submit"
-      disabled={pending}
-      className={`inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium whitespace-nowrap active:translate-y-px disabled:cursor-not-allowed ${TONE[tone]} ${className}`}
+      disabled={pending || disabled}
+      className={`inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium whitespace-nowrap active:scale-[0.98] disabled:cursor-not-allowed ${TONE[tone]} ${className}`}
     >
       {pending ? (pendingLabel ?? "Gönderiliyor...") : children}
     </button>

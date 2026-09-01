@@ -1,0 +1,99 @@
+import Link from "next/link";
+
+import { EmptyState, PageHeading, Row, Rows } from "@/components/page-shell";
+import { requireRole } from "@/lib/auth/session";
+import { listQaQueue } from "@/lib/data/admin-qa";
+
+import { QaReportForm } from "./qa-report-form";
+
+const TIER_LABEL: Record<string, string> = {
+  TIER2: "Agentic QA",
+  TIER3: "Agentic + Manuel Tester",
+  TIER4: "Sadece Manuel Tester",
+};
+
+const LEVEL_LABEL: Record<string, string> = {
+  PRINCIPAL: "Principal / Lead",
+  SENIOR: "Senior",
+};
+
+export default async function AdminQaQueuePage() {
+  await requireRole("ADMIN");
+  const queue = await listQaQueue();
+
+  return (
+    <>
+      <PageHeading
+        title="QA kuyruğu"
+        subtitle="Tier 2/3/4 satın alınmış, henüz raporlanmamış teslimler. Sıra teslim sırasıdır."
+      />
+
+      {queue.length === 0 ? (
+        <EmptyState
+          title="Kuyruk boş"
+          description="QA_QUEUED durumunda bekleyen bir teslim yok. Bir freelancer Tier 2, 3 ya da 4 seçtiğinde burada görünür."
+        />
+      ) : (
+        <Rows>
+          {queue.map((d) => (
+            <Row key={d.id}>
+              <div className="flex flex-col gap-4">
+                <div className="grid gap-2 sm:grid-cols-[1fr_auto] sm:items-start">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-zinc-950 dark:text-zinc-50">
+                      <Link href={`/contracts/${d.contract.id}`} className="hover:underline">
+                        {d.contract.title}
+                      </Link>
+                    </p>
+                    <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
+                      {d.submitted_at.slice(0, 16).replace("T", " ")} teslim edildi
+                    </p>
+                  </div>
+
+                  <span className="tnum rounded-full bg-zinc-100 px-2.5 py-1 text-xs font-semibold text-zinc-800 dark:bg-zinc-800 dark:text-zinc-200">
+                    {TIER_LABEL[d.order.tier] ?? d.order.tier}
+                  </span>
+                </div>
+
+                <div className="flex flex-wrap gap-4 text-xs text-zinc-500 dark:text-zinc-400">
+                  <a
+                    href={d.staging_url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-brand hover:underline"
+                  >
+                    Staging adresi ↗
+                  </a>
+                  {d.pr_url ? (
+                    <a
+                      href={d.pr_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-brand hover:underline"
+                    >
+                      PR linki ↗
+                    </a>
+                  ) : null}
+                  {d.order.reviewer ? (
+                    <span>
+                      Atanan: {LEVEL_LABEL[d.order.reviewer.level] ?? d.order.reviewer.level} ·{" "}
+                      {d.order.reviewer.years_experience}+ yıl
+                    </span>
+                  ) : null}
+                </div>
+
+                {d.notes ? (
+                  <p className="max-w-[70ch] border-l-2 border-zinc-200 pl-3 text-sm leading-relaxed whitespace-pre-wrap text-zinc-600 dark:border-zinc-800 dark:text-zinc-300">
+                    {d.notes}
+                  </p>
+                ) : null}
+
+                <QaReportForm deliveryId={d.id} contractId={d.contract.id} />
+              </div>
+            </Row>
+          ))}
+        </Rows>
+      )}
+    </>
+  );
+}

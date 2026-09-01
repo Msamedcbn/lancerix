@@ -21,8 +21,8 @@ export default async function FreelancerInvoicesPage() {
         />
       ) : (
         <Rows>
-          {released.map((m, index) => (
-            <Row key={m.id} index={index}>
+          {released.map((m) => (
+            <Row key={m.id}>
               <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-center">
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium text-zinc-950 dark:text-zinc-50">

@@ -20,8 +20,8 @@ export default async function ClientInvoicesPage() {
         />
       ) : (
         <Rows>
-          {released.map((m, index) => (
-            <Row key={m.id} index={index}>
+          {released.map((m) => (
+            <Row key={m.id}>
               <Link
                 href={`/contracts/${m.contract_id}`}
                 className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-center"
