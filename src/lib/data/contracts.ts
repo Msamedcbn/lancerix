@@ -279,3 +279,20 @@ const sortMilestones = (milestones: Milestone[]) =>
 
 const byReleasedAt = (a: Milestone, b: Milestone) =>
   (b.released_at ?? "").localeCompare(a.released_at ?? "");
+
+export type ClientPlatformInvoiceRow = Tables<"platform_invoices"> & {
+  contract: Pick<Contract, "id" | "title" | "reference"> | null;
+};
+
+/** Lancerix service invoices issued to a specific client. */
+export async function listClientPlatformInvoices(clientId: string): Promise<ClientPlatformInvoiceRow[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("platform_invoices")
+    .select("*, contract:contracts(id, title, reference)")
+    .eq("client_id", clientId)
+    .order("issued_at", { ascending: false });
+
+  if (error) throw error;
+  return (data ?? []) as ClientPlatformInvoiceRow[];
+}
