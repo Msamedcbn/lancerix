@@ -118,14 +118,20 @@ export function Row({ children }: Readonly<{ children: ReactNode }>) {
  */
 export function Panel({
   title,
+  action,
   children,
-}: Readonly<{ title?: string; children: ReactNode }>) {
+}: Readonly<{ title?: string; action?: ReactNode; children: ReactNode }>) {
   return (
     <section className="fade-in relative overflow-hidden rounded-2xl border border-zinc-200/80 bg-white/90 p-6 shadow-sm backdrop-blur-md dark:border-zinc-800/80 dark:bg-zinc-900/80 dark:shadow-zinc-950/40">
-      {title ? (
-        <h2 className="mb-4 text-base font-semibold tracking-tight text-zinc-950 dark:text-zinc-50">
-          {title}
-        </h2>
+      {title || action ? (
+        <div className="mb-4 flex items-center justify-between gap-3">
+          {title ? (
+            <h2 className="text-base font-semibold tracking-tight text-zinc-950 dark:text-zinc-50">
+              {title}
+            </h2>
+          ) : null}
+          {action ? <div className="shrink-0">{action}</div> : null}
+        </div>
       ) : null}
       {children}
     </section>

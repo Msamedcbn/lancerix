@@ -83,10 +83,32 @@ export default async function ContractRecordPage({
       />
 
       <div className="grid items-start gap-6 lg:grid-cols-[1.5fr_1fr]">
-        <Panel title="İmzalanan metin">
-          <pre className="max-h-[32rem] overflow-auto rounded-xl bg-zinc-50 p-4 text-xs leading-relaxed whitespace-pre-wrap text-zinc-700 dark:bg-zinc-900 dark:text-zinc-300">
-            {document}
-          </pre>
+        <Panel
+          title="İmzalanan metin"
+          action={
+            <a
+              href={`/api/contracts/${contract.id}/pdf`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium text-zinc-950 hover:bg-zinc-50 active:scale-[0.98] dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-50 dark:hover:bg-zinc-900"
+            >
+              📄 PDF indir
+            </a>
+          }
+        >
+          <iframe
+            src={`/api/contracts/${contract.id}/pdf`}
+            title="Sözleşme PDF"
+            className="h-[32rem] w-full rounded-xl border border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900"
+          />
+          <details className="mt-3">
+            <summary className="cursor-pointer text-xs font-medium text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200">
+              Ham metni göster (imza doğrulaması için)
+            </summary>
+            <pre className="mt-2 max-h-[24rem] overflow-auto rounded-xl bg-zinc-50 p-4 text-xs leading-relaxed whitespace-pre-wrap text-zinc-700 dark:bg-zinc-900 dark:text-zinc-300">
+              {document}
+            </pre>
+          </details>
           <p className="tnum mt-3 font-mono text-[0.7rem] break-all text-zinc-400">
             sha256: {currentHash}
           </p>
