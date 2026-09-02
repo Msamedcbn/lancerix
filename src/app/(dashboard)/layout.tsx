@@ -59,7 +59,7 @@ export default async function DashboardLayout({
       <span className="bg-brand text-brand-foreground flex size-8 items-center justify-center rounded-lg">
         <RoleIcon className="size-4" aria-hidden />
       </span>
-      <span className="text-[0.95rem] font-semibold tracking-tight text-zinc-950 dark:text-zinc-50">
+      <span className="text-[0.95rem] font-semibold tracking-tight text-foreground">
         Lancerix
       </span>
     </Link>
@@ -68,7 +68,7 @@ export default async function DashboardLayout({
   const footer = (
     <div className="flex items-center justify-between gap-2">
       <div className="min-w-0">
-        <p className="truncate text-sm font-medium text-zinc-950 dark:text-zinc-50">
+        <p className="truncate text-sm font-medium text-foreground">
           {session.fullName}
         </p>
         <div className="mt-1">
@@ -78,7 +78,7 @@ export default async function DashboardLayout({
       <form action={signOut}>
         <button
           type="submit"
-          className="shrink-0 rounded-lg px-2.5 py-1.5 text-xs text-zinc-500 hover:bg-zinc-100 hover:text-zinc-950 active:scale-[0.98] dark:text-zinc-400 dark:hover:bg-zinc-900 dark:hover:text-zinc-50"
+          className="shrink-0 rounded-lg px-2.5 py-1.5 text-xs text-muted-foreground hover:bg-muted hover:text-foreground active:scale-[0.98]"
         >
           Çıkış
         </button>
@@ -87,7 +87,7 @@ export default async function DashboardLayout({
   );
 
   return (
-    <div className="min-h-[100dvh] bg-zinc-50 md:flex dark:bg-zinc-950">
+    <div className="min-h-[100dvh] bg-background md:flex">
       <Sidebar items={nav} header={header} footer={footer} signOutAction={signOut} />
 
       <main className="mx-auto flex w-full min-w-0 max-w-5xl flex-1 flex-col gap-8 px-4 py-8 pb-28 sm:px-6 sm:py-12 md:pb-12">

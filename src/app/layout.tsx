@@ -1,33 +1,26 @@
 import type { Metadata } from "next";
-import { Fraunces, IBM_Plex_Mono } from "next/font/google";
+import { Plus_Jakarta_Sans, IBM_Plex_Mono } from "next/font/google";
 
 import "./globals.css";
 
 /**
- * The machine voice: timestamps, contract codes, hashes, amounts. Nothing a
- * person wrote ever sits in this face, so the reader can tell at a glance
- * what the system asserted versus what we merely claimed.
+ * The machine voice: timestamps, contract codes, hashes, amounts.
  */
 const mono = IBM_Plex_Mono({
   subsets: ["latin", "latin-ext"],
-  weight: ["400", "500"],
+  weight: ["400", "500", "600"],
   variable: "--font-mono-plex",
   display: "swap",
 });
 
 /**
- * The one place this page spends a font choice. A high-contrast serif on
- * headlines instead of another rounded geometric sans -- Satoshi, Inter,
- * Outfit, Cabinet Grotesk are the same four fonts every AI-generated landing
- * page reaches for, and the sameness is part of what reads as generated. The
- * body stays on plain system sans; one considered choice plus one boring,
- * honest one, rather than two competing "designed" fonts.
+ * The primary font used across the application for headings and body.
+ * Modern, clean, and extremely legible for financial interfaces.
  */
-const display = Fraunces({
+const jakarta = Plus_Jakarta_Sans({
   subsets: ["latin", "latin-ext"],
-  weight: ["500", "600"],
-  style: ["normal", "italic"],
-  variable: "--font-fraunces",
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-jakarta",
   display: "swap",
 });
 
@@ -44,7 +37,7 @@ export default function RootLayout({
     <html
       lang="tr"
       suppressHydrationWarning
-      className={`${mono.variable} ${display.variable}`}
+      className={`${mono.variable} ${jakarta.variable}`}
     >
       <body className="font-sans antialiased">{children}</body>
     </html>

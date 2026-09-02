@@ -14,6 +14,10 @@ const eslintConfig = [
       "node_modules/**",
       "next-env.d.ts",
       "src/lib/supabase/database.types.ts",
+      // A separate Node service (the Tier2 QA agent worker), not part of
+      // the Next.js app -- its own package.json/tsconfig, deployed and
+      // linted on its own.
+      "worker/**",
     ],
   },
 ];

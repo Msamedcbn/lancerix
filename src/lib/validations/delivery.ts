@@ -69,10 +69,10 @@ export const QA_TIER_INFO: Record<
     pricingType: "AGENTIC",
     hint: "Otonom test ajanı UI/UX ve kriterleri tarar. API bütçesi korunur.",
     details: ["UI/UX & İşlevsellik taraması", "Kıstaslı API kullanım limiti", "Çalışma sonrası API maliyeti yansıtılır"],
-    // Not orderable yet: the Playwright worker that would run it does not
-    // exist. Flip to true only once that worker ships (see QA-pivot spec,
-    // qa-worker/) -- an order that queues forever is worse than a tier that
-    // says "not yet".
+    // available: false until the worker (worker/) is actually deployed and
+    // running somewhere -- flipping this to true with no live worker means
+    // an order sits in QA_QUEUED forever, which is worse than "not yet".
+    // See STATUS.md.
     available: false,
     needsReviewer: false,
   },

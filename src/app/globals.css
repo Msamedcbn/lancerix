@@ -25,12 +25,14 @@
   --input: oklch(0.929 0.013 255.508);
   --ring: oklch(0.704 0.04 256.788);
 
-  /* The single accent. Desaturated on purpose: this is a product about money
-     moving, and a saturated green reads as a notification rather than a state.
-     Everything else in the interface is neutral. */
-  --brand: oklch(0.56 0.105 162);
-  --brand-foreground: oklch(0.985 0 0);
-  --brand-muted: oklch(0.96 0.022 162);
+  /* Trust-oriented Electric Blue for CTA (Stripe style) */
+  --brand: oklch(0.55 0.25 260);
+  --brand-foreground: oklch(1 0 0);
+  --brand-muted: oklch(0.96 0.03 260);
+
+  /* Glassmorphism base variables for Light Mode */
+  --glass: oklch(1 0 0 / 85%);
+  --glass-border: oklch(0 0 0 / 6%);
 }
 
 .dark {
@@ -54,19 +56,20 @@
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.551 0.027 264.364);
 
-  --brand: oklch(0.68 0.115 162);
-  --brand-foreground: oklch(0.16 0.02 162);
-  --brand-muted: oklch(0.26 0.035 162);
+  --brand: oklch(0.55 0.25 260);
+  --brand-foreground: oklch(1 0 0);
+  --brand-muted: oklch(0.26 0.06 260);
+
+  /* Glassmorphism base variables for Dark Mode */
+  --glass: oklch(0 0 0 / 70%);
+  --glass-border: oklch(1 0 0 / 10%);
 }
 
 @theme inline {
-  /* Plain on purpose. No "designed" geometric sans competing with the serif
-     display face below -- the operating system's own UI font, the same
-     honest choice Arial used to be before every platform grew a better one. */
-  --font-sans:
-    ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica,
-    Arial, sans-serif;
-  --font-display: var(--font-fraunces), Georgia, "Times New Roman", serif;
+  /* Plus Jakarta Sans as the primary modern geometric/grotesque sans. */
+  --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, -apple-system,
+    "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-display: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -113,8 +116,8 @@
   --accent-violet: oklch(0.62 0.19 288);
   --color-accent-violet: var(--accent-violet);
 
-  --color-glass: oklch(1 0 0 / 6%);
-  --color-glass-border: oklch(1 0 0 / 12%);
+  --color-glass: var(--glass);
+  --color-glass-border: var(--glass-border);
 }
 
 @layer base {
@@ -335,11 +338,11 @@
   .glass {
     background: var(--color-glass);
     border: 1px solid var(--color-glass-border);
-    backdrop-filter: blur(20px) saturate(140%);
-    -webkit-backdrop-filter: blur(20px) saturate(140%);
+    backdrop-filter: blur(16px) saturate(150%);
+    -webkit-backdrop-filter: blur(16px) saturate(150%);
     box-shadow:
-      inset 0 1px 0 oklch(1 0 0 / 10%),
-      0 20px 60px -20px oklch(0 0 0 / 55%);
+      inset 0 1px 1px oklch(1 0 0 / 15%),
+      0 8px 32px 0 oklch(0 0 0 / 10%);
   }
 }
 

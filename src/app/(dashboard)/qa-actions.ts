@@ -45,6 +45,12 @@ export async function submitQaDelivery(
   });
   if (!parsed.success) return FAIL(firstIssue(parsed.error));
 
+  const contract = await getContract(contractId, session.userId);
+  if (!contract) return FAIL("Sözleşme bulunamadı.");
+  if (contract.status !== "ACTIVE" || !contract.work_started_at) {
+    return FAIL("Teslimat yapabilmek için işin resmi olarak başlamış olması gerekir (başlangıç tarihi onaylanmalı).");
+  }
+
   const supabase = await createClient();
   const { error } = await supabase.from("deliveries").insert({
     contract_id: contractId,

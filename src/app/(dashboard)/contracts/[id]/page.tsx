@@ -98,12 +98,12 @@ function Amount({
 }: Readonly<{ label: string; kurus: number; strong?: boolean }>) {
   return (
     <div>
-      <dt className="text-xs text-zinc-500 dark:text-zinc-400">{label}</dt>
+      <dt className="text-xs text-muted-foreground dark:text-muted-foreground">{label}</dt>
       <dd
         className={`mt-0.5 text-sm ${
           strong
             ? "text-brand font-medium"
-            : "text-zinc-950 dark:text-zinc-50"
+            : "text-foreground dark:text-foreground"
         }`}
       >
         <Money kurus={value} />
@@ -121,11 +121,11 @@ function MilestoneCard({
       <div className="flex flex-col gap-4">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
-            <p className="text-sm font-medium text-zinc-950 dark:text-zinc-50">
+            <p className="text-sm font-medium text-foreground dark:text-foreground">
               {milestone.sequence_no}. {milestone.title}
             </p>
             {milestone.due_date ? (
-              <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
+              <p className="mt-0.5 text-xs text-muted-foreground dark:text-muted-foreground">
                 Teslim tarihi {milestone.due_date}
               </p>
             ) : null}
@@ -212,7 +212,7 @@ function DeliveryPanel({
   if (!signedByBoth) {
     return (
       <Panel title="Teslim">
-        <p className="text-sm leading-relaxed text-zinc-500 dark:text-zinc-400">
+        <p className="text-sm leading-relaxed text-muted-foreground dark:text-muted-foreground">
           İki taraf da imzalamadan teslim alınamaz. Sözleşme yürürlüğe
           girdiğinde bu bölüm açılır.
         </p>
@@ -236,7 +236,7 @@ function DeliveryPanel({
             projectCategory={projectCategory}
           />
         ) : (
-          <p className="text-sm leading-relaxed text-zinc-500 dark:text-zinc-400">
+          <p className="text-sm leading-relaxed text-muted-foreground dark:text-muted-foreground">
             {latest
               ? "İtirazın karşı tarafa iletildi. Düzeltilmiş teslim geldiğinde kontrol süren yeniden başlar."
               : "Henüz bir teslim yapılmadı. Teslim geldiğinde kontrol süren burada başlar."}
@@ -262,7 +262,7 @@ function DeliveryPanel({
           >
             {latest.staging_url}
           </a>
-          <span className="rounded-full bg-zinc-100 px-2.5 py-1 text-xs text-zinc-600 dark:bg-zinc-900 dark:text-zinc-300">
+          <span className="rounded-full bg-muted/80 px-2.5 py-1 text-xs text-foreground/80 dark:bg-muted/80 dark:text-muted-foreground">
             {deliveryStatusLabel(latest.status)}
           </span>
         </div>
@@ -272,14 +272,14 @@ function DeliveryPanel({
             href={latest.pr_url}
             target="_blank"
             rel="noreferrer noopener"
-            className="-mt-3 text-xs break-all text-zinc-500 hover:underline dark:text-zinc-400"
+            className="-mt-3 text-xs break-all text-muted-foreground hover:underline dark:text-muted-foreground"
           >
             {latest.pr_url}
           </a>
         ) : null}
 
         {latest.notes ? (
-          <p className="text-sm leading-relaxed whitespace-pre-wrap text-zinc-600 dark:text-zinc-300">
+          <p className="text-sm leading-relaxed whitespace-pre-wrap text-foreground/80 dark:text-muted-foreground">
             {latest.notes}
           </p>
         ) : null}
@@ -291,7 +291,7 @@ function DeliveryPanel({
         ) : null}
 
         {latest.status === "SUBMITTED" && isFreelancer ? (
-          <div className="border-t border-zinc-200 pt-5 dark:border-zinc-800">
+          <div className="border-t border-border pt-5 dark:border-border/50">
             <TierPicker
               contractId={contractId}
               deliveryId={latest.id}
@@ -301,13 +301,13 @@ function DeliveryPanel({
         ) : null}
 
         {latest.status === "SUBMITTED" && !isFreelancer ? (
-          <p className="text-sm text-zinc-500 dark:text-zinc-400">
+          <p className="text-sm text-muted-foreground dark:text-muted-foreground">
             Teslim alındı. Doğrulama paketi seçilince kontrol süren başlayacak.
           </p>
         ) : null}
 
         {latest.status === "QA_QUEUED" ? (
-          <p className="text-sm leading-relaxed text-zinc-500 dark:text-zinc-400">
+          <p className="text-sm leading-relaxed text-muted-foreground dark:text-muted-foreground">
             {order?.tier === "TIER3"
               ? "QA masasına iletildi. Mühendis raporu yazdığında kontrol süresi başlayacak."
               : "QA kuyruğunda."}
@@ -317,7 +317,7 @@ function DeliveryPanel({
         {order ? <QaOrderPayment order={order} /> : null}
 
         {latest.status === "AWAITING_CLIENT" && !isFreelancer ? (
-          <div className="border-t border-zinc-200 pt-5 dark:border-zinc-800">
+          <div className="border-t border-border pt-5 dark:border-border/50">
             <ClientDecision contractId={contractId} deliveryId={latest.id} />
           </div>
         ) : null}
@@ -330,15 +330,15 @@ function DeliveryPanel({
         ) : null}
 
         {myEvents.length > 0 ? (
-          <ol className="flex flex-col gap-1 border-t border-zinc-200 pt-4 dark:border-zinc-800">
+          <ol className="flex flex-col gap-1 border-t border-border pt-4 dark:border-border/50">
             {myEvents.map((e) => (
               <li
                 key={e.id}
-                className="flex flex-wrap items-baseline gap-x-2 text-xs text-zinc-500 dark:text-zinc-400"
+                className="flex flex-wrap items-baseline gap-x-2 text-xs text-muted-foreground dark:text-muted-foreground"
               >
                 <span className="tnum">{e.created_at.slice(0, 16).replace("T", " ")}</span>
                 <span>{deliveryStatusLabel(e.to_status)}</span>
-                <span className="text-zinc-400 dark:text-zinc-600">
+                <span className="text-muted-foreground dark:text-foreground/80">
                   {e.actor_kind === "SYSTEM" ? "otomatik" : null}
                 </span>
               </li>
@@ -366,12 +366,12 @@ function QaReportSummary({ report }: Readonly<{ report: QaReport }>) {
         : "Kısmen karşılandı";
 
   return (
-    <div className="rounded-xl border border-zinc-200 p-4 dark:border-zinc-800">
+    <div className="rounded-xl border border-border p-4 dark:border-border/50">
       <p className={`text-sm font-medium ${tone}`}>{label}</p>
-      <p className="tnum mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+      <p className="tnum mt-1 text-xs text-muted-foreground dark:text-muted-foreground">
         {report.generated_at.slice(0, 16).replace("T", " ")} · doğrulama raporu
       </p>
-      <p className="mt-2 font-mono text-[0.7rem] break-all text-zinc-400">
+      <p className="mt-2 font-mono text-[0.7rem] break-all text-muted-foreground">
         {report.document_sha256}
       </p>
     </div>
@@ -381,17 +381,17 @@ function QaReportSummary({ report }: Readonly<{ report: QaReport }>) {
 /* ─────────── Contract Status Badge ─────────── */
 function ContractStatusBadge({ status }: Readonly<{ status: string }>) {
   const config: Record<string, { label: string; color: string }> = {
-    DRAFT: { label: "Taslak", color: "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400" },
+    DRAFT: { label: "Taslak", color: "bg-muted/80 text-foreground/80 dark:bg-zinc-800 dark:text-muted-foreground" },
     PENDING_SIGNATURES: { label: "İmza Bekliyor", color: "bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800/60" },
     PENDING_REVIEW: { label: "İnceleme Bekliyor", color: "bg-indigo-50 text-indigo-700 border border-indigo-200 dark:bg-indigo-950/40 dark:text-indigo-300 dark:border-indigo-800/60" },
     REVISION_REQUESTED: { label: "Revizyon İstendi", color: "bg-orange-50 text-orange-700 border border-orange-200 dark:bg-orange-950/40 dark:text-orange-300 dark:border-orange-800/60" },
     REJECTED: { label: "Reddedildi", color: "bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800/60" },
     ACTIVE: { label: "Aktif", color: "bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800/60" },
-    TERMINATED: { label: "Sonlandırıldı", color: "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-500" },
+    TERMINATED: { label: "Sonlandırıldı", color: "bg-muted/80 text-muted-foreground dark:bg-zinc-800 dark:text-muted-foreground" },
     FULFILLED: { label: "Tamamlandı", color: "bg-brand/10 text-brand" },
   };
 
-  const c = config[status] ?? { label: status, color: "bg-zinc-100 text-zinc-600" };
+  const c = config[status] ?? { label: status, color: "bg-muted/80 text-foreground/80" };
 
   return (
     <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${c.color}`}>
@@ -431,6 +431,8 @@ export default async function ContractPage({
 
   const messages = await listMessages(contract.id, session.userId);
 
+  const isParty = contract.freelancer_id === session.userId || contract.client_id === session.userId;
+
   // Contract lifecycle: can the client reject/revise?
   const canClientAct =
     side === "client" &&
@@ -467,13 +469,13 @@ export default async function ContractPage({
         }
         action={
           <div className="flex items-center gap-3">
-            <span className="rounded-full border border-zinc-200 bg-zinc-50 px-2.5 py-0.5 text-xs font-medium text-zinc-600 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400">
+            <span className="rounded-full border border-border bg-muted px-2.5 py-0.5 text-xs font-medium text-foreground/80 dark:border-border/50 dark:bg-muted/80 dark:text-muted-foreground">
               {PROJECT_CATEGORY_INFO[contract.project_category].label}
             </span>
             <ContractStatusBadge status={contract.status} />
             <Link
               href={`/contracts/${contract.id}/record`}
-              className="inline-flex items-center rounded-xl border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-950 hover:bg-zinc-50 active:scale-[0.98] dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-50 dark:hover:bg-zinc-900"
+              className="inline-flex items-center rounded-xl border border-border bg-card px-4 py-2 text-sm font-medium text-foreground hover:bg-muted active:scale-[0.98] dark:border-border/50 dark:bg-muted dark:text-foreground dark:hover:bg-muted/80"
             >
               Kaydı gör
             </Link>
@@ -525,10 +527,10 @@ export default async function ContractPage({
                 İki taraf da tarihi onayladığında iş resmi olarak başlar ve platform hizmet faturası oluşturulur.
               </p>
               <div className="mt-3 flex items-center gap-3 text-xs">
-                <span className={contract.freelancer_start_confirmed ? "text-emerald-600" : "text-zinc-400"}>
+                <span className={contract.freelancer_start_confirmed ? "text-emerald-600" : "text-muted-foreground"}>
                   {contract.freelancer_start_confirmed ? "✓" : "○"} Freelancer
                 </span>
-                <span className={contract.client_start_confirmed ? "text-emerald-600" : "text-zinc-400"}>
+                <span className={contract.client_start_confirmed ? "text-emerald-600" : "text-muted-foreground"}>
                   {contract.client_start_confirmed ? "✓" : "○"} Müşteri
                 </span>
               </div>
@@ -553,7 +555,7 @@ export default async function ContractPage({
       <div className="grid items-start gap-6 lg:grid-cols-[1fr_1.6fr]">
         <div className="flex flex-col gap-6">
           <Panel title="Şartlar">
-            <p className="text-sm leading-relaxed whitespace-pre-wrap text-zinc-600 dark:text-zinc-300">
+            <p className="text-sm leading-relaxed whitespace-pre-wrap text-foreground/80 dark:text-muted-foreground">
               {contract.scope_of_work}
             </p>
 
@@ -561,15 +563,15 @@ export default async function ContractPage({
               <>
                 <dl className="mt-5 grid grid-cols-2 gap-x-6 gap-y-3">
                   <div>
-                    <dt className="text-xs text-zinc-500 dark:text-zinc-400">
+                    <dt className="text-xs text-muted-foreground dark:text-muted-foreground">
                       Proje Bedeli
                     </dt>
-                    <dd className="tnum mt-0.5 text-sm font-bold text-zinc-950 dark:text-zinc-50">
+                    <dd className="tnum mt-0.5 text-sm font-bold text-foreground dark:text-foreground">
                       <Money kurus={contract.project_amount_kurus} />
                     </dd>
                   </div>
                 </dl>
-                <p className="mt-5 text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">
+                <p className="mt-5 text-xs leading-relaxed text-muted-foreground dark:text-muted-foreground">
                   Ödeme taraflar arasında doğrudan çözülür. Lancerix bu tutar
                   üzerinden bir komisyon almaz — gelir yalnızca QA test
                   hizmetinden elde edilir.
@@ -579,33 +581,33 @@ export default async function ContractPage({
               <>
                 <dl className="mt-5 grid grid-cols-2 gap-x-6 gap-y-3">
                   <div>
-                    <dt className="text-xs text-zinc-500 dark:text-zinc-400">
+                    <dt className="text-xs text-muted-foreground dark:text-muted-foreground">
                       Hizmet bedeli
                     </dt>
-                    <dd className="tnum mt-0.5 text-sm text-zinc-950 dark:text-zinc-50">
+                    <dd className="tnum mt-0.5 text-sm text-foreground dark:text-foreground">
                       %{contract.platform_fee_bps / 100}
                     </dd>
                   </div>
                   <div>
-                    <dt className="text-xs text-zinc-500 dark:text-zinc-400">
+                    <dt className="text-xs text-muted-foreground dark:text-muted-foreground">
                       Stopaj
                     </dt>
-                    <dd className="tnum mt-0.5 text-sm text-zinc-950 dark:text-zinc-50">
+                    <dd className="tnum mt-0.5 text-sm text-foreground dark:text-foreground">
                       %{contract.stopaj_bps / 100}
                     </dd>
                   </div>
                   <div className="col-span-2">
-                    <dt className="text-xs text-zinc-500 dark:text-zinc-400">
+                    <dt className="text-xs text-muted-foreground dark:text-muted-foreground">
                       İtiraz süresi
                     </dt>
-                    <dd className="tnum mt-0.5 text-sm text-zinc-950 dark:text-zinc-50">
+                    <dd className="tnum mt-0.5 text-sm text-foreground dark:text-foreground">
                       {contract.objection_window_days} gün
                     </dd>
                   </div>
                 </dl>
 
                 {contract.company ? (
-                  <p className="mt-5 text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">
+                  <p className="mt-5 text-xs leading-relaxed text-muted-foreground dark:text-muted-foreground">
                     {contract.company.legal_name} adına fatura edilir (VKN{" "}
                     {contract.company.vkn}), {contract.company.tax_office}.
                   </p>
@@ -614,23 +616,25 @@ export default async function ContractPage({
             )}
           </Panel>
 
-          <Panel title="İmzalar">
-            <SignContract
-              contractId={contract.id}
-              alreadySigned={contract.signatures.some(
-                (s) => s.signer_id === session.userId,
-              )}
-              otherPartySigned={contract.signatures.some(
-                (s) => s.signer_id !== session.userId,
-              )}
-              criteriaMissing={
-                contract.product_type === "QA_ONLY" && contract.criteria.length === 0
-              }
-            />
-          </Panel>
+          {isParty && (
+            <Panel title="İmzalar">
+              <SignContract
+                contractId={contract.id}
+                alreadySigned={contract.signatures.some(
+                  (s) => s.signer_id === session.userId,
+                )}
+                otherPartySigned={contract.signatures.some(
+                  (s) => s.signer_id !== session.userId,
+                )}
+                criteriaMissing={
+                  contract.product_type === "QA_ONLY" && contract.criteria.length === 0
+                }
+              />
+            </Panel>
+          )}
 
           {/* Client reject/revise actions */}
-          {canClientAct && (
+          {isParty && canClientAct && (
             <Panel title="Sözleşme İşlemleri">
               <ContractActions contractId={contract.id} />
             </Panel>

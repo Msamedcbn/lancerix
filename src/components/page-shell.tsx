@@ -10,13 +10,13 @@ export function PageHeading({
   action,
 }: Readonly<{ title: string; subtitle?: ReactNode; action?: ReactNode }>) {
   return (
-    <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between pb-2 border-b border-zinc-200/60 dark:border-zinc-800/60">
+    <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between pb-2 border-b border-border">
       <div className="max-w-[58ch]">
-        <h1 className="text-2xl font-bold tracking-tight text-zinc-950 sm:text-3xl dark:text-zinc-50">
+        <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
           {title}
         </h1>
         {subtitle ? (
-          <div className="mt-1.5 text-sm leading-relaxed text-zinc-500 dark:text-zinc-400">
+          <div className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
             {subtitle}
           </div>
         ) : null}
@@ -35,8 +35,8 @@ export function EmptyState({
   children,
 }: Readonly<{ title: string; description: string; children?: ReactNode }>) {
   return (
-    <div className="fade-in group relative overflow-hidden rounded-2xl border-2 border-dashed border-zinc-200/80 bg-zinc-50/50 p-8 sm:p-12 text-center dark:border-zinc-800/80 dark:bg-zinc-900/20">
-      <div className="mx-auto flex size-12 items-center justify-center rounded-xl bg-brand/10 text-brand dark:bg-brand/20">
+    <div className="fade-in group relative overflow-hidden rounded-2xl border-2 border-dashed border-border/80 bg-muted/30 p-8 sm:p-12 text-center">
+      <div className="mx-auto flex size-12 items-center justify-center rounded-xl bg-brand/10 text-brand">
         <svg
           aria-hidden="true"
           className="size-6 text-brand"
@@ -52,10 +52,10 @@ export function EmptyState({
           />
         </svg>
       </div>
-      <h3 className="mt-4 text-base font-semibold text-zinc-950 dark:text-zinc-50">
+      <h3 className="mt-4 text-base font-semibold text-foreground">
         {title}
       </h3>
-      <p className="mx-auto mt-2 max-w-[50ch] text-sm leading-relaxed text-zinc-500 dark:text-zinc-400">
+      <p className="mx-auto mt-2 max-w-[50ch] text-sm leading-relaxed text-muted-foreground">
         {description}
       </p>
       {children ? <div className="mt-6 flex justify-center">{children}</div> : null}
@@ -76,18 +76,18 @@ export function Stat({
   hint?: string;
 }>) {
   return (
-    <div className="fade-in relative overflow-hidden rounded-2xl border border-zinc-200/80 bg-gradient-to-br from-white via-zinc-50/30 to-zinc-100/50 p-6 shadow-sm dark:border-zinc-800/80 dark:from-zinc-900/90 dark:via-zinc-900/50 dark:to-zinc-950">
+    <div className="fade-in relative overflow-hidden rounded-2xl border border-border glass p-6 shadow-sm">
       <div className="flex items-center justify-between">
-        <p className="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           {label}
         </p>
         <span className="size-2 rounded-full bg-brand animate-pulse" />
       </div>
-      <p className="tnum mt-3 text-3xl font-bold tracking-tight text-zinc-950 dark:text-zinc-50">
+      <p className="tnum mt-3 text-3xl font-bold tracking-tight text-foreground">
         {value}
       </p>
       {hint ? (
-        <p className="mt-2 text-xs font-medium text-zinc-500 dark:text-zinc-400">
+        <p className="mt-2 text-xs font-medium text-muted-foreground">
           {hint}
         </p>
       ) : null}
@@ -107,7 +107,7 @@ export function Rows({ children }: Readonly<{ children: ReactNode }>) {
  */
 export function Row({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <div className="fade-in group relative overflow-hidden rounded-2xl border border-zinc-200/80 bg-white/90 p-5 shadow-sm backdrop-blur-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-brand/40 hover:shadow-md dark:border-zinc-800/80 dark:bg-zinc-900/80 dark:hover:border-brand/40 dark:hover:shadow-zinc-950/50">
+    <div className="fade-in group relative overflow-hidden rounded-2xl border border-border glass p-5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-brand/40 hover:shadow-md">
       {children}
     </div>
   );
@@ -122,11 +122,11 @@ export function Panel({
   children,
 }: Readonly<{ title?: string; action?: ReactNode; children: ReactNode }>) {
   return (
-    <section className="fade-in relative overflow-hidden rounded-2xl border border-zinc-200/80 bg-white/90 p-6 shadow-sm backdrop-blur-md dark:border-zinc-800/80 dark:bg-zinc-900/80 dark:shadow-zinc-950/40">
+    <section className="fade-in relative overflow-hidden rounded-2xl border border-border glass p-6 shadow-sm">
       {title || action ? (
         <div className="mb-4 flex items-center justify-between gap-3">
           {title ? (
-            <h2 className="text-base font-semibold tracking-tight text-zinc-950 dark:text-zinc-50">
+            <h2 className="text-base font-semibold tracking-tight text-foreground">
               {title}
             </h2>
           ) : null}

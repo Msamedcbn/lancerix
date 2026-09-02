@@ -99,20 +99,20 @@ export function Sidebar({
 
   return (
     <>
-      <div className="sticky top-0 z-30 flex items-center justify-between border-b border-zinc-200 bg-white/80 px-4 py-3 backdrop-blur-md md:hidden dark:border-zinc-800 dark:bg-zinc-950/80">
+      <div className="sticky top-0 z-30 flex items-center justify-between border-b border-border glass px-4 py-3 md:hidden">
         {header}
         <form action={signOutAction}>
           <button
             type="submit"
             aria-label="Çıkış"
-            className="rounded-lg p-2 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-950 dark:hover:bg-zinc-900 dark:hover:text-zinc-50"
+            className="rounded-lg p-2 text-muted-foreground hover:bg-muted hover:text-foreground"
           >
             <LogOut className="size-[1.1rem]" />
           </button>
         </form>
       </div>
 
-      <aside className="sticky top-0 z-30 hidden h-dvh w-72 shrink-0 flex-col border-r border-zinc-200 bg-white md:flex dark:border-zinc-800 dark:bg-zinc-950">
+      <aside className="sticky top-0 z-30 hidden h-dvh w-72 shrink-0 flex-col border-r border-border glass md:flex">
         <div className="px-5 py-5">{header}</div>
 
         <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto px-3">
@@ -128,11 +128,11 @@ export function Sidebar({
                 className={`group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors ${
                   active
                     ? "bg-brand-muted text-brand font-medium"
-                    : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-950 dark:text-zinc-400 dark:hover:bg-zinc-900 dark:hover:text-zinc-50"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
                 }`}
               >
                 <Icon
-                  className={`size-[1.05rem] shrink-0 ${active ? "" : "text-zinc-400 group-hover:text-zinc-600 dark:text-zinc-500 dark:group-hover:text-zinc-300"}`}
+                  className={`size-[1.05rem] shrink-0 ${active ? "" : "text-muted-foreground/80 group-hover:text-foreground/80"}`}
                   aria-hidden
                 />
                 <span className="truncate">{item.label}</span>
@@ -141,12 +141,12 @@ export function Sidebar({
           })}
         </nav>
 
-        <div className="border-t border-zinc-200 p-4 dark:border-zinc-800">{footer}</div>
+        <div className="border-t border-border p-4">{footer}</div>
       </aside>
 
       {/* Mobile: a full-width tab bar. */}
       <nav
-        className="fixed inset-x-0 bottom-0 z-30 flex items-stretch border-t border-zinc-200 bg-white/95 backdrop-blur-md md:hidden dark:border-zinc-800 dark:bg-zinc-950/95"
+        className="fixed inset-x-0 bottom-0 z-30 flex items-stretch border-t border-border glass md:hidden"
         style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
       >
         {items.map((item) => {
@@ -161,12 +161,12 @@ export function Sidebar({
               className="flex flex-1 flex-col items-center gap-1 py-2.5"
             >
               <Icon
-                className={`size-5 ${active ? "text-brand" : "text-zinc-400 dark:text-zinc-500"}`}
+                className={`size-5 ${active ? "text-brand" : "text-muted-foreground"}`}
                 aria-hidden
               />
               <span
                 className={`max-w-full truncate px-1 text-[0.65rem] leading-none ${
-                  active ? "text-brand font-medium" : "text-zinc-500 dark:text-zinc-400"
+                  active ? "text-brand font-medium" : "text-muted-foreground"
                 }`}
               >
                 {item.label}

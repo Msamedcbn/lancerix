@@ -611,13 +611,19 @@ export async function addAcceptanceCriteria(
   _prev: FormState,
   formData: FormData,
 ): Promise<FormState> {
-  await requireRole("CLIENT");
+  const session = await requireRole("CLIENT");
 
   const contractId = String(formData.get("contractId") ?? "");
   if (!contractId) return FAIL("Sözleşme eksik.");
 
   const parsed = criteriaSubmissionSchema.safeParse(readCriteria(formData));
   if (!parsed.success) return FAIL(firstIssue(parsed.error));
+
+  const contract = await getContract(contractId, session.userId);
+  if (!contract) return FAIL("Sözleşme bulunamadı.");
+  if (!["DRAFT", "PENDING_REVIEW", "REVISION_REQUESTED"].includes(contract.status)) {
+    return FAIL("Sözleşme imzalandığı veya imza sürecinde olduğu için kriterler değiştirilemez.");
+  }
 
   const supabase = await createClient();
 
@@ -672,6 +678,9 @@ export async function signContract(
 
   const contract = await getContract(contractId, session.userId);
   if (!contract) return FAIL("Contract not found.");
+  if (contract.freelancer_id !== session.userId && contract.client_id !== session.userId) {
+    return FAIL("Bu sözleşmeyi imzalama yetkiniz yok.");
+  }
 
   const document = renderContractDocument(
     contract,
@@ -714,11 +723,25 @@ export async function submitDelivery(
   _prev: FormState,
   formData: FormData,
 ): Promise<FormState> {
-  await requireRole("FREELANCER");
+  const session = await requireRole("FREELANCER");
   const milestoneId = String(formData.get("milestoneId") ?? "");
   if (!milestoneId) return FAIL("Missing milestone.");
 
   const supabase = await createClient();
+
+  const { data: milestone, error: milestoneError } = await supabase
+    .from("milestones")
+    .select("contract_id")
+    .eq("id", milestoneId)
+    .single();
+
+  if (milestoneError || !milestone) return FAIL("Milestone bulunamadı.");
+
+  const contract = await getContract(milestone.contract_id, session.userId);
+  if (!contract || contract.status !== "ACTIVE" || !contract.work_started_at) {
+    return FAIL("Teslimat yapabilmek için işin resmi olarak başlamış olması gerekir.");
+  }
+
   const { error } = await supabase.rpc("transition_milestone", {
     p_milestone_id: milestoneId,
     p_to_status: "SUBMITTED",
