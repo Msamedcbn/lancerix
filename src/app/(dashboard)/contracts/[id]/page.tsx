@@ -25,7 +25,12 @@ import {
   type ProjectCategory,
 } from "@/lib/validations/project-category";
 import { requireSession } from "@/lib/auth/session";
-import { getContract, kurus, type Milestone } from "@/lib/data/contracts";
+import {
+  getContract,
+  isFreelancersFirstPaidTier,
+  kurus,
+  type Milestone,
+} from "@/lib/data/contracts";
 import {
   listActiveReviewers,
   listDeliveries,
@@ -398,15 +403,20 @@ export default async function ContractPage({
 
   const anySigned = contract.signatures.length > 0;
 
+  const qaSelectionEditable = side === "client" && !anySigned;
+
   const deliveries = isQaOnly ? await listDeliveries(contract.id) : [];
-  const [events, reviewers] = isQaOnly
+  const [events, reviewers, firstPaidTier] = isQaOnly
     ? await Promise.all([
         listDeliveryEvents(deliveries.map((d) => d.id)),
         // Only the client needs the roster, and only while the QA selection
         // is still editable -- once signed it's locked in and read-only.
-        side === "client" && !anySigned ? listActiveReviewers() : Promise.resolve([]),
+        qaSelectionEditable ? listActiveReviewers() : Promise.resolve([]),
+        qaSelectionEditable
+          ? isFreelancersFirstPaidTier(contract.freelancer_id, contract.id)
+          : Promise.resolve(false),
       ])
-    : [[], []];
+    : [[], [], false];
 
   const messages = await listMessages(contract.id, session.userId);
 
@@ -654,6 +664,7 @@ export default async function ContractPage({
                 reviewers={reviewers}
                 side={side}
                 anySigned={anySigned}
+                freelancerFirstPaidTier={firstPaidTier}
               />
               <DeliveryPanel
                 contractId={contract.id}

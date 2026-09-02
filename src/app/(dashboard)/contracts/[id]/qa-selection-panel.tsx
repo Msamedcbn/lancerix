@@ -36,6 +36,7 @@ export function QaSelectionPanel({
   reviewers,
   side,
   anySigned,
+  freelancerFirstPaidTier,
 }: Readonly<{
   contractId: string;
   qaTier: string | null;
@@ -44,6 +45,10 @@ export function QaSelectionPanel({
   reviewers: QaReviewer[];
   side: "client" | "freelancer";
   anySigned: boolean;
+  /** Whether the freelancer's first-contract fee waiver (Faz E #4) would
+   * apply if the client picks Tier 1/2 here -- shown before they commit,
+   * not just after, since the whole point is removing hesitation up front. */
+  freelancerFirstPaidTier: boolean;
 }>) {
   const [state, action] = useActionState(setQaSelection, INITIAL);
   const [tier, setTier] = useState<QaTier>((qaTier as QaTier) ?? "TIER1");
@@ -68,9 +73,19 @@ export function QaSelectionPanel({
                 {QA_TIER_INFO[qaTier as QaTier].label}
               </span>
               <span className="tnum rounded-full bg-zinc-100 px-2.5 py-0.5 text-xs font-bold text-zinc-800 dark:bg-zinc-800 dark:text-zinc-200">
-                {qaFeeKurus ? <Money kurus={qaFeeKurus} /> : QA_TIER_INFO[qaTier as QaTier].price}
+                {/* qaFeeKurus can legitimately be 0 (first-contract waiver) --
+                    that must still render as ₺0,00, not fall through to the
+                    tier's static list price. Only a true null (no fee ever
+                    computed, e.g. a Tier 4 row from before fee tracking)
+                    falls back to the static string. */}
+                {qaFeeKurus !== null ? <Money kurus={qaFeeKurus} /> : QA_TIER_INFO[qaTier as QaTier].price}
               </span>
             </div>
+            {qaFeeKurus === 0 && (qaTier === "TIER1" || qaTier === "TIER2") ? (
+              <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                🎉 İlk sözleşme hediyesi — doğrulama kaydı ücreti bu sözleşmede alınmıyor.
+              </p>
+            ) : null}
             {qaReviewer ? (
               <p className="text-xs text-zinc-500 dark:text-zinc-400">
                 İnceleyecek: {LEVEL_LABEL[qaReviewer.level] ?? qaReviewer.level} ·{" "}
@@ -127,9 +142,15 @@ export function QaSelectionPanel({
                         {info.label}
                       </span>
                     </div>
-                    <span className="tnum rounded-full bg-zinc-100 px-2.5 py-0.5 text-xs font-bold text-zinc-800 dark:bg-zinc-800 dark:text-zinc-200">
-                      {info.price}
-                    </span>
+                    {freelancerFirstPaidTier && (value === "TIER1" || value === "TIER2") ? (
+                      <span className="tnum rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-bold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
+                        🎉 İlk sözleşme ücretsiz
+                      </span>
+                    ) : (
+                      <span className="tnum rounded-full bg-zinc-100 px-2.5 py-0.5 text-xs font-bold text-zinc-800 dark:bg-zinc-800 dark:text-zinc-200">
+                        {info.price}
+                      </span>
+                    )}
                   </div>
                   <p className="mt-3 text-xs leading-relaxed text-zinc-600 dark:text-zinc-300">
                     {info.hint}

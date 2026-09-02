@@ -1126,6 +1126,7 @@ export type Database = {
         Args: { p_order_id: string; p_reason: string }
         Returns: undefined
       }
+      caller_email_confirmed: { Args: never; Returns: boolean }
       can_actor_transition: {
         Args: {
           p_from_status: Database["public"]["Enums"]["escrow_status"]
@@ -1310,6 +1311,10 @@ export type Database = {
           id: string
           role: Database["public"]["Enums"]["user_role"]
         }[]
+      }
+      freelancer_has_paid_qa_before: {
+        Args: { p_exclude_contract_id?: string; p_freelancer_id: string }
+        Returns: boolean
       }
       generate_public_id: { Args: never; Returns: string }
       is_admin: { Args: never; Returns: boolean }

@@ -323,3 +323,24 @@ export async function listClientPlatformInvoices(clientId: string): Promise<Clie
   if (error) throw error;
   return (data ?? []) as ClientPlatformInvoiceRow[];
 }
+
+/**
+ * Whether picking Tier 1/2 on this contract would land on the freelancer's
+ * first-contract fee waiver (Faz E #4). Routed through a security-definer
+ * RPC because the viewer here is the client, pre-signature -- RLS correctly
+ * does not let them see the freelancer's other contracts to check this
+ * themselves.
+ */
+export async function isFreelancersFirstPaidTier(
+  freelancerId: string,
+  excludeContractId: string,
+): Promise<boolean> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("freelancer_has_paid_qa_before", {
+    p_freelancer_id: freelancerId,
+    p_exclude_contract_id: excludeContractId,
+  });
+
+  if (error) throw error;
+  return data === false;
+}
