@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useActionState } from "react";
 
 import { register, type AuthFormState } from "@/app/(auth)/actions";
+import { Mark } from "@/components/brand/mark";
 import { Field, TextInput } from "@/components/field";
 
 const INITIAL: AuthFormState = { error: null };
@@ -27,9 +28,13 @@ export default function RegisterPage() {
   return (
     <main className="grid min-h-[100dvh] lg:grid-cols-[1fr_1.1fr]">
       <section className="hidden flex-col justify-between bg-zinc-950 p-12 lg:flex">
-        <span className="text-sm font-semibold tracking-tight text-zinc-50">
+        <Link
+          href="/"
+          className="inline-flex w-fit items-center gap-2 text-sm font-semibold tracking-tight text-zinc-50 hover:opacity-80"
+        >
+          <Mark className="size-4" />
           Lancerix
-        </span>
+        </Link>
         <div className="max-w-[34ch]">
           <p className="text-3xl leading-tight font-medium tracking-tight text-zinc-50">
             Sözleşme imzalanır, aşamalar tek tek kapanır.
@@ -46,6 +51,14 @@ export default function RegisterPage() {
 
       <section className="flex items-center justify-center px-6 py-16">
         <div className="w-full max-w-sm">
+          <Link
+            href="/"
+            className="mb-8 inline-flex w-fit items-center gap-2 text-sm font-semibold tracking-tight text-zinc-950 hover:opacity-70 lg:hidden"
+          >
+            <Mark className="size-4" />
+            Lancerix
+          </Link>
+
           <h1 className="text-2xl font-semibold tracking-tight text-zinc-950">
             Hesap oluştur
           </h1>

@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { Suspense, useActionState } from "react";
 
 import { login, type AuthFormState } from "@/app/(auth)/actions";
+import { Mark } from "@/components/brand/mark";
 import { Field, TextInput } from "@/components/field";
 
 const INITIAL: AuthFormState = { error: null };
@@ -55,9 +56,13 @@ function LoginForm() {
       {/* Asymmetric split rather than a centred card: the left column carries
           the proposition, the right one does the work. */}
       <section className="hidden flex-col justify-between bg-zinc-950 p-12 lg:flex">
-        <span className="text-sm font-semibold tracking-tight text-zinc-50">
+        <Link
+          href="/"
+          className="inline-flex w-fit items-center gap-2 text-sm font-semibold tracking-tight text-zinc-50 hover:opacity-80"
+        >
+          <Mark className="size-4" />
           Lancerix
-        </span>
+        </Link>
         <div className="max-w-[34ch]">
           <p className="text-3xl leading-tight font-medium tracking-tight text-zinc-50">
             Teslim ettin, itiraz gelmedi. Kabul edilmiş sayılır.
@@ -74,6 +79,14 @@ function LoginForm() {
 
       <section className="flex items-center justify-center px-6 py-16">
         <div className="w-full max-w-sm">
+          <Link
+            href="/"
+            className="mb-8 inline-flex w-fit items-center gap-2 text-sm font-semibold tracking-tight text-zinc-950 hover:opacity-70 lg:hidden"
+          >
+            <Mark className="size-4" />
+            Lancerix
+          </Link>
+
           <h1 className="text-2xl font-semibold tracking-tight text-zinc-950">
             Giriş yap
           </h1>
