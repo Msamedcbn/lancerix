@@ -3,12 +3,14 @@
 import type { Route } from "next";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 
 import { requireRole, requireSession } from "@/lib/auth/session";
 import { getContract } from "@/lib/data/contracts";
 import { FAIL, firstIssue, OK, type FormState } from "@/lib/forms";
 import { createQaOrderCheckout } from "@/lib/lemonsqueezy";
 import { notifyDeliverySubmitted, notifyQaOutcome } from "@/lib/notify/email";
+import { processTier2Order } from "@/lib/qa/agent";
 import { createClient } from "@/lib/supabase/server";
 import {
   clientDecisionSchema,
@@ -125,6 +127,25 @@ export async function chooseQaTier(
     });
     if (!sent.ok) {
       mailNotice = ` (Müşteriye e-posta iletilemedi: ${sent.reason})`;
+    }
+  }
+
+  if (tier.data === "TIER2") {
+    // The agent run happens after this response is sent, not before -- the
+    // freelancer isn't kept waiting on a Playwright launch + LLM call just
+    // to see "queued". A daily cron sweep (process-tier2-qa) catches any
+    // order this never got to (a crashed invocation, a deploy mid-request).
+    const { data: order } = await supabase
+      .from("qa_tier_orders")
+      .select("id")
+      .eq("delivery_id", deliveryId)
+      .eq("tier", "TIER2")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (order) {
+      after(() => processTier2Order(order.id));
     }
   }
 

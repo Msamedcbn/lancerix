@@ -960,6 +960,7 @@ export type Database = {
       }
       qa_tier_orders: {
         Row: {
+          agent_status: string | null
           created_at: string
           delivery_id: string
           fee_kurus: number
@@ -971,6 +972,7 @@ export type Database = {
           tier: string
         }
         Insert: {
+          agent_status?: string | null
           created_at?: string
           delivery_id: string
           fee_kurus?: number
@@ -982,6 +984,7 @@ export type Database = {
           tier: string
         }
         Update: {
+          agent_status?: string | null
           created_at?: string
           delivery_id?: string
           fee_kurus?: number
@@ -1005,6 +1008,47 @@ export type Database = {
             columns: ["reviewer_id"]
             isOneToOne: false
             referencedRelation: "qa_reviewers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      qa_agent_runs: {
+        Row: {
+          confidence_score: number | null
+          created_at: string
+          id: string
+          llm_responses: Json | null
+          screenshots: string[] | null
+          status: string
+          tier_order_id: string
+          updated_at: string
+        }
+        Insert: {
+          confidence_score?: number | null
+          created_at?: string
+          id?: string
+          llm_responses?: Json | null
+          screenshots?: string[] | null
+          status: string
+          tier_order_id: string
+          updated_at?: string
+        }
+        Update: {
+          confidence_score?: number | null
+          created_at?: string
+          id?: string
+          llm_responses?: Json | null
+          screenshots?: string[] | null
+          status?: string
+          tier_order_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "qa_agent_runs_tier_order_id_fkey"
+            columns: ["tier_order_id"]
+            isOneToOne: false
+            referencedRelation: "qa_tier_orders"
             referencedColumns: ["id"]
           },
         ]
@@ -1062,6 +1106,10 @@ export type Database = {
     }
     Functions: {
       apply_bps: { Args: { amount: number; bps: number }; Returns: number }
+      auto_escalate_qa_tier: {
+        Args: { p_order_id: string; p_reason: string }
+        Returns: undefined
+      }
       can_actor_transition: {
         Args: {
           p_from_status: Database["public"]["Enums"]["escrow_status"]
