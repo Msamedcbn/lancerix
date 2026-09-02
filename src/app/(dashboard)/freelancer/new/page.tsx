@@ -26,7 +26,7 @@ export default async function NewContractPage() {
   return (
     <>
       <PageHeading
-        title="Yeni sözleşme"
+        title="Yeni proje"
         subtitle="Anlaşmayı ve aşamalarını kur"
       />
 

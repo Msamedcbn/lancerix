@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { PublicProfileForm } from "@/app/(dashboard)/profil/profile-form";
+import { PayoutInfoForm, PublicProfileForm } from "@/app/(dashboard)/profil/profile-form";
 import { PageHeading, Panel } from "@/components/page-shell";
 import { ProfileCard } from "@/components/profile-card";
 import { requireSession } from "@/lib/auth/session";
@@ -50,11 +50,26 @@ export default async function MyProfilePage() {
         <ProfileCard profile={publicView} />
       </Panel>
 
+      <Panel title="Faturalandırma">
+        <p className="mb-5 rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-600 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300">
+          Bu adım henüz aktif değil — Lancerix şu an faturalandırma hizmeti
+          sunmuyor. Aşağıdakiler yalnızca hazırlık amaçlı; Faz 2&apos;de
+          açıldığında kullanılacak.
+        </p>
+        <PayoutInfoForm
+          fullName={mine.full_name}
+          tckn={mine.tckn}
+          iban={mine.iban}
+          disabled
+        />
+      </Panel>
+
       <Panel title="Profili düzenle">
         <PublicProfileForm
           headline={mine.headline}
           bio={mine.bio}
           skills={mine.skills ?? []}
+          services={mine.services ?? []}
           location={mine.location}
           websiteUrl={mine.website_url}
           isFreelancer={mine.role === "FREELANCER"}

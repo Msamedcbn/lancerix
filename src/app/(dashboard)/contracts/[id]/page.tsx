@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import {
   ClientDecision,
   DeliveryForm,
+  QaOrderPayment,
   TierPicker,
 } from "@/app/(dashboard)/contracts/[id]/delivery-panel";
 import { MilestoneActions } from "@/app/(dashboard)/contracts/[id]/milestone-actions";
@@ -347,6 +348,8 @@ function DeliveryPanel({
           </p>
         ) : null}
 
+        {order ? <QaOrderPayment order={order} /> : null}
+
         {latest.status === "AWAITING_CLIENT" && !isFreelancer ? (
           <div className="border-t border-zinc-200 pt-5 dark:border-zinc-800">
             <ClientDecision contractId={contractId} deliveryId={latest.id} />
@@ -589,10 +592,23 @@ export default async function ContractPage({
             </p>
 
             {contract.product_type === "QA_ONLY" ? (
-              <p className="mt-5 text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">
-                QA testi sözleşmesi. Escrow ve fatura bu sözleşmeye dahil
-                değil — ödeme taraflar arasında doğrudan çözülür.
-              </p>
+              <>
+                <dl className="mt-5 grid grid-cols-2 gap-x-6 gap-y-3">
+                  <div>
+                    <dt className="text-xs text-zinc-500 dark:text-zinc-400">
+                      Proje Bedeli
+                    </dt>
+                    <dd className="tnum mt-0.5 text-sm font-bold text-zinc-950 dark:text-zinc-50">
+                      <Money kurus={contract.project_amount_kurus} />
+                    </dd>
+                  </div>
+                </dl>
+                <p className="mt-5 text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">
+                  Ödeme taraflar arasında doğrudan çözülür. Lancerix bu tutar
+                  üzerinden bir komisyon almaz — gelir yalnızca QA test
+                  hizmetinden elde edilir.
+                </p>
+              </>
             ) : (
               <>
                 <dl className="mt-5 grid grid-cols-2 gap-x-6 gap-y-3">

@@ -10,6 +10,7 @@ export type PublicProfile = {
   headline: string | null;
   bio: string | null;
   skills: string[];
+  services: string[];
   location: string | null;
   website_url: string | null;
   created_at: string;
@@ -41,6 +42,7 @@ export async function getPublicProfile(
     ...data,
     completed_contracts: Number(data.completed_contracts ?? 0),
     skills: data.skills ?? [],
+    services: data.services ?? [],
     companies: Array.isArray(data.companies)
       ? (data.companies as Array<{ id: string; legal_name: string }>)
       : [],
@@ -53,7 +55,7 @@ export async function getMyProfile(userId: string) {
   const { data, error } = await supabase
     .from("profiles")
     .select(
-      "full_name, public_id, role, headline, bio, skills, location, website_url, tckn, iban, created_at",
+      "full_name, public_id, role, headline, bio, skills, services, location, website_url, tckn, iban, created_at",
     )
     .eq("id", userId)
     .single();

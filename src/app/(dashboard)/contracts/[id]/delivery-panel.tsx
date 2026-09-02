@@ -5,12 +5,14 @@ import { useActionState, useState } from "react";
 import {
   chooseQaTier,
   decideDelivery,
+  payQaOrder,
   submitQaDelivery,
   type FormState,
 } from "@/app/(dashboard)/qa-actions";
 import { Field, TextArea, TextInput } from "@/components/field";
 import { FormFeedback, SubmitButton } from "@/components/form-feedback";
-import type { QaReviewer } from "@/lib/data/deliveries";
+import { Money } from "@/components/money";
+import type { QaReviewer, QaTierOrder } from "@/lib/data/deliveries";
 import {
   QA_TIERS,
   QA_TIER_INFO,
@@ -196,11 +198,17 @@ export function TierPicker({
             </p>
           ) : (
             <div className="grid gap-2 sm:grid-cols-2">
-              {reviewers.map((r) => (
+              {reviewers.map((r) => {
+                const unrated = r.rate_kurus == null;
+                return (
                 <label
                   key={r.id}
                   htmlFor={`reviewer-${r.id}`}
-                  className="has-checked:border-brand has-checked:bg-brand-muted flex cursor-pointer flex-col gap-1 rounded-lg border border-zinc-200 px-3 py-3 hover:bg-zinc-50 dark:border-zinc-800 dark:hover:bg-zinc-900"
+                  className={`has-checked:border-brand has-checked:bg-brand-muted flex flex-col gap-1 rounded-lg border border-zinc-200 px-3 py-3 dark:border-zinc-800 ${
+                    unrated
+                      ? "cursor-not-allowed opacity-50"
+                      : "cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-900"
+                  }`}
                 >
                   <span className="flex items-start gap-2">
                     <input
@@ -209,6 +217,7 @@ export function TierPicker({
                       name="reviewerChoice"
                       value={r.id}
                       checked={reviewerId === r.id}
+                      disabled={unrated}
                       onChange={() => setReviewerId(r.id)}
                       className="accent-brand mt-1"
                     />
@@ -218,7 +227,13 @@ export function TierPicker({
                       </span>
                       <span className="tnum block text-xs text-zinc-500 dark:text-zinc-400">
                         {r.years_experience}+ yıl
+                        {unrated ? " · ücret belirlenmedi" : null}
                       </span>
+                      {r.rate_kurus != null ? (
+                        <span className="tnum block text-xs font-semibold text-zinc-700 dark:text-zinc-300">
+                          <Money kurus={r.rate_kurus} />
+                        </span>
+                      ) : null}
                     </span>
                   </span>
 
@@ -241,13 +256,14 @@ export function TierPicker({
                     </span>
                   ) : null}
                 </label>
-              ))}
+                );
+              })}
             </div>
           )}
 
           <p className="mt-1 text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">
-            Ücret şimdilik elden faturalanır; ödeme entegrasyonu henüz bağlı
-            değil.
+            Mühendisin ücreti seçince kesinleşir; onay sonrası ödeme adımı
+            açılır.
           </p>
         </fieldset>
       ) : null}
@@ -329,5 +345,33 @@ export function ClientDecision({
         {decision === "ACCEPTED" ? "Kabul et" : "İtirazı gönder"}
       </SubmitButton>
     </form>
+  );
+}
+
+/**
+ * The QA order's fee, once one exists.
+ *
+ * fee_kurus is fixed at choose_qa_tier() time from the reviewer's own
+ * rate_kurus, so this never computes an amount -- it only ever displays and
+ * pays the one already on the order. Nothing renders for TIER1/WAIVED/PAID.
+ */
+export function QaOrderPayment({ order }: Readonly<{ order: QaTierOrder }>) {
+  const [state, action] = useActionState(payQaOrder, INITIAL);
+
+  if (order.payment_status !== "PENDING" || order.fee_kurus <= 0) return null;
+
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50/60 px-4 py-3 dark:border-amber-900/60 dark:bg-amber-950/30">
+      <p className="text-sm text-amber-800 dark:text-amber-200">
+        İnceleme ücreti <Money kurus={order.fee_kurus} /> — ödeme bekleniyor.
+      </p>
+      <form action={action}>
+        <input type="hidden" name="orderId" value={order.id} />
+        <SubmitButton pendingLabel="Yönlendiriliyor...">Öde</SubmitButton>
+      </form>
+      {state.error && (
+        <p className="w-full text-xs text-rose-600 dark:text-rose-400">{state.error}</p>
+      )}
+    </div>
   );
 }

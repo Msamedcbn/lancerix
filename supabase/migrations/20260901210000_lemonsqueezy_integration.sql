@@ -1,0 +1,12 @@
+-- Superseded before ever being applied to the hosted DB.
+--
+-- This file originally added contracts.platform_fee_paid /
+-- payment_reference_id and a contract_summary view for a checkout wired to
+-- contract signing at a hardcoded amount. That design was replaced: payment
+-- now attaches to the QA tier order (qa_tier_orders), not the contract, and
+-- at the reviewer's real rate instead of a hardcoded figure. See
+-- 20260902000000_qa_payment_and_reviewer_rate.sql.
+--
+-- Left as a no-op rather than deleted so the migration timeline stays
+-- append-only and the history of what was tried is not silently erased.
+select 1;

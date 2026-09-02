@@ -1,10 +1,13 @@
 "use server";
 
+import type { Route } from "next";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 
 import { requireRole, requireSession } from "@/lib/auth/session";
 import { getContract } from "@/lib/data/contracts";
 import { FAIL, firstIssue, OK, type FormState } from "@/lib/forms";
+import { createQaOrderCheckout } from "@/lib/lemonsqueezy";
 import { notifyDeliverySubmitted, notifyQaOutcome } from "@/lib/notify/email";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -12,6 +15,7 @@ import {
   deliverySchema,
   QA_TIER_INFO,
   qaTierSchema,
+  type QaTier,
 } from "@/lib/validations/delivery";
 
 export type { FormState };
@@ -124,6 +128,55 @@ export async function chooseQaTier(
       ? `Paket seçildi. Müşterinin kontrol süresi başladı.${mailNotice}`
       : `Paket seçildi. QA masasına iletildi.${mailNotice}`,
   );
+}
+
+/**
+ * Paying a TIER3/TIER4 order's reviewer fee.
+ *
+ * Anyone party to the contract can trigger this -- RLS on qa_tier_orders
+ * already limits the select to contract parties/admin, so there is nothing
+ * beyond requireSession() to check here. The fee itself is fixed at
+ * choose_qa_tier() time from the reviewer's own rate_kurus, so this never
+ * invents an amount; it just hands that stored figure to LemonSqueezy.
+ */
+export async function payQaOrder(
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  await requireSession();
+
+  const orderId = String(formData.get("orderId") ?? "");
+  if (!orderId) return FAIL("Sipariş eksik.");
+
+  const supabase = await createClient();
+  const { data: order, error } = await supabase
+    .from("qa_tier_orders")
+    .select("id, tier, fee_kurus, payment_status")
+    .eq("id", orderId)
+    .single();
+
+  if (error || !order) return FAIL("Sipariş bulunamadı.");
+  if (order.payment_status !== "PENDING") {
+    return FAIL("Bu sipariş zaten ödenmiş ya da ücretsiz.");
+  }
+  if (order.fee_kurus <= 0) {
+    return FAIL("Bu sipariş için henüz bir ücret belirlenmemiş.");
+  }
+
+  let checkoutUrl: string;
+  try {
+    checkoutUrl = await createQaOrderCheckout(
+      order.id,
+      order.fee_kurus,
+      QA_TIER_INFO[order.tier as QaTier].label,
+    );
+  } catch (e) {
+    return FAIL(e instanceof Error ? e.message : "Ödeme linki oluşturulamadı.");
+  }
+
+  // An external LemonSqueezy URL, not an app route -- typedRoutes only knows
+  // this app's own routes, so it needs an explicit escape hatch here.
+  redirect(checkoutUrl as Route);
 }
 
 /**

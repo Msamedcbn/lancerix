@@ -1,6 +1,7 @@
 import { Briefcase, Globe, MapPin } from "lucide-react";
 
 import type { PublicProfile } from "@/lib/data/profile";
+import { SERVICE_CATALOG } from "@/lib/validations/services";
 
 const ROLE_LABEL: Record<PublicProfile["role"], string> = {
   FREELANCER: "Freelancer",
@@ -102,6 +103,38 @@ export function ProfileCard({
         </div>
       </header>
 
+      {profile.services.length > 0 ? (
+        <section>
+          <h2 className="text-xs font-semibold tracking-wide text-zinc-400 uppercase">
+            Hizmetler
+          </h2>
+          <div className="mt-3 flex flex-col gap-3">
+            {Object.values(SERVICE_CATALOG).map((group) => {
+              const picked = group.items.filter((item) => profile.services.includes(item.value));
+              if (picked.length === 0) return null;
+
+              return (
+                <div key={group.label}>
+                  <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
+                    {group.label}
+                  </p>
+                  <ul className="mt-1.5 flex flex-wrap gap-2">
+                    {picked.map((item) => (
+                      <li
+                        key={item.value}
+                        className="rounded-lg border border-zinc-200 bg-white px-2.5 py-1 text-sm text-zinc-700 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300"
+                      >
+                        {item.label}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      ) : null}
+
       {profile.skills.length > 0 ? (
         <section>
           <h2 className="text-xs font-semibold tracking-wide text-zinc-400 uppercase">
@@ -153,6 +186,7 @@ export function ProfileCard({
       {!profile.headline &&
       !profile.bio &&
       profile.skills.length === 0 &&
+      profile.services.length === 0 &&
       profile.location === null ? (
         <p className="rounded-xl border border-dashed border-zinc-200 px-4 py-6 text-center text-sm text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
           Bu profil henüz doldurulmamış.

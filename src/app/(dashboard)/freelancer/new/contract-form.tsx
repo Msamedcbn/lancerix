@@ -131,6 +131,7 @@ function DraftFields({
   criteria,
   phases,
   plannedStartDate,
+  projectAmount,
 }: Readonly<{
   productType: ProductType;
   projectCategory: ProjectCategory;
@@ -141,6 +142,7 @@ function DraftFields({
   criteria: Criterion[];
   phases: Phase[];
   plannedStartDate: string;
+  projectAmount: string;
 }>) {
   return (
     <>
@@ -151,6 +153,7 @@ function DraftFields({
       <input type="hidden" name="title" value={title} />
       <input type="hidden" name="scopeOfWork" value={scopeOfWork} />
       <input type="hidden" name="plannedStartDate" value={plannedStartDate} />
+      <input type="hidden" name="projectAmount" value={projectAmount} />
 
       {criteria.map((row, index) => (
         <input
@@ -196,6 +199,7 @@ export function ContractForm({
   const [title, setTitle] = useState("");
   const [scopeOfWork, setScopeOfWork] = useState("");
   const [plannedStartDate, setPlannedStartDate] = useState("");
+  const [projectAmount, setProjectAmount] = useState("");
   const [criteria, setCriteria] = useState<Criterion[]>([blankCriterion(0)]);
   const [phases, setPhases] = useState<Phase[]>([]);
 
@@ -218,6 +222,7 @@ export function ContractForm({
     criteria,
     phases,
     plannedStartDate,
+    projectAmount,
   };
 
   return (
@@ -368,6 +373,19 @@ export function ContractForm({
           </Field>
 
           <Field
+            label="Proje Bedeli (₺)"
+            htmlFor="projectAmount"
+            hint="Platform hizmet komisyonunun hesaplanacağı brüt proje bedeli."
+          >
+            <TextInput
+              id="projectAmount"
+              value={projectAmount}
+              onChange={(e) => setProjectAmount(e.target.value)}
+              placeholder="Örn: 50.000,00"
+            />
+          </Field>
+
+          <Field
             label="Planlanan İş Başlangıç Tarihi"
             htmlFor="plannedStartDate"
             hint="İki taraf da bu tarihi onayladığında iş resmi olarak başlar."
@@ -386,7 +404,7 @@ export function ContractForm({
             </button>
             <button
               type="button"
-              disabled={title.trim().length < 3 || scopeOfWork.trim().length < 20}
+              disabled={title.trim().length < 3 || scopeOfWork.trim().length < 20 || projectAmount.trim() === ""}
               onClick={() => setStep(2)}
               className={NEXT_BUTTON}
             >

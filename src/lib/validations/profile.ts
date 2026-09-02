@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { tcknSchema, trIbanSchema } from "@/lib/validations/identity";
+import { servicesSchema } from "@/lib/validations/services";
 
 /**
  * An empty optional field arrives from a form as "", not as undefined, so each
@@ -68,6 +69,8 @@ export const publicProfileSchema = z.object({
         .filter(Boolean)
         .slice(0, 12),
     ),
+  // Structured, catalog-backed alternative to skills -- see services.ts.
+  services: servicesSchema,
 });
 
 export type PublicProfileInput = z.infer<typeof publicProfileSchema>;

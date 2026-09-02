@@ -6,6 +6,7 @@ const base = {
   projectCategory: "SOFTWARE",
   title: "Landing page redesign",
   scopeOfWork: "Redesign the marketing landing page and ship it.",
+  projectAmount: "50.000,00",
   clientPublicId: "A3K9F2B1",
   companyId: "550e8400-e29b-41d4-a716-446655440000",
   plannedStartDate: "2026-09-05",

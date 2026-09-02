@@ -5,6 +5,7 @@ import { useActionState } from "react";
 import {
   addReviewer,
   setReviewerActive,
+  setReviewerRate,
   type FormState,
 } from "@/app/(dashboard)/admin/actions";
 import { Field, Select, TextArea, TextInput } from "@/components/field";
@@ -81,6 +82,41 @@ export function ReviewerActiveToggle({ reviewer }: Readonly<{ reviewer: QaReview
       >
         {reviewer.active ? "Pasife al" : "Aktifleştir"}
       </button>
+    </form>
+  );
+}
+
+/**
+ * The reviewer's own TIER3/TIER4 fee.
+ *
+ * choose_qa_tier() refuses to order this reviewer for TIER3/4 until
+ * rate_kurus is set, so this isn't optional bookkeeping -- it's what makes
+ * the reviewer orderable at all.
+ */
+export function ReviewerRateForm({ reviewer }: Readonly<{ reviewer: QaReviewer }>) {
+  const [state, action] = useActionState(setReviewerRate, INITIAL);
+
+  return (
+    <form action={action} className="flex items-center gap-1.5">
+      <input type="hidden" name="reviewerId" value={reviewer.id} />
+      <input
+        name="rate"
+        placeholder="0,00"
+        defaultValue={
+          reviewer.rate_kurus != null ? (reviewer.rate_kurus / 100).toFixed(2).replace(".", ",") : ""
+        }
+        inputMode="decimal"
+        className="tnum w-24 rounded-lg border border-zinc-200 px-2 py-1 text-right text-xs dark:border-zinc-800 dark:bg-zinc-900"
+      />
+      <button
+        type="submit"
+        className="rounded-lg border border-zinc-200 px-2.5 py-1 text-xs font-medium text-zinc-600 hover:bg-zinc-50 dark:border-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-900"
+      >
+        Ücreti kaydet
+      </button>
+      {state.error && (
+        <span className="text-[0.7rem] text-rose-600 dark:text-rose-400">{state.error}</span>
+      )}
     </form>
   );
 }

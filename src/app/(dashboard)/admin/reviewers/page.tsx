@@ -2,7 +2,7 @@ import { EmptyState, PageHeading, Panel, Row, Rows } from "@/components/page-she
 import { requireRole } from "@/lib/auth/session";
 import { listAllReviewers } from "@/lib/data/admin-qa";
 
-import { AddReviewerForm, ReviewerActiveToggle } from "./reviewer-form";
+import { AddReviewerForm, ReviewerActiveToggle, ReviewerRateForm } from "./reviewer-form";
 
 const LEVEL_LABEL: Record<string, string> = {
   PRINCIPAL: "Principal / Lead",
@@ -76,6 +76,13 @@ export default async function AdminReviewersPage() {
                     {r.bio}
                   </p>
                 ) : null}
+
+                <div className="flex items-center gap-2 border-t border-zinc-100 pt-3 dark:border-zinc-800">
+                  <span className="text-xs text-zinc-500 dark:text-zinc-400">
+                    Tier 3/4 ücreti:
+                  </span>
+                  <ReviewerRateForm reviewer={r} />
+                </div>
               </div>
             </Row>
           ))}

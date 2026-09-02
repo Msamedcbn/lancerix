@@ -191,6 +191,7 @@ export async function previewContract(
     clientPublicId: formData.get("clientPublicId"),
     companyId: formData.get("companyId"),
     plannedStartDate: formData.get("plannedStartDate"),
+    projectAmount: formData.get("projectAmount"),
   };
 
   const parsed =
@@ -265,6 +266,7 @@ export async function createContract(
     clientPublicId: formData.get("clientPublicId"),
     companyId: formData.get("companyId"),
     plannedStartDate: formData.get("plannedStartDate"),
+    projectAmount: formData.get("projectAmount"),
   };
 
   const parsed =
@@ -305,6 +307,7 @@ export async function createContract(
       product_type: parsed.data.productType,
       project_category: parsed.data.projectCategory,
       planned_start_date: parsed.data.plannedStartDate ?? null,
+      project_amount_kurus: parsed.data.projectAmount,
     })
     .select("id")
     .single();

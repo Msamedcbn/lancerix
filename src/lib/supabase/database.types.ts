@@ -219,6 +219,7 @@ export type Database = {
           planned_start_date: string | null
           platform_fee_bps: number
           product_type: string
+          project_amount_kurus: number
           project_category: Database["public"]["Enums"]["project_category"]
           reference: string
           rejection_reason: string | null
@@ -245,6 +246,7 @@ export type Database = {
           planned_start_date?: string | null
           platform_fee_bps?: number
           product_type?: string
+          project_amount_kurus?: number
           project_category?: Database["public"]["Enums"]["project_category"]
           reference: string
           rejection_reason?: string | null
@@ -271,6 +273,7 @@ export type Database = {
           planned_start_date?: string | null
           platform_fee_bps?: number
           product_type?: string
+          project_amount_kurus?: number
           project_category?: Database["public"]["Enums"]["project_category"]
           reference?: string
           rejection_reason?: string | null
@@ -756,6 +759,7 @@ export type Database = {
           id: string
           invoice_type: string
           issued_at: string
+          jobtogo_reference: string | null
           paid_at: string | null
           status: string
         }
@@ -768,6 +772,7 @@ export type Database = {
           id?: string
           invoice_type: string
           issued_at?: string
+          jobtogo_reference?: string | null
           paid_at?: string | null
           status?: string
         }
@@ -780,6 +785,7 @@ export type Database = {
           id?: string
           invoice_type?: string
           issued_at?: string
+          jobtogo_reference?: string | null
           paid_at?: string | null
           status?: string
         }
@@ -812,6 +818,7 @@ export type Database = {
           location: string | null
           public_id: string
           role: Database["public"]["Enums"]["user_role"]
+          services: string[]
           skills: string[]
           tckn: string | null
           updated_at: string
@@ -828,6 +835,7 @@ export type Database = {
           location?: string | null
           public_id: string
           role?: Database["public"]["Enums"]["user_role"]
+          services?: string[]
           skills?: string[]
           tckn?: string | null
           updated_at?: string
@@ -844,6 +852,7 @@ export type Database = {
           location?: string | null
           public_id?: string
           role?: Database["public"]["Enums"]["user_role"]
+          services?: string[]
           skills?: string[]
           tckn?: string | null
           updated_at?: string
@@ -911,6 +920,7 @@ export type Database = {
           id: string
           level: string
           profile_id: string
+          rate_kurus: number | null
           specialties: string[]
           years_experience: number
         }
@@ -922,6 +932,7 @@ export type Database = {
           id?: string
           level: string
           profile_id: string
+          rate_kurus?: number | null
           specialties?: string[]
           years_experience: number
         }
@@ -933,6 +944,7 @@ export type Database = {
           id?: string
           level?: string
           profile_id?: string
+          rate_kurus?: number | null
           specialties?: string[]
           years_experience?: number
         }
@@ -952,6 +964,7 @@ export type Database = {
           delivery_id: string
           fee_kurus: number
           id: string
+          paid_at: string | null
           payment_status: string
           provider_reference: string | null
           reviewer_id: string | null
@@ -962,6 +975,7 @@ export type Database = {
           delivery_id: string
           fee_kurus?: number
           id?: string
+          paid_at?: string | null
           payment_status?: string
           provider_reference?: string | null
           reviewer_id?: string | null
@@ -972,6 +986,7 @@ export type Database = {
           delivery_id?: string
           fee_kurus?: number
           id?: string
+          paid_at?: string | null
           payment_status?: string
           provider_reference?: string | null
           reviewer_id?: string | null
@@ -1220,6 +1235,7 @@ export type Database = {
           location: string
           public_id: string
           role: Database["public"]["Enums"]["user_role"]
+          services: string[]
           skills: string[]
           website_url: string
         }[]

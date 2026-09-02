@@ -46,6 +46,7 @@ export function SignContract({
   return (
     <form action={action} className="flex flex-col gap-3">
       <input type="hidden" name="contractId" value={contractId} />
+
       <p className="max-w-[58ch] text-sm leading-relaxed text-zinc-500 dark:text-zinc-400">
         İmzalamak; adını, zamanı, IP adresini ve sözleşme metninin birebir
         parmak izini kayda geçirir. Şartlar sonradan değiştirilirse o parmak izi

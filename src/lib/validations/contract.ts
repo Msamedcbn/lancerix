@@ -94,6 +94,7 @@ const baseContractFields = {
     .string()
     .trim()
     .min(20, "Ne teslim edileceğini en az bir cümleyle anlat."),
+  projectAmount: amountKurus,
   /** Now uses public_id instead of email */
   clientPublicId: z
     .string()
