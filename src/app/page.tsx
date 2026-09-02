@@ -162,7 +162,7 @@ export default function HomePage() {
         <div className="relative mx-auto flex max-w-4xl flex-col items-center z-10">
           <span className="mb-8 inline-flex items-center gap-2 rounded-full border border-border glass px-4 py-1.5 text-xs font-medium text-foreground shadow-sm">
             <span className="bg-brand size-1.5 rounded-full animate-pulse" aria-hidden />
-            Bağımsız Kod Doğrulama · Sıfır Komisyon
+            Bağımsız Kod Doğrulama
           </span>
 
           <h1
@@ -226,8 +226,9 @@ export default function HomePage() {
       {/* --- what this is, in one direct paragraph --------------------------- */}
       <section className="mx-auto max-w-3xl px-6 py-24 text-center md:py-32">
         <p className="text-2xl leading-relaxed font-medium tracking-tight text-foreground md:text-[1.75rem]">
-          Biz bir aracı kurum değil, tarafsız bir hakemiz. Paranızı bünyemizde tutmuyor (escrow yok) veya fahiş kesintiler yapmıyoruz. 
-          Sözleşme ve hakemlik altyapısı için alıcıdan sadece %10 hizmet bedeli alıyor; projenin testi ve denetimi için ise seçtiğiniz bağımsız QA paketine göre ücretlendirme yapıyoruz.
+          Biz bir aracı kurum değil, tarafsız bir hakemiz. Paranızı bünyemizde tutmuyoruz (escrow yok) — ödeme
+          taraflar arasında doğrudan çözülür. Projenin testi ve denetimi için seçtiğiniz bağımsız QA paketine göre
+          ücretlendirme yapıyoruz.
         </p>
       </section>
 
@@ -335,12 +336,7 @@ export default function HomePage() {
             Biz, kimsenin hakkının yenmemesi için süreci tamamen şeffaf, test edilebilir ve kayıt altında tutulabilir bir altyapıya dönüştürüyoruz.
           </p>
           
-          <div className="mt-12 grid gap-6 sm:grid-cols-3">
-            <GlassCard className="flex flex-col items-center justify-center p-8">
-              <span className="text-4xl font-extrabold text-brand">%10</span>
-              <span className="mt-2 text-sm font-medium text-foreground">Hizmet Bedeli</span>
-              <span className="mt-1 text-xs text-muted-foreground">Sadece alıcıya yansıtılır</span>
-            </GlassCard>
+          <div className="mt-12 grid gap-6 sm:grid-cols-2">
             <GlassCard className="flex flex-col items-center justify-center p-8">
               <span className="text-4xl font-extrabold text-foreground">SHA-256</span>
               <span className="mt-2 text-sm font-medium text-muted-foreground">Kriptografik İmza</span>
