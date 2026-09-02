@@ -95,11 +95,23 @@ const baseContractFields = {
     .trim()
     .min(20, "Ne teslim edileceğini en az bir cümleyle anlat."),
   projectAmount: amountKurus,
-  /** Now uses public_id instead of email */
-  clientPublicId: z
+  /**
+   * The client can be addressed either way: an existing account by public
+   * ID, or a not-yet-registered one by email (the invite path -- see
+   * hasClientIdentifier below, which requires exactly one of the two).
+   */
+  clientPublicId: z.string().trim().default(""),
+  clientEmail: z
     .string()
     .trim()
-    .min(1, "Müşterinin Lancerix ID'sini gir."),
+    .toLowerCase()
+    .optional()
+    .transform((v) => (v ? v : null))
+    .nullable()
+    .refine(
+      (v) => v === null || z.email().safeParse(v).success,
+      "Geçerli bir e-posta adresi gir.",
+    ),
   // Optional because a QA_ONLY contract is not invoiced, and because the client
   // may not have registered yet. Required in practice only once e-invoicing is live.
   companyId: z
@@ -161,7 +173,25 @@ export const contractSchema = z.discriminatedUnion("productType", [
       (v) => v.companyId !== null,
       { message: "Fatura edilecek şirketi seç.", path: ["companyId"] },
     ),
-]);
+]).refine(hasClientIdentifier, {
+  message: "Müşterinin Lancerix ID'sini gir ya da e-posta ile davet et.",
+  path: ["clientPublicId"],
+});
+
+/**
+ * Exactly one way to address the client: an existing account by public ID,
+ * or a not-yet-registered one by email invite. Both present would be
+ * ambiguous about which path createContract should take; neither present
+ * means the freelancer picked no counterparty at all.
+ */
+function hasClientIdentifier(v: {
+  clientPublicId: string;
+  clientEmail: string | null;
+}): boolean {
+  const hasId = v.clientPublicId.trim() !== "";
+  const hasEmail = v.clientEmail !== null;
+  return hasId !== hasEmail;
+}
 
 /**
  * The client's own submission: at least one criterion, since this is the

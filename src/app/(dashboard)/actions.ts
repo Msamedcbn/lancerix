@@ -1,5 +1,6 @@
 "use server";
 
+import type { Route } from "next";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
@@ -17,6 +18,7 @@ import type {
 import { hashDocument, renderContractDocument } from "@/lib/contracts/document";
 import { TERMS_VERSION } from "@/lib/contracts/terms";
 import { getContract } from "@/lib/data/contracts";
+import { notifyContractInvite } from "@/lib/notify/email";
 import { DEFAULT_STOPAJ_BPS } from "@/lib/tax/stopaj";
 import { FAIL, firstIssue, OK, type FormState } from "@/lib/forms";
 import { createClient } from "@/lib/supabase/server";
@@ -190,6 +192,7 @@ export async function previewContract(
     title: formData.get("title"),
     scopeOfWork: formData.get("scopeOfWork"),
     clientPublicId: formData.get("clientPublicId"),
+    clientEmail: formData.get("clientEmail"),
     companyId: formData.get("companyId"),
     plannedStartDate: formData.get("plannedStartDate"),
     projectAmount: formData.get("projectAmount"),
@@ -217,9 +220,12 @@ export async function previewContract(
   // Same lookup createContract() does -- the preview should show the name
   // a freelancer actually recognises, not the raw ID they typed. Falls back
   // to the ID itself if the lookup fails, same as showing nothing better.
-  const { data: client } = await supabase
-    .rpc("find_by_public_id", { p_public_id: parsed.data.clientPublicId })
-    .maybeSingle();
+  // Invite path (clientEmail set instead) has no account yet to look up.
+  const { data: client } = parsed.data.clientPublicId
+    ? await supabase
+        .rpc("find_by_public_id", { p_public_id: parsed.data.clientPublicId })
+        .maybeSingle()
+    : { data: null };
 
   const draftContract = {
     reference: "(kaydedildiğinde atanır)",
@@ -248,7 +254,8 @@ export async function previewContract(
       [],
       {
         freelancerName: session.fullName,
-        clientName: client?.full_name ?? parsed.data.clientPublicId,
+        clientName:
+          client?.full_name ?? (parsed.data.clientPublicId || parsed.data.clientEmail) ?? "",
         company,
       },
       criteria as AcceptanceCriterion[],
@@ -272,6 +279,7 @@ export async function createContract(
     title: formData.get("title"),
     scopeOfWork: formData.get("scopeOfWork"),
     clientPublicId: formData.get("clientPublicId"),
+    clientEmail: formData.get("clientEmail"),
     companyId: formData.get("companyId"),
     plannedStartDate: formData.get("plannedStartDate"),
     projectAmount: formData.get("projectAmount"),
@@ -289,15 +297,29 @@ export async function createContract(
 
   const supabase = await createClient();
 
-  // Look up the client by their public ID
-  const { data: client, error: lookupError } = await supabase
-    .rpc("find_by_public_id", { p_public_id: parsed.data.clientPublicId })
-    .maybeSingle();
+  // Two ways to address the client: an existing account by public ID, or a
+  // not-yet-registered one by email invite (F-3, 2026-09-03). contractSchema
+  // guarantees exactly one of the two is set.
+  let clientId: string | null = null;
+  let clientEmail = "";
 
-  if (lookupError) return FAIL(lookupError.message);
-  if (!client) return FAIL("Bu ID ile kayıtlı kullanıcı bulunamadı.");
-  if (client.role !== "CLIENT") {
-    return FAIL("Bu hesap işveren olarak kayıtlı değil.");
+  if (parsed.data.clientPublicId) {
+    const { data: client, error: lookupError } = await supabase
+      .rpc("find_by_public_id", { p_public_id: parsed.data.clientPublicId })
+      .maybeSingle();
+
+    if (lookupError) return FAIL(lookupError.message);
+    if (!client) return FAIL("Bu ID ile kayıtlı kullanıcı bulunamadı.");
+    if (client.role !== "CLIENT") {
+      return FAIL("Bu hesap işveren olarak kayıtlı değil.");
+    }
+    clientId = client.id;
+  } else if (parsed.data.clientEmail) {
+    // Invite path: no account exists under this ID (or the freelancer never
+    // asked for one). claim_invited_contract() attaches client_id once this
+    // address is behind a confirmed, active session -- whether that's a
+    // brand-new signup or an account that already existed under this email.
+    clientEmail = parsed.data.clientEmail;
   }
 
   const reference = `LX-${Date.now().toString(36).toUpperCase()}`;
@@ -308,8 +330,8 @@ export async function createContract(
       reference,
       title: parsed.data.title,
       scope_of_work: parsed.data.scopeOfWork,
-      client_id: client.id,
-      client_email: "", // no longer used for lookup, kept for schema compat
+      client_id: clientId,
+      client_email: clientEmail,
       freelancer_id: session.userId,
       company_id: parsed.data.companyId,
       product_type: parsed.data.productType,
@@ -321,6 +343,28 @@ export async function createContract(
     .single();
 
   if (error) return FAIL(error.message);
+
+  let inviteMailFailed = false;
+  if (clientEmail) {
+    // Best-effort -- a failed invite email shouldn't fail contract creation,
+    // but it also shouldn't fail silently (F-1's class of bug). The
+    // freelancer sees the notice on the contract page and can resend by
+    // other means; the contract itself is unaffected either way.
+    const sent = await notifyContractInvite({
+      to: clientEmail,
+      contractId: contract.id,
+      contractTitle: parsed.data.title,
+      freelancerName: session.fullName,
+      // Simplification: the invite path is for addresses find_by_public_id
+      // didn't resolve, so this is false in the overwhelming majority of real
+      // cases. If the freelancer invites someone who does already have a
+      // Lancerix account under this address, they still get claimed correctly
+      // by claim_invited_contract() on login -- this only affects which
+      // closing sentence the invite email uses.
+      hasAccount: false,
+    });
+    inviteMailFailed = !sent.ok;
+  }
 
   if (parsed.data.productType === "QA_ONLY") {
     // Insert criteria
@@ -350,7 +394,11 @@ export async function createContract(
     }
 
     revalidatePath("/freelancer");
-    redirect(`/contracts/${contract.id}`);
+    redirect(
+      (inviteMailFailed
+        ? `/contracts/${contract.id}?inviteMailFailed=1`
+        : `/contracts/${contract.id}`) as Route,
+    );
   }
 
   // QA_PLUS_ESCROW path (Faz 2)

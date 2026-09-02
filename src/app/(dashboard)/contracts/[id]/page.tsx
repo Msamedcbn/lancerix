@@ -381,9 +381,10 @@ export default async function ContractPage({
   searchParams,
 }: Readonly<{
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ invite?: string; reason?: string }>;
+  searchParams: Promise<{ invite?: string; reason?: string; inviteMailFailed?: string }>;
 }>) {
   const { id } = await params;
+  const { inviteMailFailed } = await searchParams;
   const session = await requireSession();
   const contract = await getContract(id, session.userId);
 
@@ -460,6 +461,20 @@ export default async function ContractPage({
           </div>
         }
       />
+
+      {inviteMailFailed === "1" && side === "freelancer" && (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5 dark:border-amber-900 dark:bg-amber-950/40">
+          <p className="text-sm font-semibold text-amber-700 dark:text-amber-300">
+            ✉️ Davet e-postası gönderilemedi
+          </p>
+          <p className="mt-2 text-sm leading-relaxed text-amber-600 dark:text-amber-400">
+            Sözleşme kaydedildi, ama {contract.client_email || "müşteri"} adresine
+            davet e-postası iletilemedi. Bu sayfanın linkini kendin paylaşabilirsin —
+            müşteri hesap oluşturduğunda ya da giriş yaptığında sözleşme
+            kendiliğinden ona bağlanır.
+          </p>
+        </div>
+      )}
 
       {/* Rejection / Revision notice */}
       {contract.status === "REJECTED" && contract.rejection_reason && (

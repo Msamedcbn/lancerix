@@ -111,16 +111,39 @@ export async function getContract(
 > {
   const supabase = await createClient();
 
-  const { data, error } = await supabase
+  const select =
+    "*, milestones(*), contract_signatures(*), acceptance_criteria(*), workflow_phases(*), qa_reviewers(*)";
+
+  const { data: first, error: firstError } = await supabase
     .from("contracts")
-    .select(
-      "*, milestones(*), contract_signatures(*), acceptance_criteria(*), workflow_phases(*), qa_reviewers(*)",
-    )
+    .select(select)
     .eq("id", contractId)
     .maybeSingle();
 
-  if (error) throw error;
-  if (!data) return null;
+  if (firstError) throw firstError;
+  if (!first) return null;
+
+  // Unclaimed invite (F-3, 2026-09-03): attach client_id the moment its
+  // matching, confirmed address looks at the contract. Idempotent and safe
+  // to call on every load -- claim_invited_contract() itself is the only
+  // authority on whether the caller actually matches; a freelancer viewing
+  // their own draft or an admin viewing someone else's unclaimed invite both
+  // fail this harmlessly (not a real error, just "not for you to claim").
+  let data = first;
+  if (first.client_id === null) {
+    const { data: claimed } = await supabase.rpc("claim_invited_contract", {
+      p_contract_id: contractId,
+    });
+    if (claimed?.client_id) {
+      const { data: refetched, error: refetchError } = await supabase
+        .from("contracts")
+        .select(select)
+        .eq("id", contractId)
+        .maybeSingle();
+      if (refetchError) throw refetchError;
+      if (refetched) data = refetched;
+    }
+  }
 
   const [names, { data: company }] = await Promise.all([
     displayNames([data.client_id, data.freelancer_id]),

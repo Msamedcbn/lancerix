@@ -123,6 +123,7 @@ function DraftFields({
   productType,
   projectCategory,
   clientPublicId,
+  clientEmail,
   companyId,
   title,
   scopeOfWork,
@@ -133,6 +134,7 @@ function DraftFields({
   productType: ProductType;
   projectCategory: ProjectCategory;
   clientPublicId: string;
+  clientEmail: string;
   companyId: string;
   title: string;
   scopeOfWork: string;
@@ -145,6 +147,7 @@ function DraftFields({
       <input type="hidden" name="productType" value={productType} />
       <input type="hidden" name="projectCategory" value={projectCategory} />
       <input type="hidden" name="clientPublicId" value={clientPublicId} />
+      <input type="hidden" name="clientEmail" value={clientEmail} />
       <input type="hidden" name="companyId" value={companyId} />
       <input type="hidden" name="title" value={title} />
       <input type="hidden" name="scopeOfWork" value={scopeOfWork} />
@@ -182,6 +185,8 @@ export function ContractForm({
   const [productType] = useState<ProductType>("QA_ONLY");
   const [projectCategory, setProjectCategory] = useState<ProjectCategory>("SOFTWARE");
   const [clientPublicId, setClientPublicId] = useState("");
+  const [useInvite, setUseInvite] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState("");
   const [companyId, setCompanyId] = useState("");
   const [title, setTitle] = useState("");
   const [scopeOfWork, setScopeOfWork] = useState("");
@@ -192,13 +197,15 @@ export function ContractForm({
   const updatePhase = (id: number, field: keyof Phase, value: string) =>
     setPhases((p) => p.map((row) => (row.id === id ? { ...row, [field]: value } : row)));
 
-  const clientSettled = Boolean(lookup.resolved);
+  const inviteEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(inviteEmail.trim());
+  const clientSettled = useInvite ? inviteEmailValid : Boolean(lookup.resolved);
   const companies = lookup.resolved?.companies ?? [];
 
   const draft = {
     productType,
     projectCategory,
-    clientPublicId: lookup.resolved?.publicId ?? clientPublicId,
+    clientPublicId: useInvite ? "" : lookup.resolved?.publicId ?? clientPublicId,
+    clientEmail: useInvite ? inviteEmail.trim() : "",
     companyId,
     title,
     scopeOfWork,
@@ -211,47 +218,85 @@ export function ContractForm({
     <div className="flex flex-col gap-8">
       <StepBar current={step} />
 
-      {/* ═══ STEP 0 — Müşteri Arama (ID ile) ═══ */}
+      {/* ═══ STEP 0 — Müşteri Arama (ID ile ya da davetle) ═══ */}
       {step === 0 && (
         <div className="fade-in flex flex-col gap-6 max-w-xl">
-          <form action={lookupAction} className="flex flex-col gap-4">
-            <Field
-              label="Müşteri Lancerix ID"
-              htmlFor="lookupPublicId"
-              hint="Müşterinin profilindeki 8 haneli Lancerix ID'sini girin."
-            >
-              <div className="flex gap-2">
-                <TextInput
-                  id="lookupPublicId"
-                  name="clientPublicId"
-                  value={clientPublicId}
-                  onChange={(e) => setClientPublicId(e.target.value.toUpperCase())}
-                  placeholder="Örn: A3K9F2B1"
-                  required
-                  maxLength={8}
-                  className="font-mono tracking-widest uppercase"
-                />
-                <SubmitButton tone="secondary" pendingLabel="Aranıyor...">
-                  Ara
-                </SubmitButton>
-              </div>
-            </Field>
-
-            {lookup.error && (
-              <p
-                role="alert"
-                className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs font-semibold text-rose-700 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-300"
+          {!useInvite ? (
+            <form action={lookupAction} className="flex flex-col gap-4">
+              <Field
+                label="Müşteri Lancerix ID"
+                htmlFor="lookupPublicId"
+                hint="Müşterinin profilindeki 8 haneli Lancerix ID'sini girin."
               >
-                {lookup.error}
-              </p>
-            )}
-          </form>
+                <div className="flex gap-2">
+                  <TextInput
+                    id="lookupPublicId"
+                    name="clientPublicId"
+                    value={clientPublicId}
+                    onChange={(e) => setClientPublicId(e.target.value.toUpperCase())}
+                    placeholder="Örn: A3K9F2B1"
+                    required
+                    maxLength={8}
+                    className="font-mono tracking-widest uppercase"
+                  />
+                  <SubmitButton tone="secondary" pendingLabel="Aranıyor...">
+                    Ara
+                  </SubmitButton>
+                </div>
+              </Field>
 
-          {lookup.resolved && (
+              {lookup.error && (
+                <p
+                  role="alert"
+                  className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs font-semibold text-rose-700 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-300"
+                >
+                  {lookup.error}
+                </p>
+              )}
+
+              <button
+                type="button"
+                onClick={() => setUseInvite(true)}
+                className="self-start text-xs font-semibold text-brand underline underline-offset-4"
+              >
+                Müşterinin Lancerix hesabı yok mu? E-posta ile davet et
+              </button>
+            </form>
+          ) : (
+            <div className="flex flex-col gap-4">
+              <Field
+                label="Müşterinin E-postası"
+                htmlFor="inviteEmail"
+                hint="Müşteri henüz Lancerix'e kayıtlı değilse, sözleşmeyi imzalaması için bu adrese bir davet gönderilir."
+              >
+                <TextInput
+                  id="inviteEmail"
+                  name="inviteEmail"
+                  type="email"
+                  value={inviteEmail}
+                  onChange={(e) => setInviteEmail(e.target.value)}
+                  placeholder="musteri@ornek.com"
+                />
+              </Field>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setUseInvite(false);
+                  setInviteEmail("");
+                }}
+                className="self-start text-xs font-semibold text-brand underline underline-offset-4"
+              >
+                &larr; Müşterinin zaten hesabı var, ID ile ara
+              </button>
+            </div>
+          )}
+
+          {lookup.resolved && !useInvite && (
             <CounterpartyCard resolved={lookup.resolved} />
           )}
 
-          {companies.length > 0 && (
+          {companies.length > 0 && !useInvite && (
             <Field label="Fatura Edilecek Şirket" htmlFor="companyId">
               <select
                 id="companyId"

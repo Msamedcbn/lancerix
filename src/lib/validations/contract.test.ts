@@ -116,3 +116,63 @@ describe("contractSchema (product type)", () => {
     expect(result.success).toBe(false);
   });
 });
+
+describe("contractSchema (client identifier -- F-3 invite path)", () => {
+  it("accepts an email invite in place of a public ID", () => {
+    const { clientPublicId: _omitted, ...withoutId } = base;
+    const result = contractSchema.safeParse({
+      ...withoutId,
+      clientEmail: "musteri@ornek.com",
+      productType: "QA_ONLY",
+      criteria: [criterion],
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.clientPublicId).toBe("");
+      expect(result.data.clientEmail).toBe("musteri@ornek.com");
+    }
+  });
+
+  it("lowercases the invite email so lookup/matching is case-insensitive at the source", () => {
+    const { clientPublicId: _omitted, ...withoutId } = base;
+    const result = contractSchema.safeParse({
+      ...withoutId,
+      clientEmail: "Musteri@Ornek.COM",
+      productType: "QA_ONLY",
+      criteria: [criterion],
+    });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.clientEmail).toBe("musteri@ornek.com");
+  });
+
+  it("rejects a malformed invite email", () => {
+    const { clientPublicId: _omitted, ...withoutId } = base;
+    const result = contractSchema.safeParse({
+      ...withoutId,
+      clientEmail: "not-an-email",
+      productType: "QA_ONLY",
+      criteria: [criterion],
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects neither a public ID nor an email -- no way to address the client", () => {
+    const { clientPublicId: _omitted, ...withoutId } = base;
+    const result = contractSchema.safeParse({
+      ...withoutId,
+      productType: "QA_ONLY",
+      criteria: [criterion],
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects both a public ID and an email -- ambiguous which path to take", () => {
+    const result = contractSchema.safeParse({
+      ...base,
+      clientEmail: "musteri@ornek.com",
+      productType: "QA_ONLY",
+      criteria: [criterion],
+    });
+    expect(result.success).toBe(false);
+  });
+});
