@@ -8,6 +8,7 @@ import {
   QaOrderPayment,
 } from "@/app/(dashboard)/contracts/[id]/delivery-panel";
 import { QaSelectionPanel } from "@/app/(dashboard)/contracts/[id]/qa-selection-panel";
+import { QaReportSummary } from "@/app/(dashboard)/contracts/[id]/qa-report-summary";
 import { MilestoneActions } from "@/app/(dashboard)/contracts/[id]/milestone-actions";
 import { SignContract } from "@/app/(dashboard)/contracts/[id]/signing";
 import {
@@ -37,7 +38,6 @@ import {
   listDeliveryEvents,
   type DeliveryEvent,
   type DeliveryRow,
-  type QaReport,
 } from "@/lib/data/deliveries";
 import { listMessages } from "@/lib/data/messages";
 import { deliveryStatusLabel } from "@/lib/qa/delivery-state-machine";
@@ -281,7 +281,13 @@ function DeliveryPanel({
           </p>
         ) : null}
 
-        {report ? <QaReportSummary report={report} /> : null}
+        {report ? (
+          <QaReportSummary
+            report={report}
+            contractId={contractId}
+            isFreelancer={isFreelancer}
+          />
+        ) : null}
 
         {latest.status === "AWAITING_CLIENT" && latest.client_review_deadline ? (
           <ReviewCountdown deadline={latest.client_review_deadline} />
@@ -328,34 +334,6 @@ function DeliveryPanel({
         ) : null}
       </div>
     </Panel>
-  );
-}
-
-function QaReportSummary({ report }: Readonly<{ report: QaReport }>) {
-  const tone =
-    report.status === "PASS"
-      ? "text-brand"
-      : report.status === "FAIL"
-        ? "text-rose-600 dark:text-rose-400"
-        : "text-amber-700 dark:text-amber-400";
-
-  const label =
-    report.status === "PASS"
-      ? "Kriterler karşılandı"
-      : report.status === "FAIL"
-        ? "Kriterler karşılanmadı"
-        : "Kısmen karşılandı";
-
-  return (
-    <div className="rounded-xl border border-border p-4 dark:border-border/50">
-      <p className={`text-sm font-medium ${tone}`}>{label}</p>
-      <p className="tnum mt-1 text-xs text-muted-foreground dark:text-muted-foreground">
-        {report.generated_at.slice(0, 16).replace("T", " ")} · doğrulama raporu
-      </p>
-      <p className="mt-2 font-mono text-[0.7rem] break-all text-muted-foreground">
-        {report.document_sha256}
-      </p>
-    </div>
   );
 }
 

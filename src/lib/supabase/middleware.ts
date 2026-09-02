@@ -6,6 +6,12 @@ import type { Database } from "@/lib/supabase/database.types";
 
 // /nasil-calisir is marketing, linked from the landing footer. It was missing
 // here, so the one page explaining the system asked visitors to log in first.
+//
+// /sartlar (linked from the signing checkbox and the landing footer) and
+// /report (Faz E #1's shareable QA report link) had the same bug: both are
+// meant to be readable by someone with no account at all -- a prospective
+// signer previewing the terms, or a stranger following a freelancer's
+// portfolio link -- and both silently required login before this was fixed.
 const PUBLIC_ROUTES = [
   "/",
   "/login",
@@ -13,6 +19,8 @@ const PUBLIC_ROUTES = [
   "/auth",
   "/nasil-calisir",
   "/profile",
+  "/sartlar",
+  "/report",
 ];
 
 export async function updateSession(request: NextRequest) {

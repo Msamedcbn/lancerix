@@ -888,6 +888,7 @@ export type Database = {
           id: string
           pdf_storage_path: string | null
           results: Json
+          share_token: string | null
           status: string
           tier_order_id: string
         }
@@ -899,6 +900,7 @@ export type Database = {
           id?: string
           pdf_storage_path?: string | null
           results: Json
+          share_token?: string | null
           status: string
           tier_order_id: string
         }
@@ -910,6 +912,7 @@ export type Database = {
           id?: string
           pdf_storage_path?: string | null
           results?: Json
+          share_token?: string | null
           status?: string
           tier_order_id?: string
         }
@@ -1351,6 +1354,17 @@ export type Database = {
           website_url: string
         }[]
       }
+      public_qa_report: {
+        Args: { p_token: string }
+        Returns: {
+          contract_title: string
+          criteria: string[]
+          document_sha256: string
+          generated_at: string
+          project_category: Database["public"]["Enums"]["project_category"]
+          status: string
+        }[]
+      }
       public_verified_count: { Args: never; Returns: number }
       reject_contract: {
         Args: { p_contract_id: string; p_reason: string }
@@ -1598,6 +1612,27 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "deliveries"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      toggle_qa_report_share: {
+        Args: { p_report_id: string; p_share: boolean }
+        Returns: {
+          client_review_deadline: string
+          delivery_id: string
+          document_sha256: string
+          generated_at: string
+          id: string
+          pdf_storage_path: string | null
+          results: Json
+          share_token: string | null
+          status: string
+          tier_order_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "qa_reports"
           isOneToOne: true
           isSetofReturn: false
         }

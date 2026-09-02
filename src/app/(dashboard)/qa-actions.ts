@@ -252,3 +252,34 @@ export async function decideDelivery(
       : "İtirazın kaydedildi ve karşı tarafa bildirildi.",
   );
 }
+
+/**
+ * Faz E #1 (2026-09-03 CEO strategy review): the freelancer's own opt-in to
+ * put a public link to an accepted report in a portfolio or a proposal.
+ * toggle_qa_report_share() is the only real gate (freelancer-only, checked
+ * against the report's own contract) -- requireRole() here just gives an
+ * earlier, cheaper rejection for a client who would never see this control
+ * rendered anyway.
+ */
+export async function toggleQaReportShare(
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  await requireRole("FREELANCER");
+
+  const reportId = String(formData.get("reportId") ?? "");
+  const contractId = String(formData.get("contractId") ?? "");
+  const share = formData.get("share") === "true";
+  if (!reportId || !contractId) return FAIL("Rapor eksik.");
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("toggle_qa_report_share", {
+    p_report_id: reportId,
+    p_share: share,
+  });
+
+  if (error) return FAIL(error.message);
+
+  revalidatePath(`/contracts/${contractId}`);
+  return OK(share ? "Paylaşım linki oluşturuldu." : "Paylaşım kapatıldı.");
+}
