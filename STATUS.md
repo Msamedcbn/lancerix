@@ -1,6 +1,6 @@
 # Lancerix — Durum Özeti
 
-_Son güncelleme: 2026-09-02_
+_Son güncelleme: 2026-09-03_
 
 Bu dosya "şu an ne çalışıyor, ne eksik, sırada ne var" sorusuna tek bakışta
 cevap vermek için var. Ürün/mimari kararların gerekçesi `CLAUDE.md`'de;
@@ -23,8 +23,38 @@ burası daha çok bir kontrol paneli.
   atomik RPC (`submit_qa_delivery()`): teslim satırı, durum geçişi ve
   `qa_tier_orders` kaydı aynı transaction'da oluşuyor, kısmi başarısızlıkta
   sahipsiz kayıt kalmıyor.
-- Teslim + QA tier: Tier1 (ücretsiz, müşteri kendi bakar), Tier3/4
-  (insan inceleme, reviewer kendi ücretini belirler → `qa_reviewers.rate_kurus`).
+- **Sözleşme kurulurken müşterinin Lancerix hesabı olması gerekmiyor artık**
+  (bu oturumda eklendi, "F-3") — freelancer, ID bulunamazsa e-posta ile davet
+  edebiliyor. `claim_invited_contract()` davetli adres giriş yapınca (yeni
+  kayıt ya da zaten var olan hesap fark etmeksizin) sözleşmeyi otomatik
+  bağlıyor; `auth.users.email_confirmed_at` kontrolü DB seviyesinde zorunlu.
+  Aynı geçişte, `client_id IS NULL` olan bir sözleşmede daha önce fark
+  edilmemiş gerçek bir güvenlik açığı da kapatıldı: `reject_contract()`,
+  `request_revision()`, `set_qa_selection()`'ın `client_id <> auth.uid()`
+  kontrolü NULL-güvenli değildi (`NULL <> x` = NULL = false in PL/pgSQL),
+  yani iddiasız bir sözleşmeyi herhangi bir oturum açmış kullanıcı
+  reddedebilir/QA paketini değiştirebilirdi. `is distinct from` ile
+  düzeltildi.
+- Teslim + QA tier: **Tier1 artık 99₺ "doğrulama kaydı ücreti"** (bu
+  oturumda eklendi, "D" — önceden ücretsizdi; LemonSqueezy zaten Tier3/4
+  reviewer ücretini tahsil ediyordu, bunu Tier1'e de genişletip P-3'ü
+  (ödeme isteği var mı) şirket kurmadan test etmek için). **Freelancer'ın
+  ilk Tier1/2 seçimi ücretsiz** ("Faz E #4" — yeni ücretin ilk müşteriye
+  sürtünme yaratmaması için). Tier3/4 değişmedi (insan inceleme, reviewer
+  kendi ücretini belirler → `qa_reviewers.rate_kurus`).
+- **Kabul edilen bir QA raporu artık herkese açık, paylaşılabilir bir linkte
+  yayınlanabiliyor** ("Faz E #1") — freelancer'ın kendi tercihi, varsayılan
+  kapalı, `/report/[token]` (256-bit rastgele token, tahmin edilemez).
+  `public_qa_report()` yalnızca güvenli alanları döndürüyor (başlık,
+  kategori, kriterler, sonuç, hash) — hiçbir zaman taraf ismi, e-posta,
+  TCKN/IBAN veya tutar yok.
+- Ana sayfada gerçek kullanım verisinden bir "X sözleşme doğrulandı"
+  sayacı var ("Faz E #2") — ama sayı 5'in altındayken hiç gösterilmiyor
+  (şu an gösterilmiyor, gerçek sayı çok düşük).
+- Müşteri 5 günlük kontrol süresinin bitmesine ~1 gün kala freelancer'a
+  hatırlatma e-postası gidiyor ("Faz E #3", günlük cron
+  `remind-pending-review`, `deliveries.reminder_sent_at` tekrar
+  göndermeyi engelliyor).
 - **Tier2 (Agentic QA) artık ayrı bir worker/hosting gerektirmiyor** —
   `src/lib/qa/agent.ts`, aynı Vercel deployment'ı içinde normal bir fonksiyon
   çağrısı olarak çalışıyor (Playwright: `@sparticuz/chromium` +
@@ -117,16 +147,63 @@ burası daha çok bir kontrol paneli.
      sözleşmede freelancer bu tarihi girmezse teslim hiç açılmayabilir; ayrı
      bir bakış gerekebilir.
 
+## 2026-09-03: Faz 1 strateji review'ı ve sonrası
+
+`/plan-ceo-review` — 2026-09-01'deki review'ın reddettiği "sadece rapor,
+para hareket etmiyor" modeline (`CLAUDE.md`) sessizce geri dönülmüş
+olduğunu buldu (kayıtlı bir karar değişikliği yok). Kapatmak için 4 fazlık
+bir plan onaylandı ve hepsi bugün sevk edildi — tam gerekçe/karar kaydı:
+`~/.gstack/projects/demearac/ceo-plans/2026-09-03-faz1-strategy-close-payment-gap.md`.
+
+1. **F-4** — `terms.ts`'in "fatura kesmez" iddiası, `confirm_start_date()`'in
+   yazdığı `platform_invoices` satırıyla çelişiyordu; metin doğru bilgiye
+   göre yeniden yazıldı, kod değişmedi (commit `919c014`).
+2. **F-3** — yukarıda (davetle sözleşme kurma). İki üretim hatası bulundu ve
+   düzeltildi *deploy anında*: (a) `contracts_select_party` RLS policy'si
+   `auth.users`'ı doğrudan sorguluyordu — `authenticated` rolünün o tabloda
+   SELECT izni yok, ve Postgres OR dallarını soldan sağa garanti kısa
+   devre yapmıyor, bu yüzden HER sözleşme okuması "permission denied for
+   table users" ile patladı. (b) İlk düzeltme (`is_contract_party(id)`
+   üzerinden yönlendirme) bu sefer freelancer'ın kendi sözleşmesini
+   oluştururken INSERT...RETURNING'i kırdı — kendi tablosuna geri
+   sorgu atan bir fonksiyon, aynı statement içinde henüz eklenmekte olan
+   satırı güvenilir şekilde göremiyor. Üçüncü migration'da (orijinal terk
+   edilmiş migration'ın deseni geri getirilerek) düzeltildi (commit `3bbec32`).
+3. **D** — Tier1/2 sembolik ücret (commit `75cab1d`).
+4. **Faz E** — 4 genişleme, hepsi kabul edildi ve sevk edildi:
+   ilk-sözleşme-ücretsiz (`b44bcd3` — bir kaçağı da bulup düzeltti: ücreti
+   0'a bağlamak sonsuz ücretsiz döngüsü açıyordu, seçime bağlamak
+   gerekiyordu), ana sayfa sayacı (`1531af1`), freelancer hatırlatması
+   (`3a9dd0e`), paylaşılabilir rapor linki (`e7cc810` — bu son commit
+   ayrıca `/report` VE `/sartlar`'ın `middleware.ts`'in genel-erişim
+   listesinde hiç olmadığını buldu: ikisi de oturum açmamış ziyaretçiyi
+   `/login`'e yönlendiriyordu, "herkese açık" olmaları gerekirken).
+
+Her faz için: hosted DB'ye karşı doğrudan SQL ile (gerçek/atılabilir test
+verisiyle) uçtan uca doğrulama + tarayıcıda canlı test + typecheck/lint/test
+temiz, commit ve push edildi.
+
+**Bu review sırasında bulunan, bilerek bu oturuma dahil edilmeyen bir bug**
+(ayrı bir arka plan görevi olarak işaretlendi): `planned_start_date`
+sözleşme kurulurken isteğe bağlı bir alan — boş bırakılırsa iki taraf da
+imzalasa bile teslim asla açılmıyor (`work_started_at`'ı set edecek hiçbir
+yol yok). Bir freelancer bu tarihi girmeyi unutursa sözleşme kalıcı olarak
+kilitli kalıyor.
+
 ## Bilinen boşluklar / sıradaki
 
 CEO review'da (2026-09-02) kararlaştırılan 4 fazlık sıra:
 
 | Faz | İş | Durum |
 |---|---|---|
-| 1 — Güven | Kayıt-rolü bug'ı + bildirim güvenilirliği | ✅ Tamamlandı (bugün) |
+| 1 — Güven | Kayıt-rolü bug'ı + bildirim güvenilirliği | ✅ Tamamlandı |
 | 2 — Ürün | Tier2 Agentic QA | Kod hazır ve Vercel'e entegre (ayrı hosting gerekmiyor) — Vercel'e `OPENAI_API_KEY` eklenip gerçek bir teslimatla uçtan uca test edilmeden `available: true` yapılmamalı |
 | 3 — Sağlamlık | Son eklenen UI akışları için test kapsamı (`addAcceptanceCriteria`, `payQaOrder`, `ServicesPicker`, `PayoutInfoForm`) | Başlamadı |
 | 4 — Gelir | PayTR/iyzico escrow (şirket kuruluşu şart) | Şirket kuruluşuna bağlı |
+
+2026-09-03 CEO review'ının kararlaştırdığı, TODOS.md'ye eklenen ayrı
+kalemler: LemonSqueezy webhook rekonsiliasyon sweep'i (P2), davet süresi
+dolma mekanizması (P3, gerçek davet hacmi birikince tekrar bakılacak).
 
 ## Diğer bilinen gerçekler
 
