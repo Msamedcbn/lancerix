@@ -1348,6 +1348,7 @@ export type Database = {
           website_url: string
         }[]
       }
+      public_verified_count: { Args: never; Returns: number }
       reject_contract: {
         Args: { p_contract_id: string; p_reason: string }
         Returns: {
