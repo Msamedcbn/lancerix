@@ -21,10 +21,13 @@ export function SignContract({
   contractId,
   alreadySigned,
   otherPartySigned,
+  criteriaMissing = false,
 }: Readonly<{
   contractId: string;
   alreadySigned: boolean;
   otherPartySigned: boolean;
+  /** QA_ONLY with no acceptance criteria yet -- the client has to set these first. */
+  criteriaMissing?: boolean;
 }>) {
   const [state, action] = useActionState(signContract, INITIAL);
   const [accepted, setAccepted] = useState(false);
@@ -40,6 +43,14 @@ export function SignContract({
             : "Karşı tarafın imzası bekleniyor."}
         </p>
       </div>
+    );
+  }
+
+  if (criteriaMissing) {
+    return (
+      <p className="text-sm leading-relaxed text-zinc-500 dark:text-zinc-400">
+        Kabul kriterleri henüz girilmedi. İmza, kriterler kaydedilince açılır.
+      </p>
     );
   }
 

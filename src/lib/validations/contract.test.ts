@@ -57,13 +57,13 @@ describe("contractSchema (QA_ONLY)", () => {
     expect(result.success).toBe(false);
   });
 
-  it("rejects an empty criteria list", () => {
+  it("accepts an empty criteria list -- the client fills these in, not the freelancer", () => {
     const result = contractSchema.safeParse({
       ...base,
       productType: "QA_ONLY",
       criteria: [],
     });
-    expect(result.success).toBe(false);
+    expect(result.success).toBe(true);
   });
 
   it("rejects a milestones field on a QA_ONLY contract", () => {

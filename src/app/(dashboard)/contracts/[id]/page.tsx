@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { CriteriaPanel } from "@/app/(dashboard)/contracts/[id]/criteria-panel";
 import {
   ClientDecision,
   DeliveryForm,
@@ -164,41 +165,6 @@ function MilestoneCard({
           canDeliver={side === "freelancer" && milestone.status === "IN_PROGRESS"}
         />
       </div>
-    </Panel>
-  );
-}
-
-/* ─────────── Free-text Criteria Panel ─────────── */
-function CriteriaPanel({
-  criteria,
-}: Readonly<{ criteria: AcceptanceCriterion[] }>) {
-  return (
-    <Panel title="Kabul Kriterleri">
-      {criteria.length === 0 ? (
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">
-          Kriter eklenmemiş.
-        </p>
-      ) : (
-        <ol className="flex flex-col gap-3">
-          {criteria.map((c) => (
-            <li
-              key={c.id}
-              className="flex items-start gap-3 rounded-xl border border-zinc-100 bg-zinc-50/50 p-4 dark:border-zinc-800/60 dark:bg-zinc-900/40"
-            >
-              <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-amber-50 text-xs font-extrabold text-amber-700 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800/60">
-                {c.sequence_no}
-              </span>
-              <p className="text-sm leading-relaxed text-zinc-700 dark:text-zinc-300">
-                {c.description}
-              </p>
-            </li>
-          ))}
-        </ol>
-      )}
-
-      <p className="mt-5 border-t border-zinc-200 pt-3 text-xs leading-relaxed text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
-        Teslim edildiğinde her kriter bu listeye göre doğrulanır.
-      </p>
     </Panel>
   );
 }
@@ -657,6 +623,9 @@ export default async function ContractPage({
               otherPartySigned={contract.signatures.some(
                 (s) => s.signer_id !== session.userId,
               )}
+              criteriaMissing={
+                contract.product_type === "QA_ONLY" && contract.criteria.length === 0
+              }
             />
           </Panel>
 
@@ -688,7 +657,13 @@ export default async function ContractPage({
                 reviewers={reviewers}
                 signedByBoth={signedByBoth}
               />
-              <CriteriaPanel criteria={contract.criteria} />
+              <CriteriaPanel
+                contractId={contract.id}
+                criteria={contract.criteria}
+                side={side}
+                projectCategory={contract.project_category}
+                anySigned={contract.signatures.length > 0}
+              />
             </>
           ) : (
             contract.milestones.map((m) => (

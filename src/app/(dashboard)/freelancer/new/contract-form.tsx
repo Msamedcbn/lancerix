@@ -24,12 +24,10 @@ const PREVIEW_INITIAL: PreviewResult = { error: null };
 
 type ProductType = "QA_ONLY" | "QA_PLUS_ESCROW";
 
-const STEPS = ["Müşteri", "Proje & Kapsam", "İş Akışı & Kriterler", "Önizleme & Gönder"] as const;
+const STEPS = ["Müşteri", "Proje & Kapsam", "İş Akışı", "Önizleme & Gönder"] as const;
 
-type Criterion = { id: number; description: string };
 type Phase = { id: number; title: string; description: string; estimatedDays: string };
 
-const blankCriterion = (id: number): Criterion => ({ id, description: "" });
 const blankPhase = (id: number): Phase => ({ id, title: "", description: "", estimatedDays: "" });
 
 /* ────────────────────────── Step Bar ────────────────────────── */
@@ -128,7 +126,6 @@ function DraftFields({
   companyId,
   title,
   scopeOfWork,
-  criteria,
   phases,
   plannedStartDate,
   projectAmount,
@@ -139,7 +136,6 @@ function DraftFields({
   companyId: string;
   title: string;
   scopeOfWork: string;
-  criteria: Criterion[];
   phases: Phase[];
   plannedStartDate: string;
   projectAmount: string;
@@ -154,15 +150,6 @@ function DraftFields({
       <input type="hidden" name="scopeOfWork" value={scopeOfWork} />
       <input type="hidden" name="plannedStartDate" value={plannedStartDate} />
       <input type="hidden" name="projectAmount" value={projectAmount} />
-
-      {criteria.map((row, index) => (
-        <input
-          key={row.id}
-          type="hidden"
-          name={`criteria[${index}][description]`}
-          value={row.description}
-        />
-      ))}
 
       {phases.map((row, index) => (
         <div key={row.id}>
@@ -200,11 +187,7 @@ export function ContractForm({
   const [scopeOfWork, setScopeOfWork] = useState("");
   const [plannedStartDate, setPlannedStartDate] = useState("");
   const [projectAmount, setProjectAmount] = useState("");
-  const [criteria, setCriteria] = useState<Criterion[]>([blankCriterion(0)]);
   const [phases, setPhases] = useState<Phase[]>([]);
-
-  const updateCriterion = (id: number, value: string) =>
-    setCriteria((c) => c.map((row) => (row.id === id ? { ...row, description: value } : row)));
 
   const updatePhase = (id: number, field: keyof Phase, value: string) =>
     setPhases((p) => p.map((row) => (row.id === id ? { ...row, [field]: value } : row)));
@@ -219,7 +202,6 @@ export function ContractForm({
     companyId,
     title,
     scopeOfWork,
-    criteria,
     phases,
     plannedStartDate,
     projectAmount,
@@ -499,64 +481,10 @@ export function ContractForm({
             </button>
           </fieldset>
 
-          {/* ── Acceptance Criteria ── */}
-          <fieldset className="flex flex-col gap-5">
-            <div className="flex flex-col gap-1 pb-3 border-b border-zinc-200/60 dark:border-zinc-800/60">
-              <legend className="text-lg font-bold text-zinc-950 dark:text-zinc-50">
-                Kabul Kriterleri
-              </legend>
-              <p className="max-w-[60ch] text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">
-                İş tamamlandığında neye bakılarak &quot;iş tamam&quot; denileceğini tanımlayın. Her kriter serbest yazılır — her iş kendine özeldir.
-              </p>
-            </div>
-
-            {criteria.map((row, index) => (
-              <div
-                key={row.id}
-                className="relative flex flex-col gap-3 rounded-2xl border border-zinc-200/80 bg-white/90 p-5 shadow-sm backdrop-blur-md dark:border-zinc-800/80 dark:bg-zinc-900/80"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="flex items-center gap-2 text-sm font-bold text-zinc-950 dark:text-zinc-50">
-                    <span className="flex size-6 items-center justify-center rounded-full bg-amber-50 text-xs font-extrabold text-amber-700 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800/60">
-                      {index + 1}
-                    </span>
-                    Kriter #{index + 1}
-                  </span>
-                  <button
-                    type="button"
-                    disabled={criteria.length === 1}
-                    onClick={() => setCriteria((c) => c.filter((r) => r.id !== row.id))}
-                    className="text-xs font-semibold text-rose-600 hover:bg-rose-50 rounded-lg px-2 py-1 transition-colors disabled:opacity-30 dark:text-rose-400 dark:hover:bg-rose-950/40"
-                  >
-                    Kaldır
-                  </button>
-                </div>
-
-                <Field label="Kriter Tanımı" htmlFor={`crit-${row.id}`}>
-                  <TextArea
-                    id={`crit-${row.id}`}
-                    value={row.description}
-                    onChange={(e) => updateCriterion(row.id, e.target.value)}
-                    rows={2}
-                    placeholder={PROJECT_CATEGORY_INFO[projectCategory].criterionPlaceholder}
-                  />
-                </Field>
-              </div>
-            ))}
-
-            <button
-              type="button"
-              onClick={() =>
-                setCriteria((c) => [...c, blankCriterion((c.at(-1)?.id ?? 0) + 1)])
-              }
-              className="inline-flex items-center gap-2 self-start rounded-xl border border-dashed border-zinc-300 bg-zinc-50/50 px-4 py-2.5 text-sm font-semibold text-zinc-800 hover:bg-zinc-100 active:scale-[0.98] dark:border-zinc-700 dark:bg-zinc-900/40 dark:text-zinc-200 dark:hover:bg-zinc-900 transition-colors"
-            >
-              <svg className="size-4 text-amber-600" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-              </svg>
-              + Yeni Kriter Ekle
-            </button>
-          </fieldset>
+          <p className="rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-xs leading-relaxed text-zinc-600 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300">
+            Kabul kriterlerini müşteri belirler — sözleşmeyi gönderdikten sonra
+            müşteri, imzalamadan önce kabul kriterlerini kendisi girecek.
+          </p>
 
           <div className="flex items-center gap-3">
             <button type="button" onClick={() => setStep(1)} className={BACK_BUTTON}>

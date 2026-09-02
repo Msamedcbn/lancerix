@@ -131,16 +131,23 @@ export const contractSchema = z.discriminatedUnion("productType", [
   z.object({
     productType: z.literal("QA_ONLY"),
     ...baseContractFields,
+    // The freelancer no longer writes these -- the client fills them in
+    // (addAcceptanceCriteria) before signing. See criteriaSubmissionSchema.
     criteria: z
       .array(criterionDraftSchema)
-      .min(1, "En az bir kabul kriteri gir.")
-      .max(50, "Elli kriter sınırı var."),
+      .max(50, "Elli kriter sınırı var.")
+      .optional()
+      .default([]),
     phases: z
       .array(phaseDraftSchema)
       .max(30, "Otuz faz sınırı var.")
       .optional()
       .default([]),
-  }),
+  })
+    // Extra keys are rejected rather than silently stripped: with criteria
+    // now optional, a stray `milestones` payload would otherwise validate
+    // fine as a QA_ONLY contract instead of surfacing as an error.
+    .strict(),
   z
     .object({
       productType: z.literal("QA_PLUS_ESCROW"),
@@ -155,6 +162,15 @@ export const contractSchema = z.discriminatedUnion("productType", [
       { message: "Fatura edilecek şirketi seç.", path: ["companyId"] },
     ),
 ]);
+
+/**
+ * The client's own submission: at least one criterion, since this is the
+ * only place acceptance_criteria rows get written for a QA_ONLY contract now.
+ */
+export const criteriaSubmissionSchema = z
+  .array(criterionDraftSchema)
+  .min(1, "En az bir kabul kriteri gir.")
+  .max(50, "Elli kriter sınırı var.");
 
 export type ContractInput = z.infer<typeof contractSchema>;
 export type MilestoneDraft = z.infer<typeof milestoneDraftSchema>;
