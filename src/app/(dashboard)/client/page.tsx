@@ -35,7 +35,7 @@ export default async function ClientPaymentsPage() {
 
       <PageHeading
         title="Sözleşmeler ve Ödemeler"
-        subtitle="Sözleşmelerin, fonlanmayı bekleyen aşamalar ve escrow ödeme hareketlerin"
+        subtitle="Sözleşmelerin ve ödeme durumların. QA sözleşmelerinde ödeme taraflar arasında doğrudan çözülür, escrow yalnızca aşamalı sözleşmelerde geçerlidir."
       />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

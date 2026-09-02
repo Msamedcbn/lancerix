@@ -214,6 +214,13 @@ export async function previewContract(
         .maybeSingle()
     : { data: null };
 
+  // Same lookup createContract() does -- the preview should show the name
+  // a freelancer actually recognises, not the raw ID they typed. Falls back
+  // to the ID itself if the lookup fails, same as showing nothing better.
+  const { data: client } = await supabase
+    .rpc("find_by_public_id", { p_public_id: parsed.data.clientPublicId })
+    .maybeSingle();
+
   const draftContract = {
     reference: "(kaydedildiğinde atanır)",
     title: parsed.data.title,
@@ -241,7 +248,7 @@ export async function previewContract(
       [],
       {
         freelancerName: session.fullName,
-        clientName: parsed.data.clientPublicId,
+        clientName: client?.full_name ?? parsed.data.clientPublicId,
         company,
       },
       criteria as AcceptanceCriterion[],

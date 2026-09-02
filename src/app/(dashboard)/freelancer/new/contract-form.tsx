@@ -357,7 +357,7 @@ export function ContractForm({
           <Field
             label="Proje Bedeli (₺)"
             htmlFor="projectAmount"
-            hint="Platform hizmet komisyonunun hesaplanacağı brüt proje bedeli."
+            hint="Taraflar arasında doğrudan ödenecek brüt proje bedeli. Lancerix bu tutardan pay almaz."
           >
             <TextInput
               id="projectAmount"
