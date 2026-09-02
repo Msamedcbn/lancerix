@@ -14,7 +14,7 @@
  * before anyone outside the team signs against it -- same standing caveat as
  * the contract body in document.ts.
  */
-export const TERMS_VERSION = "2026-09-01";
+export const TERMS_VERSION = "2026-09-03";
 
 export type TermsSection = { heading: string; body: string[] };
 
@@ -30,7 +30,7 @@ export const TERMS_SECTIONS: TermsSection[] = [
     heading: "Lancerix ne yapmaz",
     body: [
       "Para tutmaz, tahsil etmez, aktarmaz. Ödeme taraflar arasında doğrudan, bu platformun dışında gerçekleşir.",
-      "Fatura veya serbest meslek makbuzu kesmez. Vergisel yükümlülükler taraflara aittir.",
+      "Lancerix bu sözleşmedeki tutar için fatura veya serbest meslek makbuzu kesmez; vergisel yükümlülükler taraflara aittir. Platform, kendi hizmet bedeli için ileride müşteriye ayrı ve açıkça bildirilen bir komisyon faturası çıkarabilir — bu, sözleşme tutarınızdan bağımsızdır.",
       "Yazılım garantisi vermez. Doğrulama, yalnızca sözleşmede yazılı kabul kriterlerinin karşılanıp karşılanmadığına bakar; güvenlik denetimi veya hatasızlık taahhüdü değildir.",
     ],
   },
