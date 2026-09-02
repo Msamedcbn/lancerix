@@ -16,7 +16,11 @@ burası daha çok bir kontrol paneli.
 - İmza akışı: hizmet koşulları kabul gate'i, parmak izi (hash) kaydı, IP/UA.
 - Teslim + QA tier seçimi: Tier1 (ücretsiz, müşteri kendi bakar), Tier3/4
   (insan inceleme, reviewer kendi ücretini belirler → `qa_reviewers.rate_kurus`).
-- **Tier2 (Agentic QA) inşa edilmedi** — `available: false`, worker yok.
+- **Tier2 (Agentic QA) worker'ın kaynak kodu artık var (`worker/`)** ama
+  **hiçbir yerde çalışmıyor** — hosting/deployment kurulmadı, `available: false`
+  olarak kalıyor bilerek (aksi halde sipariş sonsuza dek kuyrukta bekler).
+  Playwright + LLM (gpt-4o-mini) ile kriterleri değerlendiriyor, düşük
+  güvende (`confidenceScore < 80`) Tier3'e escalate ediyor.
 - QA ücreti tahsilatı: LemonSqueezy (MoR, şirket kurulmadan sabit fiyat
   tahsil edebiliyor) — sadece Tier3/4 reviewer ücreti için, proje bedeli
   için değil.
@@ -52,6 +56,28 @@ burası daha çok bir kontrol paneli.
    SQL'i incelendi, bir kod hatası bulunamadı. Önceki rapor muhtemelen test
    sırasında yanlış radyo seçimiydi. Kapatıldı, uydurma bir düzeltme
    yapılmadı.
+5. **Antigravity'nin Tier2 worker + landing page redesign'i review edildi ve
+   düzeltildi** (commit `402eab0`) — antigravity'nin yaptığı değişiklikler
+   commit edilmeden önce incelendi, gerçek buglar bulundu ve düzeltildi:
+   - `auto_escalate_qa_tier()` sadece `is_admin()` kontrol ediyordu; worker
+     service-role ile çağırdığında `auth.uid()` null olduğu için bu her
+     zaman false dönüyor, escalation sessizce hep başarısız oluyordu.
+   - Aynı fonksiyon, reviewer atanmamış ve ücreti 0 olan yetim bir TIER3
+     kaydı oluşturuyordu — kimse fark etmez, kimse faturalanmazdı. Artık
+     sadece mevcut siparişi `ESCALATED` işaretliyor, `/admin/qa-queue`'da
+     zaten görünür oluyor.
+   - `worker/index.ts`'te sipariş alma select-then-update'ti (yarış durumu
+     riski) — atomik `UPDATE ... WHERE agent_status IS NULL` yapıldı.
+   - LLM prompt'una, freelancer'ın kontrol ettiği sayfa içeriğinin
+     (`domContent`) güvenilmez veri olduğunu belirten bir çerçeve eklendi
+     (prompt injection'a karşı temel bir önlem).
+   - Fiyatlandırma `$29`'a ve Tier1'e "%10 Hizmet Bedeli" ibaresine
+     gerilemişti (bugünkü Faz1/Faz2 kararıyla çelişiyordu) — 250₺'ye ve
+     "Ücretsiz"e geri alındı.
+   - `site-footer.tsx`'te var olmayan `/gizlilik`, `/sozlesme` linkleri ve
+     "Lancerix Inc." ibaresi (şirket henüz yok) kaldırıldı.
+   - `actions.ts`'te tanımsız `session` değişkeninden kaynaklanan iki
+     typecheck hatası düzeltildi.
 
 ## Bilinen boşluklar / sıradaki
 
@@ -60,7 +86,7 @@ CEO review'da (2026-09-02) kararlaştırılan 4 fazlık sıra:
 | Faz | İş | Durum |
 |---|---|---|
 | 1 — Güven | Kayıt-rolü bug'ı + bildirim güvenilirliği | ✅ Tamamlandı (bugün) |
-| 2 — Ürün | Gerçek Tier2 Agentic QA worker (LLM tabanlı kriter okuma, async kuyruk, düşük güvende Tier3'e otomatik yükseltme) | Başlamadı |
+| 2 — Ürün | Tier2 Agentic QA worker | Kod hazır, **deploy edilmedi** — hosting seçilip (VPS/Railway/Fly/Render), env değişkenleri (OPENAI_API_KEY, SUPABASE_SERVICE_ROLE_KEY) kurulup sürekli çalışır hale getirilmeden `available: true` yapılmamalı |
 | 3 — Sağlamlık | Son eklenen UI akışları için test kapsamı (`addAcceptanceCriteria`, `payQaOrder`, `ServicesPicker`, `PayoutInfoForm`) | Başlamadı |
 | 4 — Gelir | PayTR/iyzico escrow (şirket kuruluşu şart) | Şirket kuruluşuna bağlı |
 
