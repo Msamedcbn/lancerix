@@ -38,6 +38,17 @@ export type DeliveryInput = z.infer<typeof deliverySchema>;
  * it does not exist, and an order that queues forever is worse than a tier
  * that says "not yet". Tier 3's fee is charged manually until the payment
  * integration lands, which is why nothing here touches money in the database.
+ *
+ * Tier 1's price (D, 2026-09-03 CEO review): a small symbolic "doğrulama kaydı
+ * ücreti" through the same LemonSqueezy checkout Tier 3/4 already use, to test
+ * P-3 (will anyone actually pay for verification) without needing a company.
+ * Set at the top of the pre-approved 49-99₺ range rather than the bottom --
+ * LemonSqueezy's $0.50 flat + ~6.5% (international) fee erodes a 49₺ charge
+ * to roughly half its value; at 99₺ the flat fee is a much smaller share, netting
+ * closer to ~70% instead of ~50-55%. Nothing about report visibility or the
+ * delivery flow changes: submit_qa_report() has never checked payment_status
+ * for any tier (confirmed while implementing this), so this only adds a fee
+ * and a payment step -- it does not newly gate anything that was open before.
  */
 export const QA_TIERS = ["TIER1", "TIER2", "TIER3", "TIER4"] as const;
 export type QaTier = (typeof QA_TIERS)[number];
@@ -47,7 +58,7 @@ export const QA_TIER_INFO: Record<
   {
     label: string;
     price: string;
-    pricingType: "FREE" | "AGENTIC" | "HYBRID" | "MANUAL_TESTER";
+    pricingType: "RECORD_FEE" | "AGENTIC" | "HYBRID" | "MANUAL_TESTER";
     hint: string;
     details: string[];
     available: boolean;
@@ -56,10 +67,10 @@ export const QA_TIER_INFO: Record<
 > = {
   TIER1: {
     label: "Temel Kontrol",
-    price: "Ücretsiz",
-    pricingType: "FREE",
-    hint: "Kriter listesi müşteriye sunulur, müşteri kendi kontrolünü yapar.",
-    details: ["Müşteri doğrudan kendi inceler", "Otomatik ajan maliyeti yok", "Hızlı onay"],
+    price: "99 ₺",
+    pricingType: "RECORD_FEE",
+    hint: "Kriter listesi müşteriye sunulur, müşteri kendi kontrolünü yapar. Ücret, doğrulama kaydının kendisi içindir.",
+    details: ["Müşteri doğrudan kendi inceler", "Otomatik ajan maliyeti yok", "Zaman damgalı, değiştirilemez kayıt"],
     available: true,
     needsReviewer: false,
   },
