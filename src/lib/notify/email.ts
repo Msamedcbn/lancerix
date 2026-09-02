@@ -260,6 +260,47 @@ export async function notifyQaOutcome({
   });
 }
 
+/**
+ * Faz E #3 (2026-09-03 CEO strategy review): the client has gone quiet with
+ * roughly a day left in the silence-is-acceptance window. Freelancer-only,
+ * like notifyAutoAccepted -- addressOf() directly, no fallback, since a
+ * freelancer always has a registered account to resolve.
+ */
+export async function notifyReviewDeadlineApproaching({
+  toUserId,
+  contractId,
+  contractTitle,
+  deadline,
+}: Readonly<{
+  toUserId: string;
+  contractId: string;
+  contractTitle: string;
+  deadline: string;
+}>): Promise<SendResult> {
+  const to = await addressOf(toUserId);
+  if (!to) return { ok: false, reason: "no address on file for that account" };
+
+  const deadlineDate = new Date(deadline).toLocaleDateString("tr-TR", {
+    day: "numeric",
+    month: "long",
+  });
+
+  return sendEmail({
+    to,
+    subject: `Kontrol süresi yakında doluyor: ${contractTitle}`,
+    body: [
+      `Müşterinin kontrol süresi ${deadlineDate} tarihinde doluyor ve henüz bir karar verilmedi.`,
+      "",
+      `Sözleşme: ${contractTitle}`,
+      `Görüntüle: ${appUrlFor(`/contracts/${contractId}`)}`,
+      "",
+      "Süre dolduğunda karar verilmemiş teslimat sözleşme uyarınca kabul",
+      "edilmiş sayılır. Müşteriyi hatırlatmak istersen sözleşme sayfasındaki",
+      "mesaj alanını kullanabilirsin.",
+    ].join("\n"),
+  });
+}
+
 export async function notifyAutoAccepted({
   toUserId,
   contractId,

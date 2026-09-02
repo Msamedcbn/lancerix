@@ -375,6 +375,7 @@ export type Database = {
           milestone_id: string | null
           notes: string | null
           pr_url: string | null
+          reminder_sent_at: string | null
           staging_url: string
           status: Database["public"]["Enums"]["delivery_status"]
           submitted_at: string
@@ -389,6 +390,7 @@ export type Database = {
           milestone_id?: string | null
           notes?: string | null
           pr_url?: string | null
+          reminder_sent_at?: string | null
           staging_url: string
           status?: Database["public"]["Enums"]["delivery_status"]
           submitted_at?: string
@@ -403,6 +405,7 @@ export type Database = {
           milestone_id?: string | null
           notes?: string | null
           pr_url?: string | null
+          reminder_sent_at?: string | null
           staging_url?: string
           status?: Database["public"]["Enums"]["delivery_status"]
           submitted_at?: string
