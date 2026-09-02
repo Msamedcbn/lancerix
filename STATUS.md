@@ -16,11 +16,14 @@ burası daha çok bir kontrol paneli.
 - İmza akışı: hizmet koşulları kabul gate'i, parmak izi (hash) kaydı, IP/UA.
 - Teslim + QA tier seçimi: Tier1 (ücretsiz, müşteri kendi bakar), Tier3/4
   (insan inceleme, reviewer kendi ücretini belirler → `qa_reviewers.rate_kurus`).
-- **Tier2 (Agentic QA) worker'ın kaynak kodu artık var (`worker/`)** ama
-  **hiçbir yerde çalışmıyor** — hosting/deployment kurulmadı, `available: false`
-  olarak kalıyor bilerek (aksi halde sipariş sonsuza dek kuyrukta bekler).
-  Playwright + LLM (gpt-4o-mini) ile kriterleri değerlendiriyor, düşük
-  güvende (`confidenceScore < 80`) Tier3'e escalate ediyor.
+- **Tier2 (Agentic QA) artık ayrı bir worker/hosting gerektirmiyor** —
+  `src/lib/qa/agent.ts`, aynı Vercel deployment'ı içinde normal bir fonksiyon
+  çağrısı olarak çalışıyor (Playwright: `@sparticuz/chromium` +
+  `playwright-core`; LLM: gpt-4o-mini). `chooseQaTier()` sonrası `after()` ile
+  anında tetikleniyor, günlük bir cron (`process-tier2-qa`) da kaçanları
+  yakalıyor. Düşük güvende (`confidenceScore < 80`) Tier3'e escalate ediyor.
+  **Hâlâ `available: false`** — Vercel'e `OPENAI_API_KEY` eklenip gerçek bir
+  staging sitesiyle test edilmeden canlıya alınmamalı.
 - QA ücreti tahsilatı: LemonSqueezy (MoR, şirket kurulmadan sabit fiyat
   tahsil edebiliyor) — sadece Tier3/4 reviewer ücreti için, proje bedeli
   için değil.
@@ -86,7 +89,7 @@ CEO review'da (2026-09-02) kararlaştırılan 4 fazlık sıra:
 | Faz | İş | Durum |
 |---|---|---|
 | 1 — Güven | Kayıt-rolü bug'ı + bildirim güvenilirliği | ✅ Tamamlandı (bugün) |
-| 2 — Ürün | Tier2 Agentic QA worker | Kod hazır, **deploy edilmedi** — hosting seçilip (VPS/Railway/Fly/Render), env değişkenleri (OPENAI_API_KEY, SUPABASE_SERVICE_ROLE_KEY) kurulup sürekli çalışır hale getirilmeden `available: true` yapılmamalı |
+| 2 — Ürün | Tier2 Agentic QA | Kod hazır ve Vercel'e entegre (ayrı hosting gerekmiyor) — Vercel'e `OPENAI_API_KEY` eklenip gerçek bir teslimatla uçtan uca test edilmeden `available: true` yapılmamalı |
 | 3 — Sağlamlık | Son eklenen UI akışları için test kapsamı (`addAcceptanceCriteria`, `payQaOrder`, `ServicesPicker`, `PayoutInfoForm`) | Başlamadı |
 | 4 — Gelir | PayTR/iyzico escrow (şirket kuruluşu şart) | Şirket kuruluşuna bağlı |
 
