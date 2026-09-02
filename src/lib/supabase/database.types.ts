@@ -221,6 +221,9 @@ export type Database = {
           product_type: string
           project_amount_kurus: number
           project_category: Database["public"]["Enums"]["project_category"]
+          qa_fee_kurus: number | null
+          qa_reviewer_id: string | null
+          qa_tier: string | null
           reference: string
           rejection_reason: string | null
           revision_note: string | null
@@ -248,6 +251,9 @@ export type Database = {
           product_type?: string
           project_amount_kurus?: number
           project_category?: Database["public"]["Enums"]["project_category"]
+          qa_fee_kurus?: number | null
+          qa_reviewer_id?: string | null
+          qa_tier?: string | null
           reference: string
           rejection_reason?: string | null
           revision_note?: string | null
@@ -275,6 +281,9 @@ export type Database = {
           product_type?: string
           project_amount_kurus?: number
           project_category?: Database["public"]["Enums"]["project_category"]
+          qa_fee_kurus?: number | null
+          qa_reviewer_id?: string | null
+          qa_tier?: string | null
           reference?: string
           rejection_reason?: string | null
           revision_note?: string | null
@@ -312,6 +321,13 @@ export type Database = {
             columns: ["freelancer_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contracts_qa_reviewer_id_fkey"
+            columns: ["qa_reviewer_id"]
+            isOneToOne: false
+            referencedRelation: "qa_reviewers"
             referencedColumns: ["id"]
           },
         ]
@@ -1375,7 +1391,11 @@ export type Database = {
           planned_start_date: string | null
           platform_fee_bps: number
           product_type: string
+          project_amount_kurus: number
           project_category: Database["public"]["Enums"]["project_category"]
+          qa_fee_kurus: number | null
+          qa_reviewer_id: string | null
+          qa_tier: string | null
           reference: string
           rejection_reason: string | null
           revision_note: string | null
@@ -1416,7 +1436,11 @@ export type Database = {
           planned_start_date: string | null
           platform_fee_bps: number
           product_type: string
+          project_amount_kurus: number
           project_category: Database["public"]["Enums"]["project_category"]
+          qa_fee_kurus: number | null
+          qa_reviewer_id: string | null
+          qa_tier: string | null
           reference: string
           rejection_reason: string | null
           revision_note: string | null
@@ -1430,6 +1454,73 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "contracts"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      set_qa_selection: {
+        Args: { p_contract_id: string; p_reviewer_id?: string; p_tier: string }
+        Returns: {
+          client_email: string
+          client_id: string | null
+          client_start_confirmed: boolean
+          company_id: string | null
+          coupon_id: string | null
+          created_at: string
+          document_sha256: string | null
+          freelancer_id: string
+          freelancer_start_confirmed: boolean
+          id: string
+          objection_window_days: number
+          planned_start_date: string | null
+          platform_fee_bps: number
+          product_type: string
+          project_amount_kurus: number
+          project_category: Database["public"]["Enums"]["project_category"]
+          qa_fee_kurus: number | null
+          qa_reviewer_id: string | null
+          qa_tier: string | null
+          reference: string
+          rejection_reason: string | null
+          revision_note: string | null
+          scope_of_work: string
+          status: Database["public"]["Enums"]["contract_status"]
+          stopaj_bps: number
+          title: string
+          updated_at: string
+          work_started_at: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "contracts"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      submit_qa_delivery: {
+        Args: {
+          p_contract_id: string
+          p_notes?: string
+          p_pr_url?: string
+          p_staging_url: string
+        }
+        Returns: {
+          client_note: string | null
+          client_review_deadline: string | null
+          contract_id: string
+          decided_at: string | null
+          id: string
+          milestone_id: string | null
+          notes: string | null
+          pr_url: string | null
+          staging_url: string
+          status: Database["public"]["Enums"]["delivery_status"]
+          submitted_at: string
+          submitted_by: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "deliveries"
           isOneToOne: true
           isSetofReturn: false
         }

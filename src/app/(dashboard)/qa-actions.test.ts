@@ -1,7 +1,8 @@
 /**
- * chooseQaTier: the freelancer's tier pick, now a single choose_qa_tier() RPC
- * (see 20260901160000_atomic_qa_writes.sql) instead of a transition-then-
- * insert pair. What's worth proving in TS is what stays in TS: the
+ * setQaSelection: the client's QA package pick, now a single
+ * set_qa_selection() RPC (see 20260902070000_client_selects_qa_tier.sql)
+ * called before signing, not the freelancer's choose_qa_tier() after
+ * delivery. What's worth proving in TS is what stays in TS: the
  * reviewer-required gate for Tier 3/4, that TIER2 is refused before any RPC
  * call now that it's marked unavailable, and that the right tier/reviewer
  * reach the RPC.
@@ -14,9 +15,9 @@ vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
 const session = {
   userId: "00000000-0000-0000-0000-000000000001",
-  email: "freelancer@example.com",
+  email: "client@example.com",
   fullName: "Test Kullanıcı",
-  role: "FREELANCER" as const,
+  role: "CLIENT" as const,
   publicId: "ABCD1234",
 };
 
@@ -40,7 +41,6 @@ vi.mock("@/lib/supabase/server", () => ({
   createClient: vi.fn(async () => mockRpcClient((name, args) => rpcImpl(name, args)).client),
 }));
 
-const DELIVERY_ID = "22222222-2222-2222-2222-222222222222";
 const CONTRACT_ID = "11111111-1111-1111-1111-111111111111";
 const REVIEWER_ID = "33333333-3333-3333-3333-333333333333";
 
@@ -60,48 +60,47 @@ beforeEach(() => {
   };
 });
 
-describe("chooseQaTier", () => {
+describe("setQaSelection", () => {
   it("refuses TIER2 before calling the RPC -- not orderable yet", async () => {
-    const { chooseQaTier } = await import("./qa-actions");
-    const result = await chooseQaTier(
+    const { setQaSelection } = await import("./qa-actions");
+    const result = await setQaSelection(
       { error: null },
-      formData({ deliveryId: DELIVERY_ID, contractId: CONTRACT_ID, tier: "TIER2" }),
+      formData({ contractId: CONTRACT_ID, tier: "TIER2" }),
     );
     expect(result.error).toBeTruthy();
     expect(capturedCall).toBeNull();
   });
 
   it("requires a reviewer for TIER3 before calling the RPC", async () => {
-    const { chooseQaTier } = await import("./qa-actions");
-    const result = await chooseQaTier(
+    const { setQaSelection } = await import("./qa-actions");
+    const result = await setQaSelection(
       { error: null },
-      formData({ deliveryId: DELIVERY_ID, contractId: CONTRACT_ID, tier: "TIER3" }),
+      formData({ contractId: CONTRACT_ID, tier: "TIER3" }),
     );
     expect(result.error).toBeTruthy();
     expect(capturedCall).toBeNull();
   });
 
-  it("calls choose_qa_tier for TIER1 with no reviewer", async () => {
-    const { chooseQaTier } = await import("./qa-actions");
-    const result = await chooseQaTier(
+  it("calls set_qa_selection for TIER1 with no reviewer", async () => {
+    const { setQaSelection } = await import("./qa-actions");
+    const result = await setQaSelection(
       { error: null },
-      formData({ deliveryId: DELIVERY_ID, contractId: CONTRACT_ID, tier: "TIER1" }),
+      formData({ contractId: CONTRACT_ID, tier: "TIER1" }),
     );
     expect(result.error).toBeNull();
     // No reviewer means the key is absent, not null: the RPC defaults the
     // argument, and PostgREST types an optional arg as undefined.
     expect(capturedCall).toEqual({
-      name: "choose_qa_tier",
-      args: { p_delivery_id: DELIVERY_ID, p_tier: "TIER1" },
+      name: "set_qa_selection",
+      args: { p_contract_id: CONTRACT_ID, p_tier: "TIER1" },
     });
   });
 
-  it("calls choose_qa_tier for TIER3 with the chosen reviewer", async () => {
-    const { chooseQaTier } = await import("./qa-actions");
-    const result = await chooseQaTier(
+  it("calls set_qa_selection for TIER3 with the chosen reviewer", async () => {
+    const { setQaSelection } = await import("./qa-actions");
+    const result = await setQaSelection(
       { error: null },
       formData({
-        deliveryId: DELIVERY_ID,
         contractId: CONTRACT_ID,
         tier: "TIER3",
         reviewerId: REVIEWER_ID,
@@ -109,23 +108,24 @@ describe("chooseQaTier", () => {
     );
     expect(result.error).toBeNull();
     expect(capturedCall).toEqual({
-      name: "choose_qa_tier",
-      args: { p_delivery_id: DELIVERY_ID, p_tier: "TIER3", p_reviewer_id: REVIEWER_ID },
+      name: "set_qa_selection",
+      args: { p_contract_id: CONTRACT_ID, p_tier: "TIER3", p_reviewer_id: REVIEWER_ID },
     });
   });
 
-  it("surfaces an illegal-transition error from the RPC", async () => {
-    rpcImpl = failRpc("illegal delivery transition ACCEPTED -> QA_QUEUED");
-    const { chooseQaTier } = await import("./qa-actions");
-    const result = await chooseQaTier(
+  it("surfaces a locked-selection error from the RPC", async () => {
+    rpcImpl = failRpc("contract already has a signature -- the QA selection is locked");
+    const { setQaSelection } = await import("./qa-actions");
+    const result = await setQaSelection(
       { error: null },
       formData({
-        deliveryId: DELIVERY_ID,
         contractId: CONTRACT_ID,
         tier: "TIER3",
         reviewerId: REVIEWER_ID,
       }),
     );
-    expect(result.error).toBe("illegal delivery transition ACCEPTED -> QA_QUEUED");
+    expect(result.error).toBe(
+      "contract already has a signature -- the QA selection is locked",
+    );
   });
 });

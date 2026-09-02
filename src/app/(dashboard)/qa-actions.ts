@@ -23,13 +23,56 @@ import {
 export type { FormState };
 
 /**
+ * The client picks the QA package before signing, not the freelancer after
+ * delivery -- the party being graded choosing their own grading rigor is a
+ * conflict of interest. Same pre-signature gate as acceptance criteria:
+ * set_qa_selection() refuses once any signature exists (RPC-side check),
+ * and sign_contract() refuses to sign a QA_ONLY contract with none set.
+ */
+export async function setQaSelection(
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  await requireRole("CLIENT");
+
+  const contractId = String(formData.get("contractId") ?? "");
+  if (!contractId) return FAIL("Sözleşme eksik.");
+
+  const tier = qaTierSchema.safeParse(formData.get("tier"));
+  if (!tier.success) return FAIL(firstIssue(tier.error));
+
+  const info = QA_TIER_INFO[tier.data];
+  const reviewerId = String(formData.get("reviewerId") ?? "").trim() || null;
+
+  if (info.needsReviewer && !reviewerId) {
+    return FAIL("Bir mühendis seç.");
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("set_qa_selection", {
+    p_contract_id: contractId,
+    p_tier: tier.data,
+    // The RPC defaults this to null; PostgREST types the optional arg as
+    // undefined, so "no reviewer" is an absent key rather than an explicit
+    // null. Tier 1/2 take this path.
+    ...(reviewerId ? { p_reviewer_id: reviewerId } : {}),
+  });
+  if (error) return FAIL(error.message);
+
+  revalidatePath(`/contracts/${contractId}`);
+  return OK("QA paketi kaydedildi.");
+}
+
+/**
  * The freelancer hands the work over.
  *
- * Inserting the row and moving its status are separate steps because the row
- * has to exist before transition_delivery() can be called on it -- the
- * function takes an id. The insert lands in SUBMITTED via the column default,
- * which is the one status that needs no ledger row to justify it: the delivery
- * did not move into SUBMITTED, it began there.
+ * Folded into one RPC (submit_qa_delivery(), see
+ * 20260902070000_client_selects_qa_tier.sql): inserting the delivery row,
+ * transitioning it, and creating its qa_tier_orders row against the
+ * contract's pre-selected qa_tier/qa_reviewer_id/qa_fee_kurus all happen in
+ * one transaction, so a failure partway through cannot strand a delivery
+ * with no order to explain why. Submitting IS choosing now, since the
+ * choice was already made at signing time.
  */
 export async function submitQaDelivery(
   _prev: FormState,
@@ -54,70 +97,20 @@ export async function submitQaDelivery(
   }
 
   const supabase = await createClient();
-  const { error } = await supabase.from("deliveries").insert({
-    contract_id: contractId,
-    submitted_by: session.userId,
-    staging_url: parsed.data.stagingUrl,
-    pr_url: parsed.data.prUrl,
-    notes: parsed.data.notes,
-  });
-
-  if (error) return FAIL(error.message);
-
-  revalidatePath(`/contracts/${contractId}`);
-  return OK("Teslim kaydedildi. Şimdi QA paketini seç.");
-}
-
-/**
- * Buying a tier is what starts QA, so it also moves the delivery.
- *
- * Tier 1 buys no run at all -- it is the criteria list plus the client's own
- * check -- so it opens the review window immediately. Tier 3 queues the
- * delivery for the QA desk, and the window opens when the report lands.
- *
- * The transition and the tier-order insert happen inside one RPC
- * (choose_qa_tier(), see 20260901160000_atomic_qa_writes.sql) so a failure
- * partway through cannot leave the delivery moved with no order to explain
- * why.
- */
-export async function chooseQaTier(
-  _prev: FormState,
-  formData: FormData,
-): Promise<FormState> {
-  const session = await requireRole("FREELANCER");
-
-  const deliveryId = String(formData.get("deliveryId") ?? "");
-  const contractId = String(formData.get("contractId") ?? "");
-  if (!deliveryId || !contractId) return FAIL("Teslim eksik.");
-
-  const tier = qaTierSchema.safeParse(formData.get("tier"));
-  if (!tier.success) return FAIL(firstIssue(tier.error));
-
-  const info = QA_TIER_INFO[tier.data];
-  const reviewerId = String(formData.get("reviewerId") ?? "").trim() || null;
-
-  if (info.needsReviewer && !reviewerId) {
-    return FAIL("Bir mühendis seç.");
-  }
-
-  const supabase = await createClient();
-
-  const { error } = await supabase.rpc("choose_qa_tier", {
-    p_delivery_id: deliveryId,
-    p_tier: tier.data,
-    // The RPC defaults this to null; PostgREST types the optional arg as
-    // undefined, so "no reviewer" is an absent key rather than an explicit
-    // null. Tier 1/2 take this path.
-    ...(reviewerId ? { p_reviewer_id: reviewerId } : {}),
+  const { data: delivery, error } = await supabase.rpc("submit_qa_delivery", {
+    p_contract_id: contractId,
+    p_staging_url: parsed.data.stagingUrl,
+    ...(parsed.data.prUrl ? { p_pr_url: parsed.data.prUrl } : {}),
+    ...(parsed.data.notes ? { p_notes: parsed.data.notes } : {}),
   });
 
   if (error) return FAIL(error.message);
 
   let mailNotice = "";
-  const contract = await getContract(contractId, session.userId);
-  if (contract && tier.data === "TIER1") {
+  const tier = contract.qa_tier as QaTier | null;
+  if (tier === "TIER1") {
     // Tier 1 opens the client's window right away, so they have to be told
-    // now. Tier 3 tells them when the report lands instead.
+    // now. Tier 3+ tells them when the report lands instead.
     const sent = await notifyDeliverySubmitted({
       toUserId: contract.client_id,
       fallbackEmail: contract.client_email,
@@ -130,15 +123,15 @@ export async function chooseQaTier(
     }
   }
 
-  if (tier.data === "TIER2") {
+  if (tier === "TIER2" && delivery) {
     // The agent run happens after this response is sent, not before -- the
     // freelancer isn't kept waiting on a Playwright launch + LLM call just
-    // to see "queued". A daily cron sweep (process-tier2-qa) catches any
-    // order this never got to (a crashed invocation, a deploy mid-request).
+    // to see "gönderildi". A daily cron sweep (process-tier2-qa) catches
+    // any order this never got to (a crashed invocation, a deploy mid-request).
     const { data: order } = await supabase
       .from("qa_tier_orders")
       .select("id")
-      .eq("delivery_id", deliveryId)
+      .eq("delivery_id", delivery.id)
       .eq("tier", "TIER2")
       .order("created_at", { ascending: false })
       .limit(1)
@@ -151,9 +144,9 @@ export async function chooseQaTier(
 
   revalidatePath(`/contracts/${contractId}`);
   return OK(
-    tier.data === "TIER1"
-      ? `Paket seçildi. Müşterinin kontrol süresi başladı.${mailNotice}`
-      : `Paket seçildi. QA masasına iletildi.${mailNotice}`,
+    tier === "TIER1"
+      ? `Teslim edildi. Müşterinin kontrol süresi başladı.${mailNotice}`
+      : `Teslim edildi. QA masasına iletildi.${mailNotice}`,
   );
 }
 

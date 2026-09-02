@@ -99,6 +99,7 @@ export async function getContract(
   | (ContractRow & {
       signatures: Signature[];
       criteria: AcceptanceCriterion[];
+      qaReviewer: Tables<"qa_reviewers"> | null;
       company: {
         legal_name: string;
         vkn: string | null;
@@ -112,7 +113,9 @@ export async function getContract(
 
   const { data, error } = await supabase
     .from("contracts")
-    .select("*, milestones(*), contract_signatures(*), acceptance_criteria(*), workflow_phases(*)")
+    .select(
+      "*, milestones(*), contract_signatures(*), acceptance_criteria(*), workflow_phases(*), qa_reviewers(*)",
+    )
     .eq("id", contractId)
     .maybeSingle();
 
@@ -131,6 +134,7 @@ export async function getContract(
     milestones: sortMilestones(data.milestones),
     signatures: data.contract_signatures,
     criteria: [...data.acceptance_criteria].sort((a, b) => a.sequence_no - b.sequence_no),
+    qaReviewer: data.qa_reviewers,
     phases: [...(data.workflow_phases ?? [])].sort((a, b) => a.sequence_no - b.sequence_no),
     counterpartyName: counterparty.name,
     counterpartyPublicId: counterparty.publicId,

@@ -22,12 +22,15 @@ export function SignContract({
   alreadySigned,
   otherPartySigned,
   criteriaMissing = false,
+  qaTierMissing = false,
 }: Readonly<{
   contractId: string;
   alreadySigned: boolean;
   otherPartySigned: boolean;
   /** QA_ONLY with no acceptance criteria yet -- the client has to set these first. */
   criteriaMissing?: boolean;
+  /** QA_ONLY with no QA package chosen yet -- the client has to pick one first. */
+  qaTierMissing?: boolean;
 }>) {
   const [state, action] = useActionState(signContract, INITIAL);
   const [accepted, setAccepted] = useState(false);
@@ -46,10 +49,14 @@ export function SignContract({
     );
   }
 
-  if (criteriaMissing) {
+  if (criteriaMissing || qaTierMissing) {
     return (
       <p className="text-sm leading-relaxed text-zinc-500 dark:text-zinc-400">
-        Kabul kriterleri henüz girilmedi. İmza, kriterler kaydedilince açılır.
+        {criteriaMissing && qaTierMissing
+          ? "Kabul kriterleri ve QA paketi henüz girilmedi. İmza, ikisi de kaydedilince açılır."
+          : criteriaMissing
+            ? "Kabul kriterleri henüz girilmedi. İmza, kriterler kaydedilince açılır."
+            : "QA paketi henüz seçilmedi. İmza, paket seçilince açılır."}
       </p>
     );
   }

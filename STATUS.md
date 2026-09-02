@@ -14,7 +14,16 @@ burası daha çok bir kontrol paneli.
   (bu oturumda değişti). İmzalamadan önce en az 1 kriter zorunlu, DB seviyesinde
   garanti altında (`sign_contract()` reddediyor).
 - İmza akışı: hizmet koşulları kabul gate'i, parmak izi (hash) kaydı, IP/UA.
-- Teslim + QA tier seçimi: Tier1 (ücretsiz, müşteri kendi bakar), Tier3/4
+- **QA paketini artık client imza aşamasında seçiyor** — freelancer teslimden
+  sonra değil (bu oturumda değişti, bkz. "Bugün düzeltilenler"). Denetlenen
+  tarafın kendi denetim sıkılığını seçmesi çıkar çatışmasıydı. Tier3/4 için
+  reviewer da aynı adımda seçiliyor. Seçim, imza atılana kadar client
+  tarafından değiştirilebilir; ilk imzadan sonra kilitleniyor
+  (`set_qa_selection()` RPC, DB seviyesinde reddediyor). Teslim artık tek bir
+  atomik RPC (`submit_qa_delivery()`): teslim satırı, durum geçişi ve
+  `qa_tier_orders` kaydı aynı transaction'da oluşuyor, kısmi başarısızlıkta
+  sahipsiz kayıt kalmıyor.
+- Teslim + QA tier: Tier1 (ücretsiz, müşteri kendi bakar), Tier3/4
   (insan inceleme, reviewer kendi ücretini belirler → `qa_reviewers.rate_kurus`).
 - **Tier2 (Agentic QA) artık ayrı bir worker/hosting gerektirmiyor** —
   `src/lib/qa/agent.ts`, aynı Vercel deployment'ı içinde normal bir fonksiyon
@@ -81,6 +90,32 @@ burası daha çok bir kontrol paneli.
      "Lancerix Inc." ibaresi (şirket henüz yok) kaldırıldı.
    - `actions.ts`'te tanımsız `session` değişkeninden kaynaklanan iki
      typecheck hatası düzeltildi.
+6. **QA paketi seçimi client'a, imza aşamasına taşındı** — "client sözleşme
+   onaylarken test tipini seçti mi" sorusu üzerine: önceki akışta freelancer
+   teslimden *sonra* kendi QA sıkılığını (Tier1-4) ve Tier3/4 için reviewer'ı
+   seçiyordu — denetlenen taraf kendi denetimini seçiyordu, bariz bir çıkar
+   çatışması. Yeni akışta:
+   - `set_qa_selection()` RPC'si (yeni migration
+     `20260902070000_client_selects_qa_tier.sql`) client'ın imza öncesi
+     paket+reviewer seçimini `contracts.qa_tier/qa_reviewer_id/qa_fee_kurus`'a
+     yazıyor, herhangi bir imzadan sonra reddediyor.
+   - `sign_contract()` artık QA_ONLY sözleşmede `qa_tier is not null`'ı da
+     zorunlu kılıyor (kabul kriterleri gate'iyle aynı desende).
+   - `submit_qa_delivery()` RPC'si eski `choose_qa_tier()`'ın yerini aldı:
+     freelancer artık *seçmiyor*, sadece teslim ediyor — sipariş, sözleşmede
+     zaten kilitli olan tier/reviewer/ücretle aynı transaction'da açılıyor.
+   - Uçtan uca canlı doğrulama yapıldı (2 test hesabıyla): Tier1 akışı ve
+     Tier3+Senior reviewer akışı ayrı ayrı imzalandı, teslim edildi; her
+     ikisinde de oluşan `qa_tier_orders` satırının tier/reviewer/ücreti
+     sözleşmedeki seçimle birebir eşleşti (SQL ile doğrulandı).
+   - Not: bu doğrulama sırasında ayrı/önceden var olan bir gate'e rastlandı —
+     `submitQaDelivery` iş başlamış olmasını (`work_started_at`) şart koşuyor,
+     bu da her iki tarafın `planned_start_date`'i onaylamasına bağlı; test
+     sözleşmesinde `planned_start_date` hiç girilmemişti (freelancer'ın
+     sözleşme formunda alan isteğe bağlı bırakılmış), bu yüzden onay kartı
+     hiç görünmüyordu. Bu oturumun konusu değil, dokunulmadı — ama gerçek bir
+     sözleşmede freelancer bu tarihi girmezse teslim hiç açılmayabilir; ayrı
+     bir bakış gerekebilir.
 
 ## Bilinen boşluklar / sıradaki
 

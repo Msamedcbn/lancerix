@@ -6,8 +6,8 @@ import {
   ClientDecision,
   DeliveryForm,
   QaOrderPayment,
-  TierPicker,
 } from "@/app/(dashboard)/contracts/[id]/delivery-panel";
+import { QaSelectionPanel } from "@/app/(dashboard)/contracts/[id]/qa-selection-panel";
 import { MilestoneActions } from "@/app/(dashboard)/contracts/[id]/milestone-actions";
 import { SignContract } from "@/app/(dashboard)/contracts/[id]/signing";
 import {
@@ -25,12 +25,7 @@ import {
   type ProjectCategory,
 } from "@/lib/validations/project-category";
 import { requireSession } from "@/lib/auth/session";
-import {
-  getContract,
-  kurus,
-  type AcceptanceCriterion,
-  type Milestone,
-} from "@/lib/data/contracts";
+import { getContract, kurus, type Milestone } from "@/lib/data/contracts";
 import {
   listActiveReviewers,
   listDeliveries,
@@ -38,7 +33,6 @@ import {
   type DeliveryEvent,
   type DeliveryRow,
   type QaReport,
-  type QaReviewer,
 } from "@/lib/data/deliveries";
 import { listMessages } from "@/lib/data/messages";
 import { deliveryStatusLabel } from "@/lib/qa/delivery-state-machine";
@@ -195,7 +189,6 @@ function DeliveryPanel({
   side,
   deliveries,
   events,
-  reviewers,
   signedByBoth,
 }: Readonly<{
   contractId: string;
@@ -203,7 +196,6 @@ function DeliveryPanel({
   side: Side;
   deliveries: DeliveryRow[];
   events: DeliveryEvent[];
-  reviewers: QaReviewer[];
   signedByBoth: boolean;
 }>) {
   const latest = deliveries[0];
@@ -288,22 +280,6 @@ function DeliveryPanel({
 
         {latest.status === "AWAITING_CLIENT" && latest.client_review_deadline ? (
           <ReviewCountdown deadline={latest.client_review_deadline} />
-        ) : null}
-
-        {latest.status === "SUBMITTED" && isFreelancer ? (
-          <div className="border-t border-border pt-5 dark:border-border/50">
-            <TierPicker
-              contractId={contractId}
-              deliveryId={latest.id}
-              reviewers={reviewers}
-            />
-          </div>
-        ) : null}
-
-        {latest.status === "SUBMITTED" && !isFreelancer ? (
-          <p className="text-sm text-muted-foreground dark:text-muted-foreground">
-            Teslim alındı. Doğrulama paketi seçilince kontrol süren başlayacak.
-          </p>
         ) : null}
 
         {latest.status === "QA_QUEUED" ? (
@@ -419,13 +395,15 @@ export default async function ContractPage({
   const isQaOnly = contract.product_type === "QA_ONLY";
   const signedByBoth = contract.status === "ACTIVE";
 
+  const anySigned = contract.signatures.length > 0;
+
   const deliveries = isQaOnly ? await listDeliveries(contract.id) : [];
   const [events, reviewers] = isQaOnly
     ? await Promise.all([
         listDeliveryEvents(deliveries.map((d) => d.id)),
-        deliveries[0]?.status === "SUBMITTED" && side === "freelancer"
-          ? listActiveReviewers()
-          : Promise.resolve([]),
+        // Only the client needs the roster, and only while the QA selection
+        // is still editable -- once signed it's locked in and read-only.
+        side === "client" && !anySigned ? listActiveReviewers() : Promise.resolve([]),
       ])
     : [[], []];
 
@@ -629,6 +607,7 @@ export default async function ContractPage({
                 criteriaMissing={
                   contract.product_type === "QA_ONLY" && contract.criteria.length === 0
                 }
+                qaTierMissing={contract.product_type === "QA_ONLY" && !contract.qa_tier}
               />
             </Panel>
           )}
@@ -652,13 +631,21 @@ export default async function ContractPage({
 
           {isQaOnly ? (
             <>
+              <QaSelectionPanel
+                contractId={contract.id}
+                qaTier={contract.qa_tier}
+                qaReviewer={contract.qaReviewer}
+                qaFeeKurus={contract.qa_fee_kurus}
+                reviewers={reviewers}
+                side={side}
+                anySigned={anySigned}
+              />
               <DeliveryPanel
                 contractId={contract.id}
                 projectCategory={contract.project_category}
                 side={side}
                 deliveries={deliveries}
                 events={events}
-                reviewers={reviewers}
                 signedByBoth={signedByBoth}
               />
               <CriteriaPanel
@@ -666,7 +653,7 @@ export default async function ContractPage({
                 criteria={contract.criteria}
                 side={side}
                 projectCategory={contract.project_category}
-                anySigned={contract.signatures.length > 0}
+                anySigned={anySigned}
               />
             </>
           ) : (
