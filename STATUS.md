@@ -183,12 +183,24 @@ Her faz için: hosted DB'ye karşı doğrudan SQL ile (gerçek/atılabilir test
 verisiyle) uçtan uca doğrulama + tarayıcıda canlı test + typecheck/lint/test
 temiz, commit ve push edildi.
 
-**Bu review sırasında bulunan, bilerek bu oturuma dahil edilmeyen bir bug**
-(ayrı bir arka plan görevi olarak işaretlendi): `planned_start_date`
-sözleşme kurulurken isteğe bağlı bir alan — boş bırakılırsa iki taraf da
-imzalasa bile teslim asla açılmıyor (`work_started_at`'ı set edecek hiçbir
-yol yok). Bir freelancer bu tarihi girmeyi unutursa sözleşme kalıcı olarak
-kilitli kalıyor.
+**Bu review sırasında bulunan bir bug** (o oturumda bilerek dışarıda
+bırakılmış, bir sonraki oturumda düzeltildi — commit `46b0500`):
+`planned_start_date` sözleşme kurulurken isteğe bağlı bir alan — boş
+bırakılırsa iki taraf da imzalasa bile teslim asla açılmıyordu
+(`work_started_at`'ı set edecek hiçbir yol yoktu). `set_planned_start_date()`
+RPC'si eklendi: sözleşme ACTIVE iken ve tarih hâlâ boşken taraflardan
+biri bir kere doldurabiliyor, ardından mevcut karşılıklı-onay akışı normal
+şekilde devam ediyor. Review sırasında bir NULL-karşılaştırma hatası da
+yakalanıp düzeltildi: ilk taslak `IS DISTINCT FROM` ile taraf kontrolü
+yapıyordu, bu da anonim bir çağrıyı (`auth.uid()` null) `client_id`'si henüz
+hiç atanmamış (F-3 davet akışındaki gibi) bir sözleşmede "eşleşme" sayıyordu
+— ikisi de null olduğunda `IS DISTINCT FROM` false dönüyor. Zaten
+doğrulanmış `is_contract_party()` yardımcı fonksiyonuna (düz `=` kullanır,
+NULL-güvenli) yönlendirilerek düzeltildi. Hosted DB'ye karşı SQL ile
+(anon reddi, mutlu yol, ikinci deneme reddi, yabancı reddi) ve tarayıcıda
+uçtan uca doğrulandı: tarih girilmeden imzalanan bir sözleşmede yeni kart
+çıktı, tarih girildi, iki taraf onayladı, `work_started_at` set edildi,
+teslim (önceden kalıcı olarak kilitliydi) başarıyla gönderildi.
 
 ## Bilinen boşluklar / sıradaki
 
