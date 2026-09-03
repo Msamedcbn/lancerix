@@ -33,6 +33,7 @@ const NAV: Record<UserRole, readonly NavItem[]> = {
   ],
   ADMIN: [
     { href: "/admin", label: "Panel", icon: "layout-dashboard" },
+    { href: "/admin/search", label: "Arama", icon: "search" },
     { href: "/admin/users", label: "Kullanıcılar", icon: "contact" },
     { href: "/admin/qa-queue", label: "QA kuyruğu", icon: "list-checks" },
     { href: "/admin/reviewers", label: "Mühendisler", icon: "users" },

@@ -13,6 +13,7 @@ import {
   LogOut,
   Receipt,
   ScrollText,
+  Search,
   Settings,
   UserRound,
   Users,
@@ -44,7 +45,8 @@ export type NavIcon =
   | "alert-triangle"
   | "scroll"
   | "user"
-  | "layout-dashboard";
+  | "layout-dashboard"
+  | "search";
 
 export type NavItem = { href: Route; label: string; icon: NavIcon };
 
@@ -64,6 +66,7 @@ const ICONS: Record<NavIcon, typeof Briefcase> = {
   scroll: ScrollText,
   user: UserRound,
   "layout-dashboard": LayoutDashboard,
+  search: Search,
 };
 
 /**
