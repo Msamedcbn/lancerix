@@ -1,9 +1,11 @@
 import Link from "next/link";
 
-import { EmptyState, PageHeading, Row, Rows } from "@/components/page-shell";
+import { Money } from "@/components/money";
+import { EmptyState, PageHeading, Panel, Row, Rows } from "@/components/page-shell";
 import { requireRole } from "@/lib/auth/session";
-import { listQaQueue } from "@/lib/data/admin-qa";
+import { listPendingQaOrders, listQaQueue } from "@/lib/data/admin-qa";
 
+import { MarkOrderPaidForm } from "./mark-order-paid-form";
 import { QaReportForm } from "./qa-report-form";
 
 const TIER_LABEL: Record<string, string> = {
@@ -19,7 +21,7 @@ const LEVEL_LABEL: Record<string, string> = {
 
 export default async function AdminQaQueuePage() {
   await requireRole("ADMIN");
-  const queue = await listQaQueue();
+  const [queue, pendingOrders] = await Promise.all([listQaQueue(), listPendingQaOrders()]);
 
   return (
     <>
@@ -27,6 +29,41 @@ export default async function AdminQaQueuePage() {
         title="QA kuyruğu"
         subtitle="Tier 2/3/4 satın alınmış, henüz raporlanmamış teslimler. Sıra teslim sırasıdır."
       />
+
+      {pendingOrders.length > 0 ? (
+        <Panel title="Bekleyen QA ödemesi">
+          <p className="mb-4 text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">
+            Normalde LemonSqueezy webhook&apos;u bu siparişleri otomatik ödendi
+            işaretler. Webhook hiç gelmediyse (kaçan bir olay, banka havalesi vb.)
+            burada elle işaretleyebilirsin.
+          </p>
+          <Rows>
+            {pendingOrders.map((o) => (
+              <Row key={o.id}>
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-zinc-950 dark:text-zinc-50">
+                      {o.delivery?.contract ? (
+                        <Link href={`/contracts/${o.delivery.contract.id}`} className="hover:underline">
+                          {o.delivery.contract.title}
+                        </Link>
+                      ) : (
+                        "—"
+                      )}
+                    </p>
+                    <p className="mt-0.5 flex items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">
+                      <span>{TIER_LABEL[o.tier] ?? o.tier}</span>
+                      <Money kurus={o.fee_kurus} />
+                      <span>· {o.created_at.slice(0, 10)}</span>
+                    </p>
+                  </div>
+                  <MarkOrderPaidForm orderId={o.id} />
+                </div>
+              </Row>
+            ))}
+          </Rows>
+        </Panel>
+      ) : null}
 
       {queue.length === 0 ? (
         <EmptyState
