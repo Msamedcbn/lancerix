@@ -324,3 +324,43 @@ export async function notifyAutoAccepted({
     ].join("\n"),
   });
 }
+
+/**
+ * The daily admin digest -- sent to a fixed ADMIN_DIGEST_EMAIL, not a user
+ * lookup, since there is one operator and no in-app concept yet of "who
+ * gets ops mail" worth building. The cron only calls this when at least one
+ * count is nonzero (no "all clear" noise mail) and only once per calendar
+ * day (admin_digest_sends).
+ */
+export async function notifyAdminDigest({
+  qaQueue,
+  pendingOrders,
+  pendingInvoices,
+  disputes,
+  unclaimedInvites,
+}: Readonly<{
+  qaQueue: number;
+  pendingOrders: number;
+  pendingInvoices: number;
+  disputes: number;
+  unclaimedInvites: number;
+}>): Promise<SendResult> {
+  const to = process.env.ADMIN_DIGEST_EMAIL;
+  if (!to) return { ok: false, reason: "ADMIN_DIGEST_EMAIL is not set" };
+
+  return sendEmail({
+    to,
+    subject: "Lancerix admin özeti",
+    body: [
+      "Bugün dikkat gerektiren:",
+      "",
+      `QA kuyruğu: ${qaQueue}`,
+      `Bekleyen QA ödemesi: ${pendingOrders}`,
+      `Bekleyen fatura: ${pendingInvoices}`,
+      `İtirazlar: ${disputes}`,
+      `Bekleyen davetler: ${unclaimedInvites}`,
+      "",
+      `Panel: ${appUrlFor("/admin")}`,
+    ].join("\n"),
+  });
+}

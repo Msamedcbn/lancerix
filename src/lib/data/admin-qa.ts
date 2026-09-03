@@ -1,7 +1,17 @@
 import "server-only";
 
-import type { Tables } from "@/lib/supabase/database.types";
+import type { SupabaseClient } from "@supabase/supabase-js";
+
+import type { Database, Tables } from "@/lib/supabase/database.types";
 import { createClient } from "@/lib/supabase/server";
+
+/**
+ * Every list* function below takes an optional client so the admin dashboard
+ * (request-scoped createClient()) and the digest cron (no user session,
+ * createAdminClient()) can share the exact same query instead of the cron
+ * reimplementing them against a different client.
+ */
+type Client = SupabaseClient<Database>;
 
 export type Delivery = Tables<"deliveries">;
 export type QaTierOrder = Tables<"qa_tier_orders">;
@@ -24,8 +34,8 @@ export type QaQueueRow = Delivery & {
  * the order it arrived, not by tier. Each carries the one tier order that put
  * it here, since Faz 1 buys exactly one tier per delivery.
  */
-export async function listQaQueue(): Promise<QaQueueRow[]> {
-  const supabase = await createClient();
+export async function listQaQueue(client?: Client): Promise<QaQueueRow[]> {
+  const supabase = client ?? (await createClient());
 
   const { data, error } = await supabase
     .from("deliveries")
@@ -65,8 +75,8 @@ export type PlatformInvoiceRow = PlatformInvoice & {
 };
 
 /** Every platform invoice, newest first. */
-export async function listPlatformInvoices(): Promise<PlatformInvoiceRow[]> {
-  const supabase = await createClient();
+export async function listPlatformInvoices(client?: Client): Promise<PlatformInvoiceRow[]> {
+  const supabase = client ?? (await createClient());
   const { data, error } = await supabase
     .from("platform_invoices")
     .select("*, contract:contracts(id, title)")
@@ -85,8 +95,8 @@ export type RejectedDeliveryRow = Delivery & {
  * arbitration step here (that is Faz 2's DISPUTED escrow milestone); this is
  * just visibility into where a client's objection stands.
  */
-export async function listRejectedDeliveries(): Promise<RejectedDeliveryRow[]> {
-  const supabase = await createClient();
+export async function listRejectedDeliveries(client?: Client): Promise<RejectedDeliveryRow[]> {
+  const supabase = client ?? (await createClient());
   const { data, error } = await supabase
     .from("deliveries")
     .select(
@@ -113,8 +123,8 @@ export type PendingQaOrderRow = QaTierOrder & {
  * correctly; this is the first UI surface that lets an admin reach it
  * without going to SQL.
  */
-export async function listPendingQaOrders(): Promise<PendingQaOrderRow[]> {
-  const supabase = await createClient();
+export async function listPendingQaOrders(client?: Client): Promise<PendingQaOrderRow[]> {
+  const supabase = client ?? (await createClient());
   const { data, error } = await supabase
     .from("qa_tier_orders")
     .select("*, delivery:deliveries(id, contract:contracts(id, title))")

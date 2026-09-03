@@ -100,6 +100,27 @@ export type Database = {
           },
         ]
       }
+      admin_digest_sends: {
+        Row: {
+          id: string
+          item_count: number
+          sent_at: string
+          sent_date: string
+        }
+        Insert: {
+          id?: string
+          item_count: number
+          sent_at?: string
+          sent_date: string
+        }
+        Update: {
+          id?: string
+          item_count?: number
+          sent_at?: string
+          sent_date?: string
+        }
+        Relationships: []
+      }
       admin_user_notes: {
         Row: {
           author_id: string

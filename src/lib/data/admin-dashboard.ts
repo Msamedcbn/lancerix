@@ -1,12 +1,17 @@
 import "server-only";
 
+import type { SupabaseClient } from "@supabase/supabase-js";
+
 import { createClient } from "@/lib/supabase/server";
+import type { Database } from "@/lib/supabase/database.types";
 import {
   listPendingQaOrders,
   listPlatformInvoices,
   listQaQueue,
   listRejectedDeliveries,
 } from "@/lib/data/admin-qa";
+
+type Client = SupabaseClient<Database>;
 
 /**
  * One dashboard card's data, or the fact that it failed. Each card is
@@ -47,9 +52,8 @@ function settle<T>(dates: T[], pickDate: (row: T) => string): DashboardSection {
   return { ok: true, count: dates.length, oldestAt: oldest };
 }
 
-async function unclaimedInvitesSection(): Promise<DashboardSection> {
-  const supabase = await createClient();
-  const { data, error } = await supabase
+async function unclaimedInvitesSection(client: Client): Promise<DashboardSection> {
+  const { data, error } = await client
     .from("contracts")
     .select("created_at")
     .is("client_id", null)
@@ -63,22 +67,28 @@ async function unclaimedInvitesSection(): Promise<DashboardSection> {
  * Every card fetched independently. A rejected promise becomes { ok: false }
  * for that card only -- see DashboardSection's own comment for why this
  * matters more here than almost anywhere else in the app.
+ *
+ * Takes an optional client so the digest cron (no user session) can pass its
+ * createAdminClient() and reuse these exact queries instead of
+ * reimplementing them -- see admin-qa.ts's Client type comment.
  */
-export async function getDashboardCounts(): Promise<DashboardData> {
+export async function getDashboardCounts(client?: Client): Promise<DashboardData> {
+  const supabase = client ?? (await createClient());
+
   const [qaQueue, pendingOrders, pendingInvoices, disputes, unclaimedInvites] =
     await Promise.allSettled([
-      listQaQueue().then((rows) => settle(rows, (r) => r.submitted_at)),
-      listPendingQaOrders().then((rows) => settle(rows, (r) => r.created_at)),
-      listPlatformInvoices().then((rows) =>
+      listQaQueue(supabase).then((rows) => settle(rows, (r) => r.submitted_at)),
+      listPendingQaOrders(supabase).then((rows) => settle(rows, (r) => r.created_at)),
+      listPlatformInvoices(supabase).then((rows) =>
         settle(
           rows.filter((r) => r.status === "PENDING"),
           (r) => r.issued_at,
         ),
       ),
-      listRejectedDeliveries().then((rows) =>
+      listRejectedDeliveries(supabase).then((rows) =>
         settle(rows, (r) => r.decided_at ?? r.submitted_at),
       ),
-      unclaimedInvitesSection(),
+      unclaimedInvitesSection(supabase),
     ]);
 
   const toSection = (r: PromiseSettledResult<DashboardSection>): DashboardSection =>
