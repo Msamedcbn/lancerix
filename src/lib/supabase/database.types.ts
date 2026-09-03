@@ -1520,6 +1520,45 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      set_planned_start_date: {
+        Args: { p_contract_id: string; p_date: string }
+        Returns: {
+          client_email: string
+          client_id: string | null
+          client_start_confirmed: boolean
+          company_id: string | null
+          coupon_id: string | null
+          created_at: string
+          document_sha256: string | null
+          freelancer_id: string
+          freelancer_start_confirmed: boolean
+          id: string
+          objection_window_days: number
+          planned_start_date: string | null
+          platform_fee_bps: number
+          product_type: string
+          project_amount_kurus: number
+          project_category: Database["public"]["Enums"]["project_category"]
+          qa_fee_kurus: number | null
+          qa_reviewer_id: string | null
+          qa_tier: string | null
+          reference: string
+          rejection_reason: string | null
+          revision_note: string | null
+          scope_of_work: string
+          status: Database["public"]["Enums"]["contract_status"]
+          stopaj_bps: number
+          title: string
+          updated_at: string
+          work_started_at: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "contracts"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       set_qa_selection: {
         Args: { p_contract_id: string; p_reviewer_id?: string; p_tier: string }
         Returns: {

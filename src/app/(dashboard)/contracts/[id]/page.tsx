@@ -14,6 +14,7 @@ import { SignContract } from "@/app/(dashboard)/contracts/[id]/signing";
 import {
   ContractActions,
   ResubmitContract,
+  SetStartDate,
   StartDateConfirm,
 } from "@/app/(dashboard)/contracts/[id]/contract-lifecycle";
 import { Money } from "@/components/money";
@@ -489,6 +490,28 @@ export default async function ContractPage({
               <ResubmitContract contractId={contract.id} />
             </div>
           )}
+        </div>
+      )}
+
+      {/* No planned start date was set at signing -- either party fills one
+          in before the usual mutual-confirmation card below can appear. */}
+      {signedByBoth && !hasStartDate && !contract.work_started_at && (
+        <div className="rounded-2xl border border-indigo-200/80 bg-gradient-to-br from-indigo-50/90 via-white to-indigo-50/40 p-6 shadow-sm dark:border-indigo-800/60 dark:from-indigo-950/40 dark:via-zinc-900 dark:to-zinc-900">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h3 className="text-sm font-bold text-indigo-950 dark:text-indigo-200">
+                📅 Başlangıç Tarihi Belirlenmedi
+              </h3>
+              <p className="mt-1 text-sm text-indigo-700 dark:text-indigo-300">
+                Bu sözleşme için planlanan bir başlangıç tarihi girilmemiş.
+              </p>
+              <p className="mt-1 text-xs text-indigo-600/80 dark:text-indigo-400/80">
+                Bir tarih belirle, ardından iki taraf da onayladığında iş resmi olarak başlar.
+              </p>
+            </div>
+
+            <SetStartDate contractId={contract.id} />
+          </div>
         </div>
       )}
 

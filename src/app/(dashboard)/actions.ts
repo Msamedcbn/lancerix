@@ -563,6 +563,36 @@ export async function confirmStartDate(
 }
 
 /**
+ * Backfill a start date on a contract that was signed with none -- the field
+ * is optional at creation, but confirm_start_date() (and therefore delivery,
+ * see submitQaDelivery in qa-actions.ts) requires one. Either party can set
+ * it exactly once; after that the normal mutual-confirmation flow applies.
+ */
+export async function setPlannedStartDate(
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  await requireSession();
+
+  const contractId = String(formData.get("contractId") ?? "");
+  if (!contractId) return FAIL("Sözleşme bulunamadı.");
+
+  const date = String(formData.get("plannedStartDate") ?? "").trim();
+  if (!date || Number.isNaN(Date.parse(date))) return FAIL("Geçerli bir tarih gir.");
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("set_planned_start_date", {
+    p_contract_id: contractId,
+    p_date: date,
+  });
+
+  if (error) return FAIL(error.message);
+
+  revalidatePath(`/contracts/${contractId}`);
+  return OK("Başlangıç tarihi belirlendi.");
+}
+
+/**
  * The freelancer's answer to a revision request: send it back for another
  * look. Closes the REVISION_REQUESTED dead end -- resubmit_contract() moves
  * the contract to PENDING_REVIEW, which sign_contract() also accepts, so the

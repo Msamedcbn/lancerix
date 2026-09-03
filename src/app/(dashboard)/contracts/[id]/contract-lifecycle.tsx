@@ -7,6 +7,7 @@ import {
   rejectContract,
   requestRevision,
   resubmitContract,
+  setPlannedStartDate,
   type FormState,
 } from "@/app/(dashboard)/actions";
 import { FormFeedback, SubmitButton } from "@/components/form-feedback";
@@ -148,6 +149,33 @@ export function StartDateConfirm({
       <input type="hidden" name="contractId" value={contractId} />
       <SubmitButton pendingLabel="Onaylanıyor...">
         Başlangıcı Onayla
+      </SubmitButton>
+      <FormFeedback state={state} />
+    </form>
+  );
+}
+
+/**
+ * A signed contract with no planned start date (the field is optional at
+ * creation) has no other path to one -- confirm_start_date() requires it,
+ * and without it delivery can never open. Either party fills it in once.
+ */
+export function SetStartDate({
+  contractId,
+}: Readonly<{ contractId: string }>) {
+  const [state, action] = useActionState(setPlannedStartDate, INITIAL);
+
+  return (
+    <form action={action} className="flex flex-col items-end gap-2">
+      <input type="hidden" name="contractId" value={contractId} />
+      <input
+        type="date"
+        name="plannedStartDate"
+        required
+        className="rounded-xl border border-zinc-200/80 bg-white px-3.5 py-2 text-sm text-zinc-950 shadow-xs focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20 dark:border-zinc-800/80 dark:bg-zinc-900 dark:text-zinc-50"
+      />
+      <SubmitButton pendingLabel="Kaydediliyor...">
+        Başlangıç Tarihi Belirle
       </SubmitButton>
       <FormFeedback state={state} />
     </form>
