@@ -211,7 +211,7 @@ const FLOW_STEPS = [
     step: "02",
     edge: "AWAITING_PAYMENT -> IN_PROGRESS",
     title: "Para kilitlenir",
-    body: "Müşteri aşamanın tutarını hizmet bedeliyle birlikte, iş başlamadan yatırır. Tutar lisanslı bir ödeme kuruluşunda tutulacak; ne freelancer çekebilir ne müşteri geri alabilir. Bu adım henüz devrede değil: kurum entegrasyonu sürerken sözleşme, teslim ve kabul süreci çalışıyor, para platform üzerinden geçmiyor.",
+    body: "Müşteri aşamanın tutarını hizmet bedeliyle birlikte, iş başlamadan yatırır. Tutar lisanslı bir ödeme kuruluşunda tutulacak; ne freelancer çekebilir ne müşteri geri alabilir.",
     Diagram: LockDiagram,
   },
   {
@@ -537,6 +537,27 @@ export function SystemFlow() {
             />
             <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-neutral-950/40 to-transparent" />
           </div>
+        </div>
+      </section>
+
+      {/* Status banner: this whole page is Lancerix's target architecture
+          (escrow, stopaj withholding, automatic payout split) -- only the
+          delivery/QA/objection-window step below is actually live today.
+          One clear statement here, rather than scattering caveats through
+          five step bodies and a worked money-split example that would
+          otherwise all read as present-tense fact. */}
+      <section className="px-6 pb-4">
+        <div className="mx-auto max-w-6xl rounded-2xl border border-amber-400/25 bg-amber-500/[0.06] px-6 py-5">
+          <p className="text-sm leading-relaxed text-amber-100/90">
+            <strong className="font-semibold text-amber-200">
+              Aşağıdaki şema hedef mimarimiz, bugünkü sistem değil.
+            </strong>{" "}
+            Şu anda Lancerix bir doğrulama ve raporlama hizmeti: sözleşme,
+            teslim, QA doğrulaması ve kabul süreci (aşağıdaki 4. adım) canlı,
+            ödeme ise taraflar arasında doğrudan çözülüyor. Escrow, stopaj
+            kesintisi ve otomatik ödeme dağıtımı (1, 2, 3 ve 5. adımlar) şirket
+            kuruluşu ve ödeme lisansı sonrasında devreye girecek yol haritamız.
+          </p>
         </div>
       </section>
 
