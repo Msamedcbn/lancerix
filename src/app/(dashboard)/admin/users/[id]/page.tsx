@@ -6,6 +6,12 @@ import { requireRole } from "@/lib/auth/session";
 import { getProfileDetail } from "@/lib/data/admin-users";
 
 import { UserNotes } from "./user-notes";
+import {
+  DeleteAccountForm,
+  ProfileEditForm,
+  RoleChangeForm,
+  SuspensionControl,
+} from "./user-management";
 
 const ROLE_LABEL: Record<string, string> = {
   FREELANCER: "Freelancer",
@@ -53,11 +59,13 @@ function ContractList({
 export default async function AdminUserDetailPage({
   params,
 }: Readonly<{ params: Promise<{ id: string }> }>) {
-  await requireRole("ADMIN");
+  const session = await requireRole("ADMIN");
   const { id } = await params;
   const profile = await getProfileDetail(id);
 
   if (!profile) notFound();
+
+  const isSelf = profile.id === session.userId;
 
   return (
     <>
@@ -70,6 +78,11 @@ export default async function AdminUserDetailPage({
             </span>
             <span>{profile.email}</span>
             <span className="font-mono text-xs text-zinc-400">{profile.public_id}</span>
+            {profile.suspended_at ? (
+              <span className="rounded-full bg-rose-100 px-2.5 py-0.5 text-xs font-semibold text-rose-700 dark:bg-rose-950/50 dark:text-rose-300">
+                Askıda
+              </span>
+            ) : null}
           </span>
         }
       />
@@ -141,6 +154,42 @@ export default async function AdminUserDetailPage({
           title="Bir yönetici hesabı"
           description="Bu profilin taraf olduğu bir sözleşme kavramı yok."
         />
+      ) : null}
+
+      {!isSelf ? (
+        <Panel title="Hesap Yönetimi">
+          <div className="flex flex-col gap-6">
+            <div>
+              <p className="mb-2 text-xs font-semibold text-zinc-500 dark:text-zinc-400">
+                Ad Soyad
+              </p>
+              <ProfileEditForm profileId={profile.id} fullName={profile.full_name} />
+            </div>
+
+            <div>
+              <p className="mb-2 text-xs font-semibold text-zinc-500 dark:text-zinc-400">Rol</p>
+              <RoleChangeForm profileId={profile.id} currentRole={profile.role} />
+            </div>
+
+            <div>
+              <p className="mb-2 text-xs font-semibold text-zinc-500 dark:text-zinc-400">
+                Askıya Alma
+              </p>
+              <SuspensionControl
+                profileId={profile.id}
+                suspendedAt={profile.suspended_at}
+                suspensionReason={profile.suspension_reason}
+              />
+            </div>
+
+            <div className="border-t border-dashed border-zinc-200 pt-4 dark:border-zinc-800">
+              <p className="mb-2 text-xs font-semibold text-zinc-500 dark:text-zinc-400">
+                Tehlikeli Bölge
+              </p>
+              <DeleteAccountForm profileId={profile.id} publicId={profile.public_id} />
+            </div>
+          </div>
+        </Panel>
       ) : null}
 
       <Panel title="Admin Notları">

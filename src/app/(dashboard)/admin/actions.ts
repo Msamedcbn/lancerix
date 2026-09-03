@@ -3,12 +3,14 @@
 import { createHash } from "node:crypto";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { requireRole } from "@/lib/auth/session";
 import { logAdminEvent } from "@/lib/data/admin-activity";
 import { MoneyError, parseTryToKurus } from "@/lib/escrow/money";
 import { FAIL, firstIssue, OK, type FormState } from "@/lib/forms";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
 export type { FormState };
@@ -17,6 +19,199 @@ const userNoteSchema = z.object({
   profileId: z.string().uuid(),
   body: z.string().trim().min(1, "Not boş olamaz.").max(2000, "Not çok uzun."),
 });
+
+/**
+ * Suspend/unsuspend only ever gates NEW contract creation
+ * (contracts_insert_freelancer, 20260904000006_user_suspension_and_role_change.sql)
+ * -- not login, not any in-flight contract/delivery/message RPC. Two people
+ * who already agreed to work together finish that work; a suspended user
+ * just can't start anything new. Deliberately not threaded through 8+
+ * existing RPCs to keep this a single, low-risk enforcement point.
+ */
+export async function suspendUser(
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const session = await requireRole("ADMIN");
+
+  const profileId = String(formData.get("profileId") ?? "");
+  const reason = String(formData.get("reason") ?? "").trim();
+  if (!profileId) return FAIL("Kullanıcı eksik.");
+  if (!reason) return FAIL("Bir gerekçe gir.");
+  if (profileId === session.userId) return FAIL("Kendi hesabını askıya alamazsın.");
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("profiles")
+    .update({
+      suspended_at: new Date().toISOString(),
+      suspended_by: session.userId,
+      suspension_reason: reason,
+    })
+    .eq("id", profileId);
+  if (error) return FAIL(error.message);
+
+  await logAdminEvent(session.userId, "user_suspended", "profile", profileId, { reason });
+
+  revalidatePath(`/admin/users/${profileId}`);
+  return OK("Kullanıcı askıya alındı.");
+}
+
+export async function unsuspendUser(
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const session = await requireRole("ADMIN");
+
+  const profileId = String(formData.get("profileId") ?? "");
+  if (!profileId) return FAIL("Kullanıcı eksik.");
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("profiles")
+    .update({ suspended_at: null, suspended_by: null, suspension_reason: null })
+    .eq("id", profileId);
+  if (error) return FAIL(error.message);
+
+  await logAdminEvent(session.userId, "user_unsuspended", "profile", profileId, {});
+
+  revalidatePath(`/admin/users/${profileId}`);
+  return OK("Askı kaldırıldı.");
+}
+
+const roleChangeSchema = z.object({
+  profileId: z.string().uuid(),
+  role: z.enum(["FREELANCER", "CLIENT", "ADMIN"]),
+});
+
+/**
+ * guard_profile_role() (20260830000100_init.sql) already enforces that only
+ * an admin may change a role and that nobody may change their own -- this
+ * action is just the UI's path to a mutation the DB already secures. The
+ * one thing added here: promoting to ADMIN requires the confirm=yes flag
+ * the UI only sends after an explicit "type ADMIN to confirm" step, since
+ * that grant is full admin power with no finer-grained role today.
+ */
+export async function changeUserRole(
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const session = await requireRole("ADMIN");
+
+  const parsed = roleChangeSchema.safeParse({
+    profileId: formData.get("profileId"),
+    role: formData.get("role"),
+  });
+  if (!parsed.success) return FAIL(firstIssue(parsed.error));
+
+  if (parsed.data.role === "ADMIN" && formData.get("confirmAdmin") !== "yes") {
+    return FAIL("ADMIN yetkisi vermek için onay adımını tamamla.");
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("profiles")
+    .update({ role: parsed.data.role })
+    .eq("id", parsed.data.profileId);
+  if (error) return FAIL(error.message);
+
+  await logAdminEvent(session.userId, "user_role_changed", "profile", parsed.data.profileId, {
+    newRole: parsed.data.role,
+  });
+
+  revalidatePath(`/admin/users/${parsed.data.profileId}`);
+  return OK("Rol güncellendi.");
+}
+
+const profileEditSchema = z.object({
+  profileId: z.string().uuid(),
+  fullName: z.string().trim().min(2, "İsim en az 2 karakter olmalı.").max(255, "İsim çok uzun."),
+});
+
+/**
+ * Just full_name -- editing email would desync from auth.users (the real
+ * identity record) without a proper re-verification flow, and TCKN/IBAN are
+ * checksum-validated financial/identity fields a support-driven admin edit
+ * would too easily get wrong. Out of scope here; both stay user-editable
+ * from their own profile settings only.
+ */
+export async function updateUserProfile(
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const session = await requireRole("ADMIN");
+
+  const parsed = profileEditSchema.safeParse({
+    profileId: formData.get("profileId"),
+    fullName: formData.get("fullName"),
+  });
+  if (!parsed.success) return FAIL(firstIssue(parsed.error));
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("profiles")
+    .update({ full_name: parsed.data.fullName })
+    .eq("id", parsed.data.profileId);
+  if (error) return FAIL(error.message);
+
+  await logAdminEvent(session.userId, "user_profile_edited", "profile", parsed.data.profileId, {
+    fullName: parsed.data.fullName,
+  });
+
+  revalidatePath(`/admin/users/${parsed.data.profileId}`);
+  return OK("Profil güncellendi.");
+}
+
+/**
+ * Real deletion, not a soft flag -- but only ever succeeds for a genuinely
+ * empty account. Every FK from contracts/platform_invoices/payouts/companies
+ * to profiles is ON DELETE RESTRICT (verified directly against the schema
+ * before building this), so Postgres itself refuses the cascade the moment
+ * any real history exists; this action does not try to out-think that, it
+ * just surfaces whatever error the database gives back. The confirmation
+ * text is checked server-side against the profile's own public_id -- never
+ * trust a client-only confirm on something this irreversible.
+ */
+export async function deleteUserAccount(
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const session = await requireRole("ADMIN");
+
+  const profileId = String(formData.get("profileId") ?? "");
+  const confirmText = String(formData.get("confirmText") ?? "").trim();
+  if (!profileId) return FAIL("Kullanıcı eksik.");
+  if (profileId === session.userId) return FAIL("Kendi hesabını silemezsin.");
+
+  const supabase = await createClient();
+  const { data: profile, error: lookupError } = await supabase
+    .from("profiles")
+    .select("public_id")
+    .eq("id", profileId)
+    .maybeSingle();
+  if (lookupError) return FAIL(lookupError.message);
+  if (!profile) return FAIL("Kullanıcı bulunamadı.");
+  if (confirmText !== profile.public_id) {
+    return FAIL("Onay metni Lancerix ID ile eşleşmiyor.");
+  }
+
+  const admin = createAdminClient();
+  const { error } = await admin.auth.admin.deleteUser(profileId);
+  if (error) {
+    // The expected shape of this failure: any real contract/invoice/payout
+    // history means an ON DELETE RESTRICT constraint somewhere refuses the
+    // cascade, and Postgres's own error message is what the admin needs to
+    // see -- "this account has real history, suspend it instead."
+    return FAIL(error.message);
+  }
+
+  await logAdminEvent(session.userId, "user_deleted", "profile", profileId, {
+    publicId: profile.public_id,
+  });
+
+  revalidatePath("/admin/users");
+  redirect("/admin/users");
+}
 
 /**
  * A timestamped note an admin leaves on a user's profile -- never a single

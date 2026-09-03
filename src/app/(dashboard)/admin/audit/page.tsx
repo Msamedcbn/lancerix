@@ -20,6 +20,11 @@ const EVENT_LABEL: Record<string, string> = {
   qa_order_marked_paid: "QA siparişi elle ödendi işaretlendi",
   invoice_amount_set: "Fatura tutarı değişti",
   invoice_status_set: "Fatura durumu değişti",
+  user_suspended: "Kullanıcı askıya alındı",
+  user_unsuspended: "Kullanıcının askısı kaldırıldı",
+  user_role_changed: "Kullanıcı rolü değişti",
+  user_profile_edited: "Kullanıcı profili düzenlendi",
+  user_deleted: "Kullanıcı silindi",
 };
 
 export default async function AdminAuditPage() {

@@ -937,6 +937,9 @@ export type Database = {
           role: Database["public"]["Enums"]["user_role"]
           services: string[]
           skills: string[]
+          suspended_at: string | null
+          suspended_by: string | null
+          suspension_reason: string | null
           tckn: string | null
           updated_at: string
           website_url: string | null
@@ -954,6 +957,9 @@ export type Database = {
           role?: Database["public"]["Enums"]["user_role"]
           services?: string[]
           skills?: string[]
+          suspended_at?: string | null
+          suspended_by?: string | null
+          suspension_reason?: string | null
           tckn?: string | null
           updated_at?: string
           website_url?: string | null
@@ -971,11 +977,22 @@ export type Database = {
           role?: Database["public"]["Enums"]["user_role"]
           services?: string[]
           skills?: string[]
+          suspended_at?: string | null
+          suspended_by?: string | null
+          suspension_reason?: string | null
           tckn?: string | null
           updated_at?: string
           website_url?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_suspended_by_fkey"
+            columns: ["suspended_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       qa_agent_runs: {
         Row: {
