@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { requireRole } from "@/lib/auth/session";
+import { logAdminEvent } from "@/lib/data/admin-activity";
 import { MoneyError, parseTryToKurus } from "@/lib/escrow/money";
 import { FAIL, firstIssue, OK, type FormState } from "@/lib/forms";
 import { createClient } from "@/lib/supabase/server";
@@ -76,7 +77,7 @@ export async function submitQaReport(
   _prev: FormState,
   formData: FormData,
 ): Promise<FormState> {
-  await requireRole("ADMIN");
+  const session = await requireRole("ADMIN");
 
   const parsed = reportSchema.safeParse({
     deliveryId: formData.get("deliveryId"),
@@ -101,6 +102,8 @@ export async function submitQaReport(
     p_document_sha256: digest,
   });
   if (error) return FAIL(error.message);
+
+  await logAdminEvent(session.userId, "qa_report_submitted", "delivery", deliveryId, { status });
 
   revalidatePath("/admin/qa-queue");
   revalidatePath(`/contracts/${contractId}`);
@@ -136,7 +139,7 @@ export async function addReviewer(
   _prev: FormState,
   formData: FormData,
 ): Promise<FormState> {
-  await requireRole("ADMIN");
+  const session = await requireRole("ADMIN");
 
   const parsed = reviewerSchema.safeParse({
     email: formData.get("email"),
@@ -168,6 +171,10 @@ export async function addReviewer(
   });
   if (error) return FAIL(error.message);
 
+  await logAdminEvent(session.userId, "reviewer_added", "profile", profile.id, {
+    level: parsed.data.level,
+  });
+
   revalidatePath("/admin/reviewers");
   return OK("Mühendis kadroya eklendi.");
 }
@@ -177,7 +184,7 @@ export async function setReviewerActive(
   _prev: FormState,
   formData: FormData,
 ): Promise<FormState> {
-  await requireRole("ADMIN");
+  const session = await requireRole("ADMIN");
 
   const reviewerId = String(formData.get("reviewerId") ?? "");
   const active = formData.get("active") === "true";
@@ -189,6 +196,10 @@ export async function setReviewerActive(
     .update({ active })
     .eq("id", reviewerId);
   if (error) return FAIL(error.message);
+
+  await logAdminEvent(session.userId, "reviewer_active_toggled", "qa_reviewer", reviewerId, {
+    active,
+  });
 
   revalidatePath("/admin/reviewers");
   return OK(active ? "Mühendis aktifleştirildi." : "Mühendis pasife alındı.");
@@ -205,7 +216,7 @@ export async function setReviewerRate(
   _prev: FormState,
   formData: FormData,
 ): Promise<FormState> {
-  await requireRole("ADMIN");
+  const session = await requireRole("ADMIN");
 
   const reviewerId = String(formData.get("reviewerId") ?? "");
   if (!reviewerId) return FAIL("Mühendis eksik.");
@@ -225,6 +236,10 @@ export async function setReviewerRate(
     .eq("id", reviewerId);
   if (error) return FAIL(error.message);
 
+  await logAdminEvent(session.userId, "reviewer_rate_set", "qa_reviewer", reviewerId, {
+    rateKurus,
+  });
+
   revalidatePath("/admin/reviewers");
   return OK("Mühendis ücreti güncellendi.");
 }
@@ -238,7 +253,7 @@ export async function markQaOrderPaid(
   _prev: FormState,
   formData: FormData,
 ): Promise<FormState> {
-  await requireRole("ADMIN");
+  const session = await requireRole("ADMIN");
 
   const orderId = String(formData.get("orderId") ?? "");
   const reference = String(formData.get("reference") ?? "").trim();
@@ -257,6 +272,10 @@ export async function markQaOrderPaid(
     .eq("payment_status", "PENDING");
   if (error) return FAIL(error.message);
 
+  await logAdminEvent(session.userId, "qa_order_marked_paid", "qa_tier_order", orderId, {
+    reference,
+  });
+
   revalidatePath("/admin/qa-queue");
   return OK("Sipariş ödendi olarak işaretlendi.");
 }
@@ -274,7 +293,7 @@ export async function setInvoiceAmount(
   _prev: FormState,
   formData: FormData,
 ): Promise<FormState> {
-  await requireRole("ADMIN");
+  const session = await requireRole("ADMIN");
 
   const invoiceId = String(formData.get("invoiceId") ?? "");
   if (!invoiceId) return FAIL("Fatura eksik.");
@@ -295,6 +314,10 @@ export async function setInvoiceAmount(
     .eq("status", "PENDING");
   if (error) return FAIL(error.message);
 
+  await logAdminEvent(session.userId, "invoice_amount_set", "platform_invoice", invoiceId, {
+    amountKurus,
+  });
+
   revalidatePath("/admin/invoices");
   return OK("Fatura tutarı güncellendi.");
 }
@@ -313,7 +336,7 @@ export async function setInvoiceStatus(
   _prev: FormState,
   formData: FormData,
 ): Promise<FormState> {
-  await requireRole("ADMIN");
+  const session = await requireRole("ADMIN");
 
   const invoiceId = String(formData.get("invoiceId") ?? "");
   const status = z.enum(["PAID", "CANCELLED"]).safeParse(formData.get("status"));
@@ -335,6 +358,10 @@ export async function setInvoiceStatus(
     })
     .eq("id", invoiceId);
   if (error) return FAIL(error.message);
+
+  await logAdminEvent(session.userId, "invoice_status_set", "platform_invoice", invoiceId, {
+    status: status.data,
+  });
 
   revalidatePath("/admin/invoices");
   return OK(status.data === "PAID" ? "Fatura ödendi olarak işaretlendi." : "Fatura iptal edildi.");

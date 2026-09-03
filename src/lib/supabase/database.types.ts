@@ -62,6 +62,44 @@ export type Database = {
           },
         ]
       }
+      admin_activity_log: {
+        Row: {
+          actor_id: string
+          created_at: string
+          detail: Json
+          event_type: string
+          id: string
+          target_id: string | null
+          target_type: string
+        }
+        Insert: {
+          actor_id: string
+          created_at?: string
+          detail?: Json
+          event_type: string
+          id?: string
+          target_id?: string | null
+          target_type: string
+        }
+        Update: {
+          actor_id?: string
+          created_at?: string
+          detail?: Json
+          event_type?: string
+          id?: string
+          target_id?: string | null
+          target_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_activity_log_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       admin_user_notes: {
         Row: {
           author_id: string
