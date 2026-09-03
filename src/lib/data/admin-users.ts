@@ -63,11 +63,16 @@ export async function listReviewersWithProfile(): Promise<ReviewerCard[]> {
     .map((r) => ({ ...r, profile: r.profile as ReviewerCard["profile"] }));
 }
 
+export type AdminUserNote = Tables<"admin_user_notes"> & {
+  author: Pick<Profile, "full_name"> | null;
+};
+
 export type ProfileDetail = Profile & {
   companies: Company[];
   contractsAsFreelancer: Pick<Contract, "id" | "title" | "created_at">[];
   contractsAsClient: Pick<Contract, "id" | "title" | "created_at">[];
   reviewer: QaReviewer | null;
+  notes: AdminUserNote[];
 };
 
 /** One profile's full picture -- who they are, what they own, what they are party to. */
@@ -82,7 +87,7 @@ export async function getProfileDetail(profileId: string): Promise<ProfileDetail
   if (error) throw error;
   if (!profile) return null;
 
-  const [companiesRes, asFreelancerRes, asClientRes, reviewerRes] = await Promise.all([
+  const [companiesRes, asFreelancerRes, asClientRes, reviewerRes, notesRes] = await Promise.all([
     supabase.from("companies").select("*").eq("owner_id", profileId),
     supabase
       .from("contracts")
@@ -95,12 +100,18 @@ export async function getProfileDetail(profileId: string): Promise<ProfileDetail
       .eq("client_id", profileId)
       .order("created_at", { ascending: false }),
     supabase.from("qa_reviewers").select("*").eq("profile_id", profileId).maybeSingle(),
+    supabase
+      .from("admin_user_notes")
+      .select("*, author:profiles!admin_user_notes_author_id_fkey(full_name)")
+      .eq("profile_id", profileId)
+      .order("created_at", { ascending: false }),
   ]);
 
   if (companiesRes.error) throw companiesRes.error;
   if (asFreelancerRes.error) throw asFreelancerRes.error;
   if (asClientRes.error) throw asClientRes.error;
   if (reviewerRes.error) throw reviewerRes.error;
+  if (notesRes.error) throw notesRes.error;
 
   return {
     ...profile,
@@ -108,5 +119,6 @@ export async function getProfileDetail(profileId: string): Promise<ProfileDetail
     contractsAsFreelancer: asFreelancerRes.data ?? [],
     contractsAsClient: asClientRes.data ?? [],
     reviewer: reviewerRes.data,
+    notes: (notesRes.data ?? []) as AdminUserNote[],
   };
 }

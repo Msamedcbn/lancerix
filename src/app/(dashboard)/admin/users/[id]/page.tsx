@@ -5,6 +5,8 @@ import { Panel, PageHeading, EmptyState } from "@/components/page-shell";
 import { requireRole } from "@/lib/auth/session";
 import { getProfileDetail } from "@/lib/data/admin-users";
 
+import { UserNotes } from "./user-notes";
+
 const ROLE_LABEL: Record<string, string> = {
   FREELANCER: "Freelancer",
   CLIENT: "Müşteri",
@@ -140,6 +142,10 @@ export default async function AdminUserDetailPage({
           description="Bu profilin taraf olduğu bir sözleşme kavramı yok."
         />
       ) : null}
+
+      <Panel title="Admin Notları">
+        <UserNotes profileId={profile.id} notes={profile.notes} />
+      </Panel>
     </>
   );
 }

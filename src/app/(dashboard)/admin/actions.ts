@@ -12,6 +12,41 @@ import { createClient } from "@/lib/supabase/server";
 
 export type { FormState };
 
+const userNoteSchema = z.object({
+  profileId: z.string().uuid(),
+  body: z.string().trim().min(1, "Not boş olamaz.").max(2000, "Not çok uzun."),
+});
+
+/**
+ * A timestamped note an admin leaves on a user's profile -- never a single
+ * editable field two admins could silently overwrite, always a log entry.
+ * admin_user_notes is is_admin()-only at the RLS level; the profile owner
+ * never sees these.
+ */
+export async function addUserNote(
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const session = await requireRole("ADMIN");
+
+  const parsed = userNoteSchema.safeParse({
+    profileId: formData.get("profileId"),
+    body: formData.get("body"),
+  });
+  if (!parsed.success) return FAIL(firstIssue(parsed.error));
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("admin_user_notes").insert({
+    profile_id: parsed.data.profileId,
+    author_id: session.userId,
+    body: parsed.data.body,
+  });
+  if (error) return FAIL(error.message);
+
+  revalidatePath(`/admin/users/${parsed.data.profileId}`);
+  return OK("Not eklendi.");
+}
+
 const reportSchema = z.object({
   deliveryId: z.string().uuid(),
   contractId: z.string().uuid(),
