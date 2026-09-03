@@ -1,6 +1,6 @@
 # Lancerix — Durum Özeti
 
-_Son güncelleme: 2026-09-03_
+_Son güncelleme: 2026-09-04_
 
 Bu dosya "şu an ne çalışıyor, ne eksik, sırada ne var" sorusuna tek bakışta
 cevap vermek için var. Ürün/mimari kararların gerekçesi `CLAUDE.md`'de;
@@ -14,6 +14,12 @@ burası daha çok bir kontrol paneli.
 - **Sözleşme sayfasında müşteriye kalem kalem toplam maliyet gösteriliyor**:
   Proje Bedeli + Platform Komisyonu (%10) + Test Ücreti = Toplam. Sadece
   bilgilendirme amaçlı — para akışı değişmedi (bkz. aynı bölüm).
+- **Admin alanı artık SQL'siz çalışıyor** — tek operatör (founder) `/admin`
+  panelinde tek bakışta neyin dikkat gerektirdiğini görüyor (QA kuyruğu,
+  bekleyen ödeme/fatura, itiraz, davet — hepsi eskime rengiyle), global
+  arama, kullanıcı notları, tüm admin aksiyonları için append-only bir
+  aktivite günlüğü ve günlük özet e-postası var (bkz. aşağıdaki "Admin
+  operatör araç seti" bölümü).
 - **Kabul kriterleri artık client tarafından belirleniyor** — freelancer değil
   (bu oturumda değişti). İmzalamadan önce en az 1 kriter zorunlu, DB seviyesinde
   garanti altında (`sign_contract()` reddediyor).
@@ -236,6 +242,56 @@ tamamladıkça işaretleyebilmeli.
   authenticated` da gerekiyor. İlk denemede bu yüzden yanlışlıkla "her şey
   yeşil" görünüyordu; düzeltilip doğru şekilde tekrar test edildi.
 
+## 2026-09-04: Admin operatör araç seti
+
+`/plan-ceo-review` + `/plan-eng-review` (tam süreç: sistem denetimi, premise
+challenge, karmaşıklık kontrolü, detaylı review, outside-voice zıtlığı,
+worktree paralelleştirme stratejisi) — "bizim admin alanımızı iyi
+kurgulamamız lazım artık" isteğine karşılık. Karar kaydı:
+`~/.gstack/projects/demearac/ceo-plans/2026-09-04-admin-area-operator-toolkit.md`
+(status: SHIPPED).
+
+Sistem denetimi 6 çalışan ama görünürlüğü/aksiyonu sınırlı admin sayfası
+buldu; en somut bulgu: `markQaOrderPaid()` (LemonSqueezy webhook'u
+kaçarsa QA siparişini elle ödendi işaretleme fonksiyonu) yazılmış ve test
+edilmişti ama hiçbir UI'a bağlı değildi — ölü kod. 8 madde kabul edildi,
+hepsi sevk edildi:
+
+1. **Dashboard + routing** (`06f899b`) — `/admin` artık 5 kartlı özet
+   panel (QA kuyruğu, bekleyen QA ödemesi, bekleyen fatura, itiraz,
+   davet), `Promise.allSettled` ile bağımsız sorgu başarısızlığı
+   (biri çökerse sadece o kart hata rozeti gösterir). Eski içerik
+   `/admin/disputes`'a taşındı.
+2. **markQaOrderPaid UI'a bağlandı** (`669588d`) — `/admin/qa-queue`'da
+   yeni "Bekleyen QA ödemesi" paneli; gerçek bir PENDING siparişle
+   canlıda doğrulandı.
+3. **Kullanıcı notları** (`a3953c2`) — `admin_user_notes`, is_admin()
+   RLS, `/admin/users/[id]`'de zaman damgalı not listesi.
+4. **Global arama** (`7b65562`) — sözleşme referansı/e-posta/Lancerix ID.
+5. **Aktivite günlüğü** (`099e9af`) — `admin_activity_log`, delivery
+   ledger'ın append-only deseniyle birebir (trigger canlıda bir
+   superuser UPDATE/DELETE'ini bile reddettiği doğrulandı), tüm 7 admin
+   aksiyonuna (`logAdminEvent()` ortak yardımcısıyla) bağlandı. Log
+   yazma hatası gerçek aksiyonu asla engellemiyor (yutulup console'a
+   loglanıyor).
+6. **Günlük özet e-postası** (`6ada63a`) — `admin_digest_sends` ile
+   günlük idempotency, sıfır-bekleyen günde gönderilmiyor, dashboard'ın
+   kendi sorgularını (`getDashboardCounts()`'a inject edilebilir client
+   eklendi) yeniden kullanıyor. Gerçek bir test e-postasıyla uçtan uca
+   doğrulandı.
+
+**Bulunan ve düzeltilen bir tutarsızlık:** outside-voice review, activity
+log'un kapsamda tutulma gerekçesinin ("ikinci bir admin geldiğinde...")
+tam da çoklu-admin yaklaşımını reddetme gerekçesiyle çeliştiğini buldu.
+Kullanıcı kapsamı korudu, gerekçe pilotun kendi ihtiyacına (hafızaya
+güvenilemeyen an) düzeltildi.
+
+**Bu makinede Vercel CLI oturumu (hollypredator) lancerix projesine bağlı
+değil** — proje aslında Msamedcbn'in GitHub'a bağlı ayrı bir Vercel
+hesabı üzerinden deploy oluyor. Bu yüzden cron slot kapasitesi (artık 5
+günlük cron var) bu oturumdan doğrulanamadı — deploy'dan önce/sonra
+Vercel dashboard'undan elle kontrol gerekiyor.
+
 ## Bilinen boşluklar / sıradaki
 
 CEO review'da (2026-09-02) kararlaştırılan 4 fazlık sıra:
@@ -250,6 +306,11 @@ CEO review'da (2026-09-02) kararlaştırılan 4 fazlık sıra:
 2026-09-03 CEO review'ının kararlaştırdığı, TODOS.md'ye eklenen ayrı
 kalemler: LemonSqueezy webhook rekonsiliasyon sweep'i (P2), davet süresi
 dolma mekanizması (P3, gerçek davet hacmi birikince tekrar bakılacak).
+
+**Teyit gerekiyor:** `/api/cron/admin-digest` deploy'dan sonra Vercel
+dashboard'unda (Msamedcbn hesabı) 5 günlük cron'un plana sığdığı elle
+kontrol edilmeli — bu oturumun CLI'ı o hesaba bağlı değildi, kod
+doğrulandı ama slot kapasitesi doğrulanamadı.
 
 ## Diğer bilinen gerçekler
 
