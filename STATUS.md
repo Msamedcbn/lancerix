@@ -20,6 +20,11 @@ burası daha çok bir kontrol paneli.
   arama, kullanıcı notları, tüm admin aksiyonları için append-only bir
   aktivite günlüğü ve günlük özet e-postası var (bkz. aşağıdaki "Admin
   operatör araç seti" bölümü).
+- **Admin artık kullanıcıları yönetebiliyor**: askıya alma (sadece yeni
+  sözleşme oluşturmayı engelliyor, giriş/mevcut iş etkilenmiyor), rol
+  değiştirme (ADMIN'e yükseltme yazarak onay gerektiriyor), profil adı
+  düzenleme, ve gerçekten boş (sözleşme geçmişi olmayan) hesaplar için
+  kalıcı silme (bkz. aşağıdaki "Kullanıcı yönetimi" bölümü).
 - **Kabul kriterleri artık client tarafından belirleniyor** — freelancer değil
   (bu oturumda değişti). İmzalamadan önce en az 1 kriter zorunlu, DB seviyesinde
   garanti altında (`sign_contract()` reddediyor).
@@ -291,6 +296,37 @@ değil** — proje aslında Msamedcbn'in GitHub'a bağlı ayrı bir Vercel
 hesabı üzerinden deploy oluyor. Bu yüzden cron slot kapasitesi (artık 5
 günlük cron var) bu oturumdan doğrulanamadı — deploy'dan önce/sonra
 Vercel dashboard'undan elle kontrol gerekiyor.
+
+## 2026-09-04: Kullanıcı yönetimi
+
+"Kullanıcıları yönetebilmeyi de eklemek lazım" isteğine karşılık — admin
+operatör araç setinin doğal devamı. Şemaya bakılarak kapsam daraltıldı:
+`contracts`/`platform_invoices`/`payouts`/`companies`'in `profiles`'a tüm
+FK'leri `ON DELETE RESTRICT` — gerçek geçmişi olan bir hesap zaten
+silinemez, bu yüzden "silme" isteği "askıya alma" ile karşılandı, gerçek
+silme sadece boş hesaplar için var. Ayrıca `guard_profile_role()`
+trigger'ı (proje başından beri) zaten admin'in rol değiştirmesine izin
+veriyordu — hiç UI'ı yoktu.
+
+- **Askıya alma/kaldırma**: sadece yeni sözleşme oluşturmayı engelliyor
+  (tek bir RLS policy'e dokunuldu — `contracts_insert_freelancer`), giriş
+  veya devam eden iş etkilenmiyor. 8+ RPC'ye dokunmaktan kaçınıldı.
+- **Rol değiştirme**: ADMIN'e yükseltme "ADMIN" yazarak onay gerektiriyor.
+- **Profil düzenleme**: sadece ad soyad (e-posta/TCKN/IBAN kapsam dışı).
+- **Kalıcı silme**: Lancerix ID'yi yazarak onay, gerçek güvenlik ağı
+  veritabanının kendi RESTRICT kısıtları.
+
+**Sevk öncesi yakalanan gerçek bug:** `profiles` tablosunda
+`profiles_update_self` (sadece kendi kaydı) vardı ama admin bypass'ı
+yoktu — `qa_reviewers`/`qa_tier_orders`/`platform_invoices` gibi diğer
+tüm admin-yönetilen tablolarda bu zaten vardı, `profiles`'da hiç
+eklenmemişti. Sonuç: yeni yazdığım 4 aksiyonun hepsi (profil düzenleme,
+askıya alma, askı kaldırma, rol değiştirme) "başarılı" mesajı döndürüyordu
+ama RLS satırı sessizce UPDATE'in dışında bırakıyordu — hiçbir şey
+yazılmıyordu. Canlı testte veritabanını doğrudan kontrol ederek
+yakalandı, aksiyonun kendi dönüş değerine güvenilerek değil. Eksik
+`profiles_update_admin` policy'si eklenerek düzeltildi ve doğru şekilde
+yeniden test edildi.
 
 ## Bilinen boşluklar / sıradaki
 
