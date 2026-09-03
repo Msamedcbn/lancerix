@@ -8,6 +8,7 @@ import {
   QaOrderPayment,
 } from "@/app/(dashboard)/contracts/[id]/delivery-panel";
 import { QaSelectionPanel } from "@/app/(dashboard)/contracts/[id]/qa-selection-panel";
+import { TotalCostBreakdown } from "@/app/(dashboard)/contracts/[id]/total-cost-breakdown";
 import { QaReportSummary } from "@/app/(dashboard)/contracts/[id]/qa-report-summary";
 import { MilestoneActions } from "@/app/(dashboard)/contracts/[id]/milestone-actions";
 import { SignContract } from "@/app/(dashboard)/contracts/[id]/signing";
@@ -564,23 +565,7 @@ export default async function ContractPage({
             </p>
 
             {contract.product_type === "QA_ONLY" ? (
-              <>
-                <dl className="mt-5 grid grid-cols-2 gap-x-6 gap-y-3">
-                  <div>
-                    <dt className="text-xs text-muted-foreground dark:text-muted-foreground">
-                      Proje Bedeli
-                    </dt>
-                    <dd className="tnum mt-0.5 text-sm font-bold text-foreground dark:text-foreground">
-                      <Money kurus={contract.project_amount_kurus} />
-                    </dd>
-                  </div>
-                </dl>
-                <p className="mt-5 text-xs leading-relaxed text-muted-foreground dark:text-muted-foreground">
-                  Ödeme taraflar arasında doğrudan çözülür. Lancerix bu tutar
-                  üzerinden bir komisyon almaz — gelir yalnızca QA test
-                  hizmetinden elde edilir.
-                </p>
-              </>
+              <TotalCostBreakdown contract={contract} />
             ) : (
               <>
                 <dl className="mt-5 grid grid-cols-2 gap-x-6 gap-y-3">
