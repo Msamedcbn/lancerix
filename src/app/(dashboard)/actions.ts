@@ -379,18 +379,41 @@ export async function createContract(
     );
     if (criteriaError) return FAIL(criteriaError.message);
 
-    // Insert workflow phases if any
+    // Insert workflow phases if any, then their checklist items -- items
+    // reference the phase row's real id, so phases must be inserted (and the
+    // ids read back) first.
     if (parsed.data.phases && parsed.data.phases.length > 0) {
-      const { error: phasesError } = await supabase.from("workflow_phases").insert(
-        parsed.data.phases.map((p, index) => ({
-          contract_id: contract.id,
-          sequence_no: index + 1,
-          title: p.title,
-          description: p.description || null,
-          estimated_days: p.estimatedDays,
-        })),
-      );
+      const { data: insertedPhases, error: phasesError } = await supabase
+        .from("workflow_phases")
+        .insert(
+          parsed.data.phases.map((p, index) => ({
+            contract_id: contract.id,
+            sequence_no: index + 1,
+            title: p.title,
+            description: p.description || null,
+            start_date: p.startDate,
+            end_date: p.endDate,
+          })),
+        )
+        .select("id, sequence_no");
       if (phasesError) return FAIL(phasesError.message);
+
+      const idBySequence = new Map((insertedPhases ?? []).map((row) => [row.sequence_no, row.id]));
+      const itemRows = parsed.data.phases.flatMap((phase, index) => {
+        const phaseId = idBySequence.get(index + 1);
+        if (!phaseId) return [];
+        return phase.items.map((title, itemIndex) => ({
+          phase_id: phaseId,
+          sequence_no: itemIndex + 1,
+          title,
+        }));
+      });
+      if (itemRows.length > 0) {
+        const { error: itemsError } = await supabase
+          .from("workflow_phase_items")
+          .insert(itemRows);
+        if (itemsError) return FAIL(itemsError.message);
+      }
     }
 
     revalidatePath("/freelancer");
@@ -469,24 +492,51 @@ function readCriteria(formData: FormData): CriterionDraft[] {
     .filter((row) => row.description.trim() !== "");
 }
 
-/** Workflow phases: title, description, estimatedDays */
+/** Workflow phases: title, description, startDate, endDate, and a nested checklist of items. */
 function readPhases(formData: FormData) {
-  const byIndex = new Map<number, { title: string; description: string; estimatedDays: string }>();
+  type PhaseRow = {
+    title: string;
+    description: string;
+    startDate: string;
+    endDate: string;
+    items: Map<number, string>;
+  };
+  const blankRow = (): PhaseRow => ({ title: "", description: "", startDate: "", endDate: "", items: new Map() });
+  const byIndex = new Map<number, PhaseRow>();
 
   for (const [key, value] of formData.entries()) {
-    const match = /^phases\[(\d+)]\[(title|description|estimatedDays)]$/.exec(key);
-    if (!match) continue;
+    const flat = /^phases\[(\d+)]\[(title|description|startDate|endDate)]$/.exec(key);
+    if (flat) {
+      const index = Number(flat[1]);
+      const field = flat[2] as "title" | "description" | "startDate" | "endDate";
+      const row = byIndex.get(index) ?? blankRow();
+      row[field] = String(value);
+      byIndex.set(index, row);
+      continue;
+    }
 
-    const index = Number(match[1]);
-    const field = match[2] as "title" | "description" | "estimatedDays";
-    const row = byIndex.get(index) ?? { title: "", description: "", estimatedDays: "" };
-    row[field] = String(value);
-    byIndex.set(index, row);
+    const item = /^phases\[(\d+)]\[items]\[(\d+)]\[title]$/.exec(key);
+    if (item) {
+      const index = Number(item[1]);
+      const itemIndex = Number(item[2]);
+      const row = byIndex.get(index) ?? blankRow();
+      row.items.set(itemIndex, String(value));
+      byIndex.set(index, row);
+    }
   }
 
   return [...byIndex.entries()]
     .sort(([a], [b]) => a - b)
-    .map(([, row]) => row)
+    .map(([, row]) => ({
+      title: row.title,
+      description: row.description,
+      startDate: row.startDate,
+      endDate: row.endDate,
+      items: [...row.items.entries()]
+        .sort(([a], [b]) => a - b)
+        .map(([, title]) => title)
+        .filter((title) => title.trim() !== ""),
+    }))
     .filter((row) => row.title.trim() !== "");
 }
 

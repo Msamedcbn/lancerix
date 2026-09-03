@@ -26,9 +26,25 @@ type ProductType = "QA_ONLY" | "QA_PLUS_ESCROW";
 
 const STEPS = ["Müşteri", "Proje & Kapsam", "İş Akışı", "Önizleme & Gönder"] as const;
 
-type Phase = { id: number; title: string; description: string; estimatedDays: string };
+type PhaseItem = { id: number; title: string };
+type Phase = {
+  id: number;
+  title: string;
+  description: string;
+  startDate: string;
+  endDate: string;
+  items: PhaseItem[];
+};
 
-const blankPhase = (id: number): Phase => ({ id, title: "", description: "", estimatedDays: "" });
+const blankPhase = (id: number): Phase => ({
+  id,
+  title: "",
+  description: "",
+  startDate: "",
+  endDate: "",
+  items: [],
+});
+const blankPhaseItem = (id: number): PhaseItem => ({ id, title: "" });
 
 /* ────────────────────────── Step Bar ────────────────────────── */
 function StepBar({ current }: Readonly<{ current: number }>) {
@@ -158,7 +174,16 @@ function DraftFields({
         <div key={row.id}>
           <input type="hidden" name={`phases[${index}][title]`} value={row.title} />
           <input type="hidden" name={`phases[${index}][description]`} value={row.description} />
-          <input type="hidden" name={`phases[${index}][estimatedDays]`} value={row.estimatedDays} />
+          <input type="hidden" name={`phases[${index}][startDate]`} value={row.startDate} />
+          <input type="hidden" name={`phases[${index}][endDate]`} value={row.endDate} />
+          {row.items.map((item, itemIndex) => (
+            <input
+              key={item.id}
+              type="hidden"
+              name={`phases[${index}][items][${itemIndex}][title]`}
+              value={item.title}
+            />
+          ))}
         </div>
       ))}
     </>
@@ -194,8 +219,36 @@ export function ContractForm({
   const [projectAmount, setProjectAmount] = useState("");
   const [phases, setPhases] = useState<Phase[]>([]);
 
-  const updatePhase = (id: number, field: keyof Phase, value: string) =>
-    setPhases((p) => p.map((row) => (row.id === id ? { ...row, [field]: value } : row)));
+  const updatePhase = (
+    id: number,
+    field: "title" | "description" | "startDate" | "endDate",
+    value: string,
+  ) => setPhases((p) => p.map((row) => (row.id === id ? { ...row, [field]: value } : row)));
+
+  const addPhaseItem = (phaseId: number) =>
+    setPhases((p) =>
+      p.map((row) =>
+        row.id === phaseId
+          ? { ...row, items: [...row.items, blankPhaseItem((row.items.at(-1)?.id ?? 0) + 1)] }
+          : row,
+      ),
+    );
+
+  const updatePhaseItem = (phaseId: number, itemId: number, title: string) =>
+    setPhases((p) =>
+      p.map((row) =>
+        row.id === phaseId
+          ? { ...row, items: row.items.map((it) => (it.id === itemId ? { ...it, title } : it)) }
+          : row,
+      ),
+    );
+
+  const removePhaseItem = (phaseId: number, itemId: number) =>
+    setPhases((p) =>
+      p.map((row) =>
+        row.id === phaseId ? { ...row, items: row.items.filter((it) => it.id !== itemId) } : row,
+      ),
+    );
 
   const inviteEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(inviteEmail.trim());
   const clientSettled = useInvite ? inviteEmailValid : Boolean(lookup.resolved);
@@ -477,29 +530,32 @@ export function ContractForm({
                   </button>
                 </div>
 
-                <div className="grid gap-4 sm:grid-cols-3">
-                  <div className="sm:col-span-2">
-                    <Field label="Faz Başlığı" htmlFor={`phase-title-${phase.id}`}>
-                      <TextInput
-                        id={`phase-title-${phase.id}`}
-                        value={phase.title}
-                        onChange={(e) => updatePhase(phase.id, "title", e.target.value)}
-                        placeholder="Örn: Tasarım Onayı"
-                      />
-                    </Field>
-                  </div>
-                  <div>
-                    <Field label="Tahmini Süre (gün)" htmlFor={`phase-days-${phase.id}`}>
-                      <TextInput
-                        id={`phase-days-${phase.id}`}
-                        value={phase.estimatedDays}
-                        onChange={(e) => updatePhase(phase.id, "estimatedDays", e.target.value)}
-                        placeholder="Örn: 7"
-                        inputMode="numeric"
-                        maxLength={3}
-                      />
-                    </Field>
-                  </div>
+                <Field label="Faz Başlığı" htmlFor={`phase-title-${phase.id}`}>
+                  <TextInput
+                    id={`phase-title-${phase.id}`}
+                    value={phase.title}
+                    onChange={(e) => updatePhase(phase.id, "title", e.target.value)}
+                    placeholder="Örn: Tasarım Onayı"
+                  />
+                </Field>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Field label="Başlangıç Tarihi (İsteğe Bağlı)" htmlFor={`phase-start-${phase.id}`}>
+                    <TextInput
+                      id={`phase-start-${phase.id}`}
+                      type="date"
+                      value={phase.startDate}
+                      onChange={(e) => updatePhase(phase.id, "startDate", e.target.value)}
+                    />
+                  </Field>
+                  <Field label="Bitiş Tarihi (İsteğe Bağlı)" htmlFor={`phase-end-${phase.id}`}>
+                    <TextInput
+                      id={`phase-end-${phase.id}`}
+                      type="date"
+                      value={phase.endDate}
+                      onChange={(e) => updatePhase(phase.id, "endDate", e.target.value)}
+                    />
+                  </Field>
                 </div>
 
                 <Field label="Açıklama (İsteğe Bağlı)" htmlFor={`phase-desc-${phase.id}`}>
@@ -511,6 +567,43 @@ export function ContractForm({
                     placeholder="Bu fazda neler yapılacak?"
                   />
                 </Field>
+
+                <div className="flex flex-col gap-2">
+                  <span className="text-sm font-medium text-zinc-950 dark:text-zinc-50">
+                    Maddeler (İsteğe Bağlı)
+                  </span>
+                  <p className="text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">
+                    Fazı daha küçük parçalara böl; her maddeyi işini bitirdikçe ayrı ayrı işaretleyebilirsin.
+                  </p>
+
+                  {phase.items.map((item, itemIndex) => (
+                    <div key={item.id} className="flex items-center gap-2">
+                      <span className="w-5 shrink-0 text-center text-xs text-zinc-400">
+                        {itemIndex + 1}.
+                      </span>
+                      <TextInput
+                        value={item.title}
+                        onChange={(e) => updatePhaseItem(phase.id, item.id, e.target.value)}
+                        placeholder="Örn: Renk paleti onayı"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removePhaseItem(phase.id, item.id)}
+                        className="shrink-0 rounded-lg px-2 py-1.5 text-xs font-semibold text-rose-600 hover:bg-rose-50 transition-colors dark:text-rose-400 dark:hover:bg-rose-950/40"
+                      >
+                        Kaldır
+                      </button>
+                    </div>
+                  ))}
+
+                  <button
+                    type="button"
+                    onClick={() => addPhaseItem(phase.id)}
+                    className="self-start rounded-lg px-2 py-1 text-xs font-semibold text-brand hover:bg-brand/5 transition-colors"
+                  >
+                    + Madde Ekle
+                  </button>
+                </div>
               </div>
             ))}
 
@@ -579,14 +672,21 @@ export function ContractForm({
               </h3>
               <ol className="flex flex-col gap-2">
                 {phases.map((p, i) => (
-                  <li key={p.id} className="flex items-center gap-3 text-sm text-zinc-700 dark:text-zinc-300">
-                    <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-brand/10 text-xs font-extrabold text-brand">
-                      {i + 1}
-                    </span>
-                    <span className="font-medium">{p.title}</span>
-                    {p.estimatedDays && (
-                      <span className="text-xs text-zinc-400">~{p.estimatedDays} gün</span>
-                    )}
+                  <li key={p.id} className="flex flex-col gap-1 text-sm text-zinc-700 dark:text-zinc-300">
+                    <div className="flex items-center gap-3">
+                      <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-brand/10 text-xs font-extrabold text-brand">
+                        {i + 1}
+                      </span>
+                      <span className="font-medium">{p.title}</span>
+                      {p.startDate || p.endDate ? (
+                        <span className="text-xs text-zinc-400">
+                          {p.startDate || "?"} → {p.endDate || "?"}
+                        </span>
+                      ) : null}
+                      {p.items.length > 0 ? (
+                        <span className="text-xs text-zinc-400">{p.items.length} madde</span>
+                      ) : null}
+                    </div>
                   </li>
                 ))}
               </ol>

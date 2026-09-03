@@ -21,13 +21,28 @@ const FUNDED: readonly EscrowStatus[] = [
 
 export type Signature = Tables<"contract_signatures">;
 
+export type PhaseItem = Tables<"workflow_phase_items">;
+export type Phase = Tables<"workflow_phases"> & { items: PhaseItem[] };
+
 export type ContractRow = Contract & {
   milestones: Milestone[];
   criteria: AcceptanceCriterion[];
-  phases: Tables<"workflow_phases">[];
+  phases: Phase[];
   counterpartyName: string;
   counterpartyPublicId: string | null;
 };
+
+/** Sorts phases by sequence, and each phase's checklist items by sequence. */
+function sortPhases(
+  rows: (Tables<"workflow_phases"> & { workflow_phase_items?: PhaseItem[] | null })[] | null,
+): Phase[] {
+  return [...(rows ?? [])]
+    .sort((a, b) => a.sequence_no - b.sequence_no)
+    .map((row) => ({
+      ...row,
+      items: [...(row.workflow_phase_items ?? [])].sort((a, b) => a.sequence_no - b.sequence_no),
+    }));
+}
 
 /**
  * Contracts the caller is a party to. RLS already scopes the rows to the
@@ -42,7 +57,7 @@ export async function listContracts(
 
   let query = supabase
     .from("contracts")
-    .select("*, milestones(*), acceptance_criteria(*), workflow_phases(*)")
+    .select("*, milestones(*), acceptance_criteria(*), workflow_phases(*, workflow_phase_items(*))")
     .order("created_at", { ascending: false });
 
   if (side === "freelancer") query = query.eq("freelancer_id", userId);
@@ -62,7 +77,7 @@ export async function listContracts(
       ...c,
       milestones: sortMilestones(c.milestones),
       criteria: [...(c.acceptance_criteria ?? [])].sort((a, b) => a.sequence_no - b.sequence_no),
-      phases: [...(c.workflow_phases ?? [])].sort((a, b) => a.sequence_no - b.sequence_no),
+      phases: sortPhases(c.workflow_phases),
       counterpartyName: counterparty.name,
       counterpartyPublicId: counterparty.publicId,
     };
@@ -112,7 +127,7 @@ export async function getContract(
   const supabase = await createClient();
 
   const select =
-    "*, milestones(*), contract_signatures(*), acceptance_criteria(*), workflow_phases(*), qa_reviewers(*)";
+    "*, milestones(*), contract_signatures(*), acceptance_criteria(*), workflow_phases(*, workflow_phase_items(*)), qa_reviewers(*)";
 
   const { data: first, error: firstError } = await supabase
     .from("contracts")
@@ -158,7 +173,7 @@ export async function getContract(
     signatures: data.contract_signatures,
     criteria: [...data.acceptance_criteria].sort((a, b) => a.sequence_no - b.sequence_no),
     qaReviewer: data.qa_reviewers,
-    phases: [...(data.workflow_phases ?? [])].sort((a, b) => a.sequence_no - b.sequence_no),
+    phases: sortPhases(data.workflow_phases),
     counterpartyName: counterparty.name,
     counterpartyPublicId: counterparty.publicId,
     company: company

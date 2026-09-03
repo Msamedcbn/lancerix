@@ -26,6 +26,35 @@ export async function toggleWorkflowPhase(
 }
 
 /**
+ * Toggle one checklist item within a phase. Same shape as
+ * toggleWorkflowPhase() above -- a plain table update relying on
+ * workflow_phase_items_update_freelancer, not a separate RPC.
+ */
+export async function togglePhaseItem(
+  contractId: string,
+  itemId: string,
+  isCompleted: boolean,
+) {
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("workflow_phase_items")
+    .update({
+      is_completed: isCompleted,
+      completed_at: isCompleted ? new Date().toISOString() : null,
+    })
+    .eq("id", itemId);
+
+  if (error) {
+    console.error("Error toggling phase item:", error);
+    return { error: error.message };
+  }
+
+  revalidatePath(`/contracts/${contractId}`);
+  return { success: true };
+}
+
+/**
  * The freelancer's note for a phase -- what happened, what's blocked, what the
  * client should know. workflow_phases_update_freelancer already covers this
  * column, so no new policy: only the contract's freelancer can write, both

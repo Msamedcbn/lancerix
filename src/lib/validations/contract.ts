@@ -59,29 +59,41 @@ export const milestoneDraftSchema = z.object({
  */
 export const DEFAULT_OBJECTION_WINDOW_DAYS = 5;
 
-/** Workflow phase draft — freelancer defines project phases during contract creation */
-export const phaseDraftSchema = z.object({
-  title: z
+const optionalDateField = (message: string) =>
+  z
     .string()
     .trim()
-    .min(3, "Faz başlığı en az 3 karakter olmalı.")
-    .max(255, "Bu başlık çok uzun."),
-  description: z
-    .string()
-    .trim()
-    .max(1000, "Açıklama çok uzun.")
-    .optional()
-    .default(""),
-  estimatedDays: z
-    .string()
-    .trim()
-    .transform((v) => (v === "" ? null : Number(v)))
+    .transform((v) => (v === "" ? null : v))
     .nullable()
-    .refine(
-      (v) => v === null || (Number.isInteger(v) && v > 0),
-      "Geçerli bir gün sayısı gir.",
-    ),
-});
+    .refine((v) => v === null || !Number.isNaN(Date.parse(v)), message);
+
+/** Workflow phase draft — freelancer defines project phases during contract creation */
+export const phaseDraftSchema = z
+  .object({
+    title: z
+      .string()
+      .trim()
+      .min(3, "Faz başlığı en az 3 karakter olmalı.")
+      .max(255, "Bu başlık çok uzun."),
+    description: z
+      .string()
+      .trim()
+      .max(1000, "Açıklama çok uzun.")
+      .optional()
+      .default(""),
+    startDate: optionalDateField("Geçerli bir başlangıç tarihi gir."),
+    endDate: optionalDateField("Geçerli bir bitiş tarihi gir."),
+    /** Checklist items within the phase — freelancer ticks them off individually. */
+    items: z
+      .array(z.string().trim().min(1).max(255))
+      .max(50, "Elli madde sınırı var.")
+      .optional()
+      .default([]),
+  })
+  .refine((v) => v.startDate === null || v.endDate === null || v.endDate >= v.startDate, {
+    message: "Bitiş tarihi başlangıçtan önce olamaz.",
+    path: ["endDate"],
+  });
 
 const baseContractFields = {
   projectCategory: projectCategorySchema,
@@ -124,15 +136,7 @@ const baseContractFields = {
       "Fatura edilecek şirketi seç.",
     ),
   /** Planned start date — both parties must confirm before work begins */
-  plannedStartDate: z
-    .string()
-    .trim()
-    .transform((v) => (v === "" ? null : v))
-    .nullable()
-    .refine(
-      (v) => v === null || !Number.isNaN(Date.parse(v)),
-      "Geçerli bir tarih gir.",
-    ),
+  plannedStartDate: optionalDateField("Geçerli bir tarih gir."),
 };
 
 /**

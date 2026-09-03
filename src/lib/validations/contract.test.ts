@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { contractSchema } from "@/lib/validations/contract";
+import { contractSchema, phaseDraftSchema } from "@/lib/validations/contract";
 
 const base = {
   projectCategory: "SOFTWARE",
@@ -172,6 +172,72 @@ describe("contractSchema (client identifier -- F-3 invite path)", () => {
       clientEmail: "musteri@ornek.com",
       productType: "QA_ONLY",
       criteria: [criterion],
+    });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("phaseDraftSchema (milestone dates + checklist items)", () => {
+  const phase = {
+    title: "Tasarım Onayı",
+    description: "",
+    startDate: "",
+    endDate: "",
+    items: [],
+  };
+
+  it("accepts a phase with no dates and no items -- both are optional", () => {
+    const result = phaseDraftSchema.safeParse(phase);
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts a phase with a start and end date in order", () => {
+    const result = phaseDraftSchema.safeParse({
+      ...phase,
+      startDate: "2026-09-05",
+      endDate: "2026-09-12",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects an end date before the start date", () => {
+    const result = phaseDraftSchema.safeParse({
+      ...phase,
+      startDate: "2026-09-12",
+      endDate: "2026-09-05",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts an end date with no start date -- the pair check only fires when both are set", () => {
+    const result = phaseDraftSchema.safeParse({
+      ...phase,
+      endDate: "2026-09-12",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects an invalid date string", () => {
+    const result = phaseDraftSchema.safeParse({
+      ...phase,
+      startDate: "not-a-date",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("carries a checklist of item titles through", () => {
+    const result = phaseDraftSchema.safeParse({
+      ...phase,
+      items: ["Renk paleti onayı", "Font seçimi"],
+    });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.items).toEqual(["Renk paleti onayı", "Font seçimi"]);
+  });
+
+  it("rejects more than fifty items", () => {
+    const result = phaseDraftSchema.safeParse({
+      ...phase,
+      items: Array.from({ length: 51 }, (_, i) => `Madde ${i}`),
     });
     expect(result.success).toBe(false);
   });

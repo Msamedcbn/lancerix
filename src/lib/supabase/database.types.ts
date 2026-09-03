@@ -879,6 +879,47 @@ export type Database = {
         }
         Relationships: []
       }
+      qa_agent_runs: {
+        Row: {
+          confidence_score: number | null
+          created_at: string
+          id: string
+          llm_responses: Json | null
+          screenshots: string[] | null
+          status: string
+          tier_order_id: string
+          updated_at: string
+        }
+        Insert: {
+          confidence_score?: number | null
+          created_at?: string
+          id?: string
+          llm_responses?: Json | null
+          screenshots?: string[] | null
+          status: string
+          tier_order_id: string
+          updated_at?: string
+        }
+        Update: {
+          confidence_score?: number | null
+          created_at?: string
+          id?: string
+          llm_responses?: Json | null
+          screenshots?: string[] | null
+          status?: string
+          tier_order_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "qa_agent_runs_tier_order_id_fkey"
+            columns: ["tier_order_id"]
+            isOneToOne: false
+            referencedRelation: "qa_tier_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       qa_reports: {
         Row: {
           client_review_deadline: string
@@ -1034,43 +1075,40 @@ export type Database = {
           },
         ]
       }
-      qa_agent_runs: {
+      workflow_phase_items: {
         Row: {
-          confidence_score: number | null
+          completed_at: string | null
           created_at: string
           id: string
-          llm_responses: Json | null
-          screenshots: string[] | null
-          status: string
-          tier_order_id: string
-          updated_at: string
+          is_completed: boolean
+          phase_id: string
+          sequence_no: number
+          title: string
         }
         Insert: {
-          confidence_score?: number | null
+          completed_at?: string | null
           created_at?: string
           id?: string
-          llm_responses?: Json | null
-          screenshots?: string[] | null
-          status: string
-          tier_order_id: string
-          updated_at?: string
+          is_completed?: boolean
+          phase_id: string
+          sequence_no: number
+          title: string
         }
         Update: {
-          confidence_score?: number | null
+          completed_at?: string | null
           created_at?: string
           id?: string
-          llm_responses?: Json | null
-          screenshots?: string[] | null
-          status?: string
-          tier_order_id?: string
-          updated_at?: string
+          is_completed?: boolean
+          phase_id?: string
+          sequence_no?: number
+          title?: string
         }
         Relationships: [
           {
-            foreignKeyName: "qa_agent_runs_tier_order_id_fkey"
-            columns: ["tier_order_id"]
+            foreignKeyName: "workflow_phase_items_phase_id_fkey"
+            columns: ["phase_id"]
             isOneToOne: false
-            referencedRelation: "qa_tier_orders"
+            referencedRelation: "workflow_phases"
             referencedColumns: ["id"]
           },
         ]
@@ -1081,11 +1119,13 @@ export type Database = {
           contract_id: string
           created_at: string
           description: string | null
+          end_date: string | null
           estimated_days: number | null
           id: string
           is_completed: boolean
           notes: string | null
           sequence_no: number
+          start_date: string | null
           title: string
         }
         Insert: {
@@ -1093,11 +1133,13 @@ export type Database = {
           contract_id: string
           created_at?: string
           description?: string | null
+          end_date?: string | null
           estimated_days?: number | null
           id?: string
           is_completed?: boolean
           notes?: string | null
           sequence_no: number
+          start_date?: string | null
           title: string
         }
         Update: {
@@ -1105,11 +1147,13 @@ export type Database = {
           contract_id?: string
           created_at?: string
           description?: string | null
+          end_date?: string | null
           estimated_days?: number | null
           id?: string
           is_completed?: boolean
           notes?: string | null
           sequence_no?: number
+          start_date?: string | null
           title?: string
         }
         Relationships: [
@@ -1166,6 +1210,7 @@ export type Database = {
           milestone_id: string | null
           notes: string | null
           pr_url: string | null
+          reminder_sent_at: string | null
           staging_url: string
           status: Database["public"]["Enums"]["delivery_status"]
           submitted_at: string
@@ -1224,11 +1269,13 @@ export type Database = {
           contract_id: string
           created_at: string
           description: string | null
+          end_date: string | null
           estimated_days: number | null
           id: string
           is_completed: boolean
           notes: string | null
           sequence_no: number
+          start_date: string | null
           title: string
         }
         SetofOptions: {
@@ -1255,7 +1302,11 @@ export type Database = {
           planned_start_date: string | null
           platform_fee_bps: number
           product_type: string
+          project_amount_kurus: number
           project_category: Database["public"]["Enums"]["project_category"]
+          qa_fee_kurus: number | null
+          qa_reviewer_id: string | null
+          qa_tier: string | null
           reference: string
           rejection_reason: string | null
           revision_note: string | null
@@ -1383,7 +1434,11 @@ export type Database = {
           planned_start_date: string | null
           platform_fee_bps: number
           product_type: string
+          project_amount_kurus: number
           project_category: Database["public"]["Enums"]["project_category"]
+          qa_fee_kurus: number | null
+          qa_reviewer_id: string | null
+          qa_tier: string | null
           reference: string
           rejection_reason: string | null
           revision_note: string | null
@@ -1403,41 +1458,6 @@ export type Database = {
       }
       request_revision: {
         Args: { p_contract_id: string; p_note: string }
-        Returns: {
-          client_email: string
-          client_id: string | null
-          client_start_confirmed: boolean
-          company_id: string | null
-          coupon_id: string | null
-          created_at: string
-          document_sha256: string | null
-          freelancer_id: string
-          freelancer_start_confirmed: boolean
-          id: string
-          objection_window_days: number
-          planned_start_date: string | null
-          platform_fee_bps: number
-          product_type: string
-          project_category: Database["public"]["Enums"]["project_category"]
-          reference: string
-          rejection_reason: string | null
-          revision_note: string | null
-          scope_of_work: string
-          status: Database["public"]["Enums"]["contract_status"]
-          stopaj_bps: number
-          title: string
-          updated_at: string
-          work_started_at: string | null
-        }
-        SetofOptions: {
-          from: "*"
-          to: "contracts"
-          isOneToOne: true
-          isSetofReturn: false
-        }
-      }
-      resubmit_contract: {
-        Args: { p_contract_id: string }
         Returns: {
           client_email: string
           client_id: string | null
@@ -1475,14 +1495,8 @@ export type Database = {
           isSetofReturn: false
         }
       }
-      sign_contract: {
-        Args: {
-          p_contract_id: string
-          p_document_sha256: string
-          p_ip: unknown
-          p_terms_version?: string
-          p_user_agent: string
-        }
+      resubmit_contract: {
+        Args: { p_contract_id: string }
         Returns: {
           client_email: string
           client_id: string | null
@@ -1598,6 +1612,51 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      sign_contract: {
+        Args: {
+          p_contract_id: string
+          p_document_sha256: string
+          p_ip: unknown
+          p_terms_version?: string
+          p_user_agent: string
+        }
+        Returns: {
+          client_email: string
+          client_id: string | null
+          client_start_confirmed: boolean
+          company_id: string | null
+          coupon_id: string | null
+          created_at: string
+          document_sha256: string | null
+          freelancer_id: string
+          freelancer_start_confirmed: boolean
+          id: string
+          objection_window_days: number
+          planned_start_date: string | null
+          platform_fee_bps: number
+          product_type: string
+          project_amount_kurus: number
+          project_category: Database["public"]["Enums"]["project_category"]
+          qa_fee_kurus: number | null
+          qa_reviewer_id: string | null
+          qa_tier: string | null
+          reference: string
+          rejection_reason: string | null
+          revision_note: string | null
+          scope_of_work: string
+          status: Database["public"]["Enums"]["contract_status"]
+          stopaj_bps: number
+          title: string
+          updated_at: string
+          work_started_at: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "contracts"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       submit_qa_delivery: {
         Args: {
           p_contract_id: string
@@ -1614,6 +1673,7 @@ export type Database = {
           milestone_id: string | null
           notes: string | null
           pr_url: string | null
+          reminder_sent_at: string | null
           staging_url: string
           status: Database["public"]["Enums"]["delivery_status"]
           submitted_at: string
@@ -1643,6 +1703,7 @@ export type Database = {
           milestone_id: string | null
           notes: string | null
           pr_url: string | null
+          reminder_sent_at: string | null
           staging_url: string
           status: Database["public"]["Enums"]["delivery_status"]
           submitted_at: string
@@ -1691,6 +1752,7 @@ export type Database = {
           milestone_id: string | null
           notes: string | null
           pr_url: string | null
+          reminder_sent_at: string | null
           staging_url: string
           status: Database["public"]["Enums"]["delivery_status"]
           submitted_at: string
@@ -1793,12 +1855,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1822,11 +1884,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1847,11 +1909,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1872,11 +1934,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1889,11 +1951,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }

@@ -1,10 +1,9 @@
 import { PhaseNotesForm, PhaseNotesReadOnly } from "@/components/forms/phase-notes-form";
 import { TogglePhaseForm } from "@/components/forms/toggle-phase-form";
+import { PhaseItemsReadOnly, TogglePhaseItemForm } from "@/components/forms/toggle-phase-item-form";
 import { PhaseThread } from "@/components/phase-thread";
 import type { MessageRow } from "@/lib/data/messages";
-import type { Tables } from "@/lib/supabase/database.types";
-
-type Phase = Tables<"workflow_phases">;
+import type { Phase } from "@/lib/data/contracts";
 
 /**
  * The project's phases as a flow, not a card grid.
@@ -123,7 +122,11 @@ export function PhaseFlowchart({
                   {phase.title}
                 </p>
 
-                {phase.estimated_days ? (
+                {phase.start_date || phase.end_date ? (
+                  <p className="tnum mt-0.5 text-xs text-zinc-400">
+                    {phase.start_date ?? "?"} → {phase.end_date ?? "?"}
+                  </p>
+                ) : phase.estimated_days ? (
                   <p className="tnum mt-0.5 text-xs text-zinc-400">
                     ~{phase.estimated_days} gün
                   </p>
@@ -139,6 +142,30 @@ export function PhaseFlowchart({
                   <span className="bg-brand/10 text-brand mt-2 inline-block rounded-full px-2 py-0.5 text-[0.65rem] font-semibold">
                     Şu an burada
                   </span>
+                ) : null}
+
+                {phase.items.length > 0 ? (
+                  <div className="mt-3 max-w-2xl rounded-xl border border-zinc-100 bg-zinc-50/60 p-2 dark:border-zinc-800/60 dark:bg-zinc-950/30">
+                    <p className="px-2 py-1 text-[0.65rem] font-semibold text-zinc-400">
+                      {phase.items.filter((it) => it.is_completed).length}/{phase.items.length}{" "}
+                      madde tamamlandı
+                    </p>
+                    {side === "freelancer" ? (
+                      <div className="flex flex-col">
+                        {phase.items.map((item) => (
+                          <TogglePhaseItemForm
+                            key={item.id}
+                            contractId={contractId}
+                            itemId={item.id}
+                            title={item.title}
+                            isCompleted={item.is_completed}
+                          />
+                        ))}
+                      </div>
+                    ) : (
+                      <PhaseItemsReadOnly items={phase.items} />
+                    )}
+                  </div>
                 ) : null}
 
                 <div className="mt-3 flex max-w-2xl flex-col gap-2">
