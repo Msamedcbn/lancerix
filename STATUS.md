@@ -9,7 +9,11 @@ burası daha çok bir kontrol paneli.
 ## Şu an çalışan (Faz 1)
 
 - Sözleşme oluşturma (freelancer): proje kategorisi, kapsam, proje bedeli,
-  iş akışı fazları.
+  iş akışı fazları (her fazda gerçek başlangıç/bitiş tarihi ve alt madde
+  listesi — bkz. aşağıdaki "Toplam maliyet ve faz/checklist" bölümü).
+- **Sözleşme sayfasında müşteriye kalem kalem toplam maliyet gösteriliyor**:
+  Proje Bedeli + Platform Komisyonu (%10) + Test Ücreti = Toplam. Sadece
+  bilgilendirme amaçlı — para akışı değişmedi (bkz. aynı bölüm).
 - **Kabul kriterleri artık client tarafından belirleniyor** — freelancer değil
   (bu oturumda değişti). İmzalamadan önce en az 1 kriter zorunlu, DB seviyesinde
   garanti altında (`sign_contract()` reddediyor).
@@ -201,6 +205,36 @@ NULL-güvenli) yönlendirilerek düzeltildi. Hosted DB'ye karşı SQL ile
 uçtan uca doğrulandı: tarih girilmeden imzalanan bir sözleşmede yeni kart
 çıktı, tarih girildi, iki taraf onayladı, `work_started_at` set edildi,
 teslim (önceden kalıcı olarak kilitliydi) başarıyla gönderildi.
+
+## 2026-09-03: Toplam maliyet gösterimi ve faz/checklist geliştirmeleri
+
+Kullanıcının doğrudan isteği: müşteri toplam maliyeti (proje bedeli + %10 +
+test ücreti) kalem kalem görmeli; freelancer projeyi fazlara ayırırken her
+fazın gerçek başlangıç/bitiş tarihini girebilmeli, fazı maddelere bölüp
+tamamladıkça işaretleyebilmeli.
+
+- **Toplam maliyet kartı** (commit `a9f66ce`) — mevcut "Lancerix bu tutar
+  üzerinden komisyon almaz" cümlesiyle doğrudan çelişeceği için önce
+  kullanıcıya soruldu: bilgilendirme amaçlı mı, yoksa imzada gerçekten
+  tahsile mi başlanacak? Cevap: bilgilendirme amaçlı — para akışı
+  değişmiyor, Faz 1 kapsamında kalınıyor (fon saklama yok). `contracts`
+  tablosunda zaten duran `platform_fee_bps` (%10, her sözleşmede
+  günden beri kayıtlı ama hiç gösterilmiyordu) ve `qa_fee_kurus`
+  kullanılarak `TotalCostBreakdown` bileşeni eklendi; eski cümle
+  gerçeğe uygun şekilde yeniden yazıldı.
+- **Faz tarihleri + checklist** (commit `b7f4816`) — `workflow_phases`'a
+  `start_date`/`end_date` eklendi (eski `estimated_days` tahminin yerini
+  aldı, sütun geriye dönük uyumluluk için tabloda kaldı). Yeni
+  `workflow_phase_items` tablosu: her fazın altına serbest sayıda madde,
+  freelancer tek tek işaretliyor, müşteri salt-okunur görüyor. RLS,
+  `workflow_phases`'ın deseniyle birebir aynı (parti okuyabilir, sadece
+  freelancer ekleyip güncelleyebilir).
+- **Doğrulama sırasında bir test metodolojisi hatası bulundu**: RLS'i
+  `supabase db query`'nin bağlandığı `postgres` rolüyle test etmek RLS'i
+  tamamen atlıyor (superuser/tablo sahibi RLS'e tabi değil) — sadece
+  `request.jwt.claim.sub` set etmek yetmiyor, `set local role
+  authenticated` da gerekiyor. İlk denemede bu yüzden yanlışlıkla "her şey
+  yeşil" görünüyordu; düzeltilip doğru şekilde tekrar test edildi.
 
 ## Bilinen boşluklar / sıradaki
 
