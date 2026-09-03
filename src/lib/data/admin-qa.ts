@@ -102,6 +102,29 @@ export async function listRejectedDeliveries(): Promise<RejectedDeliveryRow[]> {
     .map((d) => ({ ...d, contract: d.contract as ContractSummary }));
 }
 
+export type PendingQaOrderRow = QaTierOrder & {
+  delivery: { id: string; contract: Pick<Tables<"contracts">, "id" | "title"> } | null;
+};
+
+/**
+ * PENDING qa_tier_orders, oldest first -- the manual reconciliation queue for
+ * a LemonSqueezy webhook that never arrived (see TODOS.md's webhook
+ * reconciliation entry). markQaOrderPaid() already existed and handled this
+ * correctly; this is the first UI surface that lets an admin reach it
+ * without going to SQL.
+ */
+export async function listPendingQaOrders(): Promise<PendingQaOrderRow[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("qa_tier_orders")
+    .select("*, delivery:deliveries(id, contract:contracts(id, title))")
+    .eq("payment_status", "PENDING")
+    .order("created_at", { ascending: true });
+
+  if (error) throw error;
+  return (data ?? []) as PendingQaOrderRow[];
+}
+
 export type DeliveryEventRow = DeliveryEvent & {
   delivery: { contract: Pick<Tables<"contracts">, "id" | "title"> } | null;
 };

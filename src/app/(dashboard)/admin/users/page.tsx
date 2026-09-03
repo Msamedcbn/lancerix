@@ -29,7 +29,7 @@ const QUICK_ACTIONS: readonly QuickAction[] = [
   { label: "QA kuyruğu", icon: ListChecks, href: "/admin/qa-queue", tint: "sky" },
   { label: "Mühendisler", icon: Users, href: "/admin/reviewers", tint: "amber" },
   { label: "Faturalar", icon: FileText, href: "/admin/invoices", tint: "violet" },
-  { label: "İtirazlar", icon: AlertTriangle, href: "/admin", tint: "rose" },
+  { label: "İtirazlar", icon: AlertTriangle, href: "/admin/disputes", tint: "rose" },
   { label: "Kayıt defteri", icon: ScrollText, href: "/admin/audit", tint: "indigo" },
 ];
 

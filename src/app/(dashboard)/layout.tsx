@@ -32,11 +32,12 @@ const NAV: Record<UserRole, readonly NavItem[]> = {
     { href: "/profil", label: "Profilim", icon: "user" },
   ],
   ADMIN: [
+    { href: "/admin", label: "Panel", icon: "layout-dashboard" },
     { href: "/admin/users", label: "Kullanıcılar", icon: "contact" },
     { href: "/admin/qa-queue", label: "QA kuyruğu", icon: "list-checks" },
     { href: "/admin/reviewers", label: "Mühendisler", icon: "users" },
     { href: "/admin/invoices", label: "Faturalar", icon: "file-text" },
-    { href: "/admin", label: "İtirazlar", icon: "alert-triangle" },
+    { href: "/admin/disputes", label: "İtirazlar", icon: "alert-triangle" },
     { href: "/admin/audit", label: "Kayıt defteri", icon: "scroll" },
   ],
 };

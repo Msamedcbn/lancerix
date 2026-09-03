@@ -8,6 +8,7 @@ import {
   Contact,
   CreditCard,
   FileText,
+  LayoutDashboard,
   ListChecks,
   LogOut,
   Receipt,
@@ -42,7 +43,8 @@ export type NavIcon =
   | "contact"
   | "alert-triangle"
   | "scroll"
-  | "user";
+  | "user"
+  | "layout-dashboard";
 
 export type NavItem = { href: Route; label: string; icon: NavIcon };
 
@@ -61,6 +63,7 @@ const ICONS: Record<NavIcon, typeof Briefcase> = {
   "alert-triangle": AlertTriangle,
   scroll: ScrollText,
   user: UserRound,
+  "layout-dashboard": LayoutDashboard,
 };
 
 /**
