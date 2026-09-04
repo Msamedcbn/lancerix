@@ -2,6 +2,7 @@ import "server-only";
 
 import type { Enums, Tables } from "@/lib/supabase/database.types";
 import { createClient } from "@/lib/supabase/server";
+import { deadlineUrgency, stalenessLevel } from "@/lib/data/urgency";
 
 export type EscrowStatus = Enums<"escrow_status">;
 export type Milestone = Tables<"milestones">;
@@ -24,12 +25,17 @@ export type Signature = Tables<"contract_signatures">;
 export type PhaseItem = Tables<"workflow_phase_items">;
 export type Phase = Tables<"workflow_phases"> & { items: PhaseItem[] };
 
+export type ActionUrgency = "none" | "amber" | "red";
+
+export type ContractActionState = { label: string; urgency: ActionUrgency } | null;
+
 export type ContractRow = Contract & {
   milestones: Milestone[];
   criteria: AcceptanceCriterion[];
   phases: Phase[];
   counterpartyName: string;
   counterpartyPublicId: string | null;
+  needsAction: ContractActionState;
 };
 
 /** Sorts phases by sequence, and each phase's checklist items by sequence. */
@@ -71,17 +77,141 @@ export async function listContracts(
     rows.flatMap((c) => [c.client_id, c.freelancer_id]),
   );
 
+  const [signedContractIds, latestDeliveryByContract] = await Promise.all([
+    mySignedContractIds(supabase, rows.map((c) => c.id), userId),
+    latestDeliveryByContractId(
+      supabase,
+      rows.filter((c) => c.product_type === "QA_ONLY").map((c) => c.id),
+    ),
+  ]);
+
   return rows.map((c) => {
     const counterparty = counterpartyName(c, userId, names);
+    const contractSide: "freelancer" | "client" =
+      side === "all" ? (c.freelancer_id === userId ? "freelancer" : "client") : side;
+    const milestones = sortMilestones(c.milestones);
     return {
       ...c,
-      milestones: sortMilestones(c.milestones),
+      milestones,
       criteria: [...(c.acceptance_criteria ?? [])].sort((a, b) => a.sequence_no - b.sequence_no),
       phases: sortPhases(c.workflow_phases),
       counterpartyName: counterparty.name,
       counterpartyPublicId: counterparty.publicId,
+      needsAction: contractActionState(
+        c,
+        contractSide,
+        signedContractIds.has(c.id),
+        latestDeliveryByContract.get(c.id) ?? null,
+        milestones,
+      ),
     };
   });
+}
+
+/** Contract ids among `contractIds` the caller has already signed. */
+async function mySignedContractIds(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  contractIds: string[],
+  userId: string,
+): Promise<Set<string>> {
+  if (contractIds.length === 0) return new Set();
+  const { data, error } = await supabase
+    .from("contract_signatures")
+    .select("contract_id")
+    .in("contract_id", contractIds)
+    .eq("signer_id", userId);
+
+  if (error) throw error;
+  return new Set((data ?? []).map((s) => s.contract_id));
+}
+
+type LatestDelivery = {
+  status: Enums<"delivery_status">;
+  client_review_deadline: string | null;
+  submitted_at: string;
+};
+
+/** Newest delivery per QA_ONLY contract, batched instead of N+1. */
+async function latestDeliveryByContractId(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  qaOnlyContractIds: string[],
+): Promise<Map<string, LatestDelivery>> {
+  if (qaOnlyContractIds.length === 0) return new Map();
+
+  const { data, error } = await supabase
+    .from("deliveries")
+    .select("contract_id, status, client_review_deadline, submitted_at")
+    .in("contract_id", qaOnlyContractIds)
+    .order("submitted_at", { ascending: false });
+
+  if (error) throw error;
+
+  const byContract = new Map<string, LatestDelivery>();
+  for (const d of data ?? []) {
+    // Ordered newest-first, so the first row seen per contract is the latest.
+    if (!byContract.has(d.contract_id)) byContract.set(d.contract_id, d);
+  }
+  return byContract;
+}
+
+/**
+ * What this caller needs to do on this contract, if anything -- the single
+ * source for the "sırada sen varsın" list on the freelancer/client
+ * dashboards. Checked in state-machine order: a contract's `status` and
+ * `product_type` never overlap two of these cases at once, so the first
+ * match wins.
+ */
+function contractActionState(
+  c: Contract,
+  side: "freelancer" | "client",
+  hasSigned: boolean,
+  latestDelivery: LatestDelivery | null,
+  milestones: Milestone[],
+): ContractActionState {
+  if ((c.status === "DRAFT" || c.status === "PENDING_SIGNATURES") && !hasSigned) {
+    return { label: "İmzanı bekliyor", urgency: stalenessLevel(c.created_at) };
+  }
+
+  if (c.status === "REVISION_REQUESTED" && side === "freelancer") {
+    return { label: "Revizyon bekliyor", urgency: stalenessLevel(c.created_at) };
+  }
+
+  if (c.status !== "ACTIVE") return null;
+
+  if (!c.planned_start_date && !c.work_started_at) {
+    return { label: "Başlangıç tarihi belirle", urgency: "none" };
+  }
+
+  if (c.planned_start_date && !c.work_started_at) {
+    const myConfirmed =
+      side === "freelancer" ? c.freelancer_start_confirmed : c.client_start_confirmed;
+    if (!myConfirmed) return { label: "Başlangıç tarihini onayla", urgency: "none" };
+  }
+
+  if (c.product_type === "QA_ONLY") {
+    if (!latestDelivery && side === "freelancer") {
+      return { label: "Teslim bekliyor", urgency: stalenessLevel(c.created_at) };
+    }
+    if (latestDelivery?.status === "REJECTED" && side === "freelancer") {
+      return { label: "Yeniden teslim et", urgency: stalenessLevel(latestDelivery.submitted_at) };
+    }
+    if (latestDelivery?.status === "AWAITING_CLIENT" && side === "client") {
+      return {
+        label: "Teslimi incele",
+        urgency: deadlineUrgency(latestDelivery.client_review_deadline),
+      };
+    }
+  } else {
+    if (side === "freelancer" && milestones.some((m) => m.status === "IN_PROGRESS")) {
+      return { label: "Teslim bekliyor", urgency: stalenessLevel(c.created_at) };
+    }
+    const submitted = milestones.find((m) => m.status === "SUBMITTED" && m.auto_accept_at);
+    if (side === "client" && submitted) {
+      return { label: "Teslimatı onayla", urgency: deadlineUrgency(submitted.auto_accept_at) };
+    }
+  }
+
+  return null;
 }
 
 /**
@@ -166,16 +296,27 @@ export async function getContract(
   ]);
 
   const counterparty = counterpartyName(data, userId, names);
+  const milestones = sortMilestones(data.milestones);
 
   return {
     ...data,
-    milestones: sortMilestones(data.milestones),
+    milestones,
     signatures: data.contract_signatures,
     criteria: [...data.acceptance_criteria].sort((a, b) => a.sequence_no - b.sequence_no),
     qaReviewer: data.qa_reviewers,
     phases: sortPhases(data.workflow_phases),
     counterpartyName: counterparty.name,
     counterpartyPublicId: counterparty.publicId,
+    // Delivery-state cases (re-teslim/incele) are left out here -- unlike
+    // the list page, this page already renders the live delivery panel
+    // directly, so it does not read this field for that case.
+    needsAction: contractActionState(
+      data,
+      data.freelancer_id === userId ? "freelancer" : "client",
+      data.contract_signatures.some((s) => s.signer_id === userId),
+      null,
+      milestones,
+    ),
     company: company
       ? {
           legal_name: company.legal_name,

@@ -5,6 +5,7 @@ import { Money } from "@/components/money";
 import { EmptyState, PageHeading, Stat } from "@/components/page-shell";
 import { QuickActions, type QuickAction } from "@/components/quick-actions";
 import { StatusBadge } from "@/components/status-badge";
+import { NeedsActionList } from "@/components/needs-action-list";
 import { requireRole } from "@/lib/auth/session";
 import { listContracts } from "@/lib/data/contracts";
 
@@ -47,6 +48,8 @@ export default async function FreelancerProjectsPage() {
           </Link>
         }
       />
+
+      <NeedsActionList contracts={contracts} />
 
       {contracts.length > 0 ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

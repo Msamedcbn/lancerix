@@ -10,6 +10,9 @@ import {
   listQaQueue,
   listRejectedDeliveries,
 } from "@/lib/data/admin-qa";
+import { stalenessLevel, STALE_AMBER_DAYS, STALE_RED_DAYS } from "@/lib/data/urgency";
+
+export { stalenessLevel, STALE_AMBER_DAYS, STALE_RED_DAYS };
 
 type Client = SupabaseClient<Database>;
 
@@ -31,18 +34,6 @@ export type DashboardData = {
   disputes: DashboardSection;
   unclaimedInvites: DashboardSection;
 };
-
-/** Amber past this many days un-actioned, red past STALE_RED_DAYS. */
-export const STALE_AMBER_DAYS = 3;
-export const STALE_RED_DAYS = 7;
-
-export function stalenessLevel(oldestAt: string | null): "none" | "amber" | "red" {
-  if (!oldestAt) return "none";
-  const ageDays = (Date.now() - new Date(oldestAt).getTime()) / 86_400_000;
-  if (ageDays >= STALE_RED_DAYS) return "red";
-  if (ageDays >= STALE_AMBER_DAYS) return "amber";
-  return "none";
-}
 
 function settle<T>(dates: T[], pickDate: (row: T) => string): DashboardSection {
   const oldest = dates.reduce<string | null>((min, row) => {

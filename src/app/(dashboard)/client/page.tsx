@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Money } from "@/components/money";
 import { EmptyState, PageHeading, Stat } from "@/components/page-shell";
 import { QuickActions, type QuickAction } from "@/components/quick-actions";
+import { NeedsActionList } from "@/components/needs-action-list";
 import { requireRole } from "@/lib/auth/session";
 import { formatKurus } from "@/lib/escrow/money";
 import { kurus, listContracts, listMilestones } from "@/lib/data/contracts";
@@ -37,6 +38,8 @@ export default async function ClientPaymentsPage() {
         title="Sözleşmeler ve Ödemeler"
         subtitle="Sözleşmelerin ve ödeme durumların. QA sözleşmelerinde ödeme taraflar arasında doğrudan çözülür, escrow yalnızca aşamalı sözleşmelerde geçerlidir."
       />
+
+      <NeedsActionList contracts={contracts} />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <Stat
