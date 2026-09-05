@@ -18,6 +18,7 @@ export type SiteCopy = {
     howItWorks: string;
     verificationMethods: string;
     guide: string;
+    guideQa: string;
     roadmap: string;
     login: string;
     terms: string;
@@ -46,6 +47,7 @@ export const SITE_COPY: Record<Locale, SiteCopy> = {
       howItWorks: "Nasıl Çalışır?",
       verificationMethods: "Doğrulama Yöntemleri",
       guide: "Teslim ve Kabul Rehberi",
+      guideQa: "Bağımsız QA Doğrulama Nedir",
       roadmap: "Yol Haritası (Neredeyiz?)",
       login: "Giriş Yap",
       terms: "Şartlar ve Koşullar",
@@ -71,6 +73,7 @@ export const SITE_COPY: Record<Locale, SiteCopy> = {
       howItWorks: "How it works",
       verificationMethods: "Verification tiers",
       guide: "Delivery & Acceptance Guide",
+      guideQa: "What Is Independent QA Verification",
       roadmap: "Roadmap",
       login: "Log in",
       terms: "Terms of service",

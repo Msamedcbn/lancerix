@@ -32,6 +32,10 @@ export const PUBLIC_ROUTES = {
     tr: "/rehber/freelance-teslim-ve-kabul",
     en: "/en/guide/freelance-delivery-and-acceptance",
   },
+  guideQaVerification: {
+    tr: "/rehber/bagimsiz-qa-dogrulama-nedir",
+    en: "/en/guide/independent-qa-verification",
+  },
 } as const satisfies Record<string, Record<Locale, string>>;
 
 export type PublicRouteId = keyof typeof PUBLIC_ROUTES;

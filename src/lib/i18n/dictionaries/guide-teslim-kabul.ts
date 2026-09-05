@@ -1,4 +1,5 @@
 import type { Locale } from "@/lib/i18n/config";
+import type { GuideCopy } from "@/lib/i18n/dictionaries/guide-shared";
 
 /**
  * The first pillar page in the content strategy: the single highest-intent
@@ -10,34 +11,6 @@ import type { Locale } from "@/lib/i18n/config";
  * verbatim. Keep it a complete claim on its own, not a sentence fragment that
  * depends on the paragraph before it.
  */
-export type GuideSection = {
-  heading: string;
-  body: readonly string[];
-};
-
-export type GuideFaqItem = {
-  q: string;
-  a: string;
-};
-
-export type GuideCopy = {
-  metaTitle: string;
-  metaDescription: string;
-  eyebrow: string;
-  title: string;
-  intro: string;
-  definition: string;
-  sections: readonly GuideSection[];
-  faqHeading: string;
-  faq: readonly GuideFaqItem[];
-  ctaTitle: string;
-  ctaBody: string;
-  ctaPrimary: string;
-  ctaSecondary: string;
-  /** ISO date -- also feeds the page's FAQPage/Article schema. */
-  updated: string;
-};
-
 export const GUIDE_DELIVERY_ACCEPTANCE_COPY: Record<Locale, GuideCopy> = {
   tr: {
     metaTitle: "Freelance Teslim ve Kabul Rehberi — Lancerix",
