@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { CalendarClock, CheckCircle2, MailWarning, PencilLine, XCircle } from "lucide-react";
 
 import { CriteriaPanel } from "@/app/(dashboard)/contracts/[id]/criteria-panel";
 import {
@@ -454,8 +455,9 @@ export default async function ContractPage({
 
       {inviteMailFailed === "1" && side === "freelancer" && (
         <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5 dark:border-amber-900 dark:bg-amber-950/40">
-          <p className="text-sm font-semibold text-amber-700 dark:text-amber-300">
-            ✉️ Davet e-postası gönderilemedi
+          <p className="flex items-center gap-2 text-sm font-semibold text-amber-700 dark:text-amber-300">
+            <MailWarning className="size-4 shrink-0" aria-hidden />
+            Davet e-postası gönderilemedi
           </p>
           <p className="mt-2 text-sm leading-relaxed text-amber-600 dark:text-amber-400">
             Sözleşme kaydedildi, ama {contract.client_email || "müşteri"} adresine
@@ -469,8 +471,9 @@ export default async function ContractPage({
       {/* Rejection / Revision notice */}
       {contract.status === "REJECTED" && contract.rejection_reason && (
         <div className="rounded-2xl border border-rose-200 bg-rose-50 p-5 dark:border-rose-900 dark:bg-rose-950/40">
-          <p className="text-sm font-semibold text-rose-700 dark:text-rose-300">
-            ❌ Sözleşme Reddedildi
+          <p className="flex items-center gap-2 text-sm font-semibold text-rose-700 dark:text-rose-300">
+            <XCircle className="size-4 shrink-0" aria-hidden />
+            Sözleşme Reddedildi
           </p>
           <p className="mt-2 text-sm leading-relaxed text-rose-600 dark:text-rose-400">
             {contract.rejection_reason}
@@ -480,8 +483,9 @@ export default async function ContractPage({
 
       {contract.status === "REVISION_REQUESTED" && contract.revision_note && (
         <div className="rounded-2xl border border-orange-200 bg-orange-50 p-5 dark:border-orange-900 dark:bg-orange-950/40">
-          <p className="text-sm font-semibold text-orange-700 dark:text-orange-300">
-            ✏️ Revizyon Talep Edildi
+          <p className="flex items-center gap-2 text-sm font-semibold text-orange-700 dark:text-orange-300">
+            <PencilLine className="size-4 shrink-0" aria-hidden />
+            Revizyon Talep Edildi
           </p>
           <p className="mt-2 text-sm leading-relaxed text-orange-600 dark:text-orange-400">
             {contract.revision_note}
@@ -497,11 +501,12 @@ export default async function ContractPage({
       {/* No planned start date was set at signing -- either party fills one
           in before the usual mutual-confirmation card below can appear. */}
       {signedByBoth && !hasStartDate && !contract.work_started_at && (
-        <div className="rounded-2xl border border-indigo-200/80 bg-gradient-to-br from-indigo-50/90 via-white to-indigo-50/40 p-6 shadow-sm dark:border-indigo-800/60 dark:from-indigo-950/40 dark:via-zinc-900 dark:to-zinc-900">
+        <div className="rounded-2xl border border-indigo-200/80 bg-indigo-50/60 p-6 shadow-sm dark:border-indigo-800/60 dark:bg-indigo-950/20">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <h3 className="text-sm font-bold text-indigo-950 dark:text-indigo-200">
-                📅 Başlangıç Tarihi Belirlenmedi
+              <h3 className="flex items-center gap-2 text-sm font-bold text-indigo-950 dark:text-indigo-200">
+                <CalendarClock className="size-4 shrink-0" aria-hidden />
+                Başlangıç Tarihi Belirlenmedi
               </h3>
               <p className="mt-1 text-sm text-indigo-700 dark:text-indigo-300">
                 Bu sözleşme için planlanan bir başlangıç tarihi girilmemiş.
@@ -523,11 +528,12 @@ export default async function ContractPage({
 
       {/* Start Date Confirmation Card */}
       {signedByBoth && hasStartDate && !bothConfirmedStart && (
-        <div className="rounded-2xl border border-indigo-200/80 bg-gradient-to-br from-indigo-50/90 via-white to-indigo-50/40 p-6 shadow-sm dark:border-indigo-800/60 dark:from-indigo-950/40 dark:via-zinc-900 dark:to-zinc-900">
+        <div className="rounded-2xl border border-indigo-200/80 bg-indigo-50/60 p-6 shadow-sm dark:border-indigo-800/60 dark:bg-indigo-950/20">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <h3 className="text-sm font-bold text-indigo-950 dark:text-indigo-200">
-                📅 İş Başlangıcı Onayı
+              <h3 className="flex items-center gap-2 text-sm font-bold text-indigo-950 dark:text-indigo-200">
+                <CalendarClock className="size-4 shrink-0" aria-hidden />
+                İş Başlangıcı Onayı
               </h3>
               <p className="mt-1 text-sm text-indigo-700 dark:text-indigo-300">
                 Planlanan başlangıç:{" "}
@@ -561,8 +567,9 @@ export default async function ContractPage({
       {/* Work started badge */}
       {contract.work_started_at && (
         <div className="rounded-2xl border border-emerald-200 bg-emerald-50/80 p-4 dark:border-emerald-800/60 dark:bg-emerald-950/30">
-          <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">
-            ✅ İş Başladı — {contract.work_started_at.slice(0, 10)}
+          <p className="flex items-center gap-2 text-sm font-semibold text-emerald-700 dark:text-emerald-300">
+            <CheckCircle2 className="size-4 shrink-0" aria-hidden />
+            İş Başladı — {contract.work_started_at.slice(0, 10)}
           </p>
         </div>
       )}
