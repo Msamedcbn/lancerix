@@ -8,6 +8,7 @@ import {
   Contact,
   CreditCard,
   FileText,
+  Inbox,
   LayoutDashboard,
   ListChecks,
   LogOut,
@@ -15,6 +16,7 @@ import {
   ScrollText,
   Search,
   Settings,
+  UserPlus,
   UserRound,
   Users,
   Wallet,
@@ -46,7 +48,9 @@ export type NavIcon =
   | "scroll"
   | "user"
   | "layout-dashboard"
-  | "search";
+  | "search"
+  | "inbox"
+  | "user-plus";
 
 export type NavItem = { href: Route; label: string; icon: NavIcon };
 
@@ -67,6 +71,8 @@ const ICONS: Record<NavIcon, typeof Briefcase> = {
   user: UserRound,
   "layout-dashboard": LayoutDashboard,
   search: Search,
+  inbox: Inbox,
+  "user-plus": UserPlus,
 };
 
 /**

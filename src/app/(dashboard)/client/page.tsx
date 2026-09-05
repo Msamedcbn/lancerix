@@ -1,4 +1,4 @@
-import { Building2, CheckCircle2, CreditCard, FileText } from "lucide-react";
+import { Building2, CheckCircle2, CreditCard, UserPlus } from "lucide-react";
 import Link from "next/link";
 
 import { Money } from "@/components/money";
@@ -12,7 +12,7 @@ import { kurus, listContracts, listMilestones } from "@/lib/data/contracts";
 const QUICK_ACTIONS: readonly QuickAction[] = [
   { label: "Ödemeler", icon: CreditCard, href: "/client", tint: "emerald" },
   { label: "Onaylar", icon: CheckCircle2, href: "/client/approvals", tint: "sky" },
-  { label: "Faturalar", icon: FileText, href: "/client/invoices", tint: "amber" },
+  { label: "Geliştirici çağır", icon: UserPlus, href: "/client/requests", tint: "amber" },
   { label: "Şirket", icon: Building2, href: "/client/company", tint: "violet" },
 ];
 
@@ -121,8 +121,15 @@ export default async function ClientPaymentsPage() {
         waiting.length === 0 && (
           <EmptyState
             title="Henüz sözleşme yok"
-            description="Bir freelancer seninle sözleşme paylaştığında burada görünür."
-          />
+            description="Bir freelancer seninle sözleşme paylaştığında burada görünür. Birlikte çalıştığın bir geliştirici varsa onu sen de çağırabilirsin."
+          >
+            <Link
+              href="/client/requests"
+              className="mt-4 inline-flex items-center rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-brand-foreground shadow-md shadow-brand/20 transition-all hover:bg-brand/90 active:scale-[0.98]"
+            >
+              Geliştirici çağır
+            </Link>
+          </EmptyState>
         )
       ) : (
         <div className="flex flex-col gap-4">

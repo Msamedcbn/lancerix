@@ -161,6 +161,46 @@ export async function notifySignatureRequested({
 }
 
 /**
+ * A client asking a freelancer to start a project.
+ *
+ * The brief is not included. It can run to 4000 characters, it is the client's
+ * own words about their business, and it belongs behind auth like the rest of
+ * the record. The email's job is to get the freelancer to open the request,
+ * not to be the request.
+ */
+export async function notifyProjectRequest({
+  toUserId,
+  fallbackEmail,
+  requestId,
+  title,
+  clientName,
+}: Readonly<{
+  toUserId: string | null;
+  fallbackEmail: string;
+  requestId: string;
+  title: string;
+  clientName: string;
+}>): Promise<SendResult> {
+  const to = await addressFor(toUserId, fallbackEmail);
+  if (!to) return { ok: false, reason: "no address on file for that account" };
+
+  return sendEmail({
+    to,
+    subject: `Yeni proje talebi: ${title}`,
+    body: [
+      `${clientName} seninle bir projeye başlamak istiyor.`,
+      "",
+      `Proje: ${title}`,
+      `Talebi gör: ${appUrlFor(`/freelancer/requests/${requestId}`)}`,
+      "",
+      toUserId
+        ? "Talebi sözleşmeye dönüştürebilir ya da gerekçesiyle reddedebilirsin."
+        : "Devam etmek için önce bir hesap oluşturman gerekiyor.",
+    ].join("\n"),
+  });
+}
+
+/**
  * A new message on a contract thread.
  *
  * The body is deliberately not included: the thread is part of the contract

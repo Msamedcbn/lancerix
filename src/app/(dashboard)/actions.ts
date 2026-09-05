@@ -263,6 +263,29 @@ export async function previewContract(
   };
 }
 
+/**
+ * Mark the project request this contract came from as converted.
+ *
+ * Returns true when the link failed, so the caller can say so rather than
+ * leaving the request sitting OPEN with no explanation -- the contract itself
+ * is already created and valid either way, which is why this never throws.
+ */
+async function linkProjectRequest(
+  formData: FormData,
+  contractId: string,
+): Promise<boolean> {
+  const requestId = String(formData.get("requestId") ?? "").trim();
+  if (!requestId) return false;
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("convert_project_request", {
+    p_request_id: requestId,
+    p_contract_id: contractId,
+  });
+
+  return Boolean(error);
+}
+
 export async function createContract(
   _prev: FormState,
   formData: FormData,
@@ -416,10 +439,23 @@ export async function createContract(
       }
     }
 
+    // Link the client's project request to the contract it produced, when
+    // this contract came from one. convert_project_request() re-checks that
+    // the contract really belongs to this freelancer and this client, so a
+    // forged requestId in the form cannot attach someone else's request.
+    const requestLinkFailed = await linkProjectRequest(formData, contract.id);
+
     revalidatePath("/freelancer");
+    revalidatePath("/freelancer/requests");
+
+    const flags = [
+      inviteMailFailed ? "inviteMailFailed=1" : "",
+      requestLinkFailed ? "requestLinkFailed=1" : "",
+    ].filter(Boolean);
+
     redirect(
-      (inviteMailFailed
-        ? `/contracts/${contract.id}?inviteMailFailed=1`
+      (flags.length > 0
+        ? `/contracts/${contract.id}?${flags.join("&")}`
         : `/contracts/${contract.id}`) as Route,
     );
   }

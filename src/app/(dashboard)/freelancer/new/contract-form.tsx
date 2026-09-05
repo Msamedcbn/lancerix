@@ -218,6 +218,7 @@ function DraftFields({
   phases,
   plannedStartDate,
   projectAmount,
+  requestId,
 }: Readonly<{
   productType: ProductType;
   projectCategory: ProjectCategory;
@@ -229,10 +230,14 @@ function DraftFields({
   phases: Phase[];
   plannedStartDate: string;
   projectAmount: string;
+  requestId: string;
 }>) {
   return (
     <>
       <input type="hidden" name="productType" value={productType} />
+      {/* Empty unless this contract is converting a client's request.
+          convert_project_request() re-checks ownership server-side. */}
+      <input type="hidden" name="requestId" value={requestId} />
       <input type="hidden" name="projectCategory" value={projectCategory} />
       <input type="hidden" name="clientPublicId" value={clientPublicId} />
       <input type="hidden" name="clientEmail" value={clientEmail} />
@@ -275,12 +280,25 @@ export function ContractForm({
   payoutBlockers,
   draftKey,
   previousClients,
+  fromRequest,
 }: Readonly<{
   feeBps: number;
   stopajBps: number;
   payoutBlockers: string[];
   draftKey: string;
   previousClients: readonly PreviousClient[];
+  /**
+   * Set when the freelancer arrived from a client's project request. The
+   * client and the brief come pre-filled; the scope, the phases and the
+   * amount are still theirs to write, because those are the parts the client
+   * was never in a position to specify.
+   */
+  fromRequest: {
+    id: string;
+    clientPublicId: string;
+    title: string;
+    brief: string;
+  } | null;
 }>) {
   const [lookup, lookupAction] = useActionState(findCounterparty, LOOKUP_INITIAL);
   const [preview, previewAction] = useActionState(previewContract, PREVIEW_INITIAL);
@@ -289,12 +307,15 @@ export function ContractForm({
   const [step, setStep] = useState(0);
   const [productType] = useState<ProductType>("QA_ONLY");
   const [projectCategory, setProjectCategory] = useState<ProjectCategory>("SOFTWARE");
-  const [clientPublicId, setClientPublicId] = useState("");
+  const [clientPublicId, setClientPublicId] = useState(fromRequest?.clientPublicId ?? "");
   const [useInvite, setUseInvite] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
   const [companyId, setCompanyId] = useState("");
-  const [title, setTitle] = useState("");
-  const [scopeOfWork, setScopeOfWork] = useState("");
+  const [title, setTitle] = useState(fromRequest?.title ?? "");
+  // The client's brief seeds the scope rather than becoming it. It is their
+  // description of the problem, not the text both parties sign, so it starts
+  // in the field the freelancer is going to rewrite anyway.
+  const [scopeOfWork, setScopeOfWork] = useState(fromRequest?.brief ?? "");
   const [plannedStartDate, setPlannedStartDate] = useState("");
   const [projectAmount, setProjectAmount] = useState("");
   const [phases, setPhases] = useState<Phase[]>([]);
@@ -307,6 +328,11 @@ export function ContractForm({
   useEffect(() => {
     if (restoreDone.current) return;
     restoreDone.current = true;
+
+    // A conversion carries its own client and brief. Restoring a saved draft
+    // over them would silently point this contract at whoever the freelancer
+    // was writing to last time -- the one prefill mistake that matters.
+    if (fromRequest) return;
 
     const draft = readDraft(draftKey);
     if (!draft) return;
@@ -323,7 +349,7 @@ export function ContractForm({
     setProjectAmount(draft.projectAmount);
     setPhases(draft.phases);
     setRestoredAt(draft.savedAt);
-  }, [draftKey]);
+  }, [draftKey, fromRequest]);
 
   // Saving pauses the moment the contract is submitted, so a successful
   // creation (which redirects away, and never re-renders this component)
@@ -444,6 +470,16 @@ export function ContractForm({
     lookupFormRef.current?.requestSubmit();
   }, [pendingLookup]);
 
+  // A converted request arrives with the client's ID already filled but not
+  // yet resolved, so run the same lookup a manual entry would -- it is what
+  // produces the counterparty card and the invoicing company list.
+  const requestLookupDone = useRef(false);
+  useEffect(() => {
+    if (requestLookupDone.current || !fromRequest?.clientPublicId) return;
+    requestLookupDone.current = true;
+    setPendingLookup(true);
+  }, [fromRequest]);
+
   const pickPreviousClient = (publicId: string) => {
     setUseInvite(false);
     setCompanyId("");
@@ -466,11 +502,22 @@ export function ContractForm({
     phases,
     plannedStartDate,
     projectAmount,
+    requestId: fromRequest?.id ?? "",
   };
 
   return (
     <div className="flex flex-col gap-8">
       <StepBar current={step} />
+
+      {fromRequest && (
+        <div className="rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 dark:border-sky-900/60 dark:bg-sky-950/30">
+          <p className="text-xs leading-relaxed text-sky-800 dark:text-sky-200">
+            Bu sözleşme müşterinin proje talebinden geliyor. Müşteri ve brief
+            dolduruldu; kapsamı, fazları ve bedeli sen yazacaksın. Sözleşmeyi
+            oluşturduğunda talep otomatik kapanır.
+          </p>
+        </div>
+      )}
 
       {restoredAt !== null && (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-900/60 dark:bg-amber-950/30">

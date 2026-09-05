@@ -1,4 +1,4 @@
-import { Briefcase, Receipt, Settings, Wallet } from "lucide-react";
+import { Briefcase, Inbox, Receipt, Wallet } from "lucide-react";
 import Link from "next/link";
 
 import { Money } from "@/components/money";
@@ -8,17 +8,23 @@ import { StatusBadge } from "@/components/status-badge";
 import { NeedsActionList } from "@/components/needs-action-list";
 import { requireRole } from "@/lib/auth/session";
 import { listContracts } from "@/lib/data/contracts";
+import { listIncomingRequests } from "@/lib/data/project-requests";
 
 const QUICK_ACTIONS: readonly QuickAction[] = [
   { label: "Projeler", icon: Briefcase, href: "/freelancer", tint: "emerald" },
-  { label: "Kazanç", icon: Wallet, href: "/freelancer/earnings", tint: "sky" },
-  { label: "Makbuzlar", icon: Receipt, href: "/freelancer/invoices", tint: "amber" },
-  { label: "Ayarlar", icon: Settings, href: "/freelancer/settings", tint: "violet" },
+  { label: "Talepler", icon: Inbox, href: "/freelancer/requests", tint: "sky" },
+  { label: "Kazanç", icon: Wallet, href: "/freelancer/earnings", tint: "amber" },
+  { label: "Makbuzlar", icon: Receipt, href: "/freelancer/invoices", tint: "violet" },
 ];
 
 export default async function FreelancerProjectsPage() {
   const session = await requireRole("FREELANCER");
-  const contracts = await listContracts("freelancer", session.userId);
+  const [contracts, requests] = await Promise.all([
+    listContracts("freelancer", session.userId),
+    listIncomingRequests(session.userId),
+  ]);
+
+  const openRequests = requests.filter((r) => r.status === "OPEN");
 
   const qaContractsCount = contracts.filter((c) => c.product_type === "QA_ONLY").length;
   const escrowContractsCount = contracts.length - qaContractsCount;
@@ -48,6 +54,20 @@ export default async function FreelancerProjectsPage() {
           </Link>
         }
       />
+
+      {openRequests.length > 0 && (
+        <Link
+          href="/freelancer/requests"
+          className="flex items-center justify-between gap-3 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm transition-all hover:-translate-y-0.5 hover:shadow-md dark:border-sky-800/60 dark:bg-sky-950/30"
+        >
+          <span className="font-medium text-sky-900 dark:text-sky-100">
+            {openRequests.length} yeni proje talebi
+          </span>
+          <span className="shrink-0 text-xs font-semibold text-sky-700 dark:text-sky-300">
+            İncele →
+          </span>
+        </Link>
+      )}
 
       <NeedsActionList contracts={contracts} />
 
