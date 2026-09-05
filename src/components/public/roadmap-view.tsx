@@ -118,47 +118,41 @@ export function RoadmapView({ locale }: Readonly<{ locale: Locale }>) {
                   {t.future.body}
                 </p>
 
-                <div className="mt-5 flex flex-col gap-4">
-                  <div className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/50">
-                    <div className="mb-2 flex items-center gap-3">
-                      <span className="bg-brand/10 text-brand rounded-full px-2.5 py-0.5 text-xs font-bold">
-                        {t.future.nowBadge}
-                      </span>
-                      <h3 className="font-bold text-zinc-900 dark:text-zinc-100">
-                        {t.future.nowTitle}
-                      </h3>
-                    </div>
-                    <p className="text-sm text-neutral-600 dark:text-neutral-400">
+                <div className="mt-2 flex flex-col divide-y divide-border">
+                  <div className="py-5">
+                    <p className="mono text-xs tracking-wide text-muted-foreground">
+                      {t.future.nowBadge}
+                    </p>
+                    <h3 className="mt-1 text-base font-semibold text-foreground">
+                      {t.future.nowTitle}
+                    </h3>
+                    <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
                       {t.future.nowBody}
                     </p>
                   </div>
 
-                  <div className="rounded-xl border border-blue-200 bg-blue-50/50 p-5 dark:border-blue-900/50 dark:bg-blue-950/20">
-                    <div className="mb-2 flex items-center gap-3">
-                      <span className="rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-bold text-blue-700 dark:bg-blue-900/60 dark:text-blue-300">
-                        {t.future.launchBadge}
-                      </span>
-                      <h3 className="font-bold text-blue-900 dark:text-blue-100">
-                        {t.future.launchTitle}
-                      </h3>
-                    </div>
-                    <p className="text-sm text-blue-700 dark:text-blue-300/80">
+                  <div className="py-5">
+                    <p className="mono text-xs tracking-wide text-muted-foreground">
+                      {t.future.launchBadge}
+                    </p>
+                    <h3 className="mt-1 text-base font-semibold text-foreground">
+                      {t.future.launchTitle}
+                    </h3>
+                    <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
                       {t.future.launchBody}
                     </p>
                   </div>
 
-                  <div className="rounded-xl border border-emerald-200 bg-emerald-50/50 p-5 dark:border-emerald-900/50 dark:bg-emerald-950/20">
-                    <div className="mb-2 flex items-center gap-3">
-                      <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-bold text-emerald-700 dark:bg-emerald-900/60 dark:text-emerald-300">
-                        {t.future.targetBadge}
-                      </span>
-                      <h3 className="font-bold text-emerald-900 dark:text-emerald-100">
-                        {t.future.targetTitle}
-                      </h3>
-                    </div>
-                    <p className="text-sm text-emerald-700 dark:text-emerald-300/80">
+                  <div className="py-5">
+                    <p className="mono text-xs tracking-wide text-muted-foreground">
+                      {t.future.targetBadge}
+                    </p>
+                    <h3 className="mt-1 text-base font-semibold text-foreground">
+                      {t.future.targetTitle}
+                    </h3>
+                    <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
                       {t.future.targetBodyBefore}
-                      <strong>{t.future.targetBodyStrong}</strong>
+                      <strong className="text-foreground">{t.future.targetBodyStrong}</strong>
                       {t.future.targetBodyAfter}
                     </p>
                   </div>
