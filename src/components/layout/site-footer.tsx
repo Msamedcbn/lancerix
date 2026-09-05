@@ -2,10 +2,17 @@ import Link from "next/link";
 import { Mark } from "@/components/brand/mark";
 import { Github, Twitter, Linkedin, Mail } from "lucide-react";
 
+import { DEFAULT_LOCALE, PUBLIC_ROUTES, type Locale } from "@/lib/i18n/config";
+import { SITE_COPY } from "@/lib/i18n/dictionaries/site";
+
 const BRAND = "Lancerix";
 
-export function SiteFooter() {
+export function SiteFooter({
+  locale = DEFAULT_LOCALE,
+}: Readonly<{ locale?: Locale }>) {
   const currentYear = new Date().getFullYear();
+  const t = SITE_COPY[locale].footer;
+  const home = PUBLIC_ROUTES.home[locale];
 
   return (
     <footer className="relative border-t border-border bg-background pt-16 pb-8">
@@ -13,12 +20,12 @@ export function SiteFooter() {
         <div className="grid gap-10 md:grid-cols-4 lg:grid-cols-5">
           {/* Brand & Tagline */}
           <div className="md:col-span-2">
-            <Link href="/" className="inline-flex items-center gap-2">
+            <Link href={home} className="inline-flex items-center gap-2">
               <Mark className="text-brand size-6" title={BRAND} />
               <span className="font-semibold tracking-tight text-foreground text-lg">{BRAND}</span>
             </Link>
             <p className="mt-4 max-w-xs text-sm leading-relaxed text-muted-foreground">
-              Yazılım projelerindeki teslimat ve onay süreçlerini güvene alan, şeffaf ve bağımsız kod doğrulama altyapısı.
+              {t.tagline}
             </p>
             <div className="mt-6 flex items-center gap-4 text-muted-foreground">
               <a href="#" className="hover:text-brand transition-colors" aria-label="Twitter">
@@ -35,39 +42,39 @@ export function SiteFooter() {
 
           {/* Product Links */}
           <div>
-            <h3 className="text-sm font-semibold text-foreground">Ürün</h3>
+            <h3 className="text-sm font-semibold text-foreground">{t.product}</h3>
             <ul className="mt-4 flex flex-col gap-3 text-sm text-muted-foreground">
               <li>
-                <Link href="/#nasil" className="hover:text-foreground transition-colors">Nasıl Çalışır?</Link>
+                <Link href={`${home}#nasil`} className="hover:text-foreground transition-colors">{t.howItWorks}</Link>
               </li>
               <li>
-                <Link href="/#fiyat" className="hover:text-foreground transition-colors">Doğrulama Yöntemleri</Link>
+                <Link href={`${home}#fiyat`} className="hover:text-foreground transition-colors">{t.verificationMethods}</Link>
               </li>
               <li>
-                <Link href="/nasil-calisir" className="hover:text-foreground transition-colors">Sistem Şeması</Link>
+                <Link href={PUBLIC_ROUTES.howItWorks[locale]} className="hover:text-foreground transition-colors">{t.systemDiagram}</Link>
               </li>
               <li>
-                <Link href="/yol-haritasi" className="hover:text-foreground transition-colors">Yol Haritası (Neredeyiz?)</Link>
+                <Link href={PUBLIC_ROUTES.roadmap[locale]} className="hover:text-foreground transition-colors">{t.roadmap}</Link>
               </li>
               <li>
-                <Link href="/login" className="hover:text-foreground transition-colors">Giriş Yap</Link>
+                <Link href="/login" className="hover:text-foreground transition-colors">{t.login}</Link>
               </li>
             </ul>
           </div>
 
           {/* Legal Links */}
           <div>
-            <h3 className="text-sm font-semibold text-foreground">Yasal</h3>
+            <h3 className="text-sm font-semibold text-foreground">{t.legal}</h3>
             <ul className="mt-4 flex flex-col gap-3 text-sm text-muted-foreground">
               <li>
-                <Link href="/sartlar" className="hover:text-foreground transition-colors">Şartlar ve Koşullar</Link>
+                <Link href={PUBLIC_ROUTES.terms[locale]} className="hover:text-foreground transition-colors">{t.terms}</Link>
               </li>
             </ul>
           </div>
 
           {/* Contact */}
           <div>
-            <h3 className="text-sm font-semibold text-foreground">İletişim</h3>
+            <h3 className="text-sm font-semibold text-foreground">{t.contact}</h3>
             <ul className="mt-4 flex flex-col gap-3 text-sm text-muted-foreground">
               <li>
                 <a href="mailto:hello@lancerix.com" className="inline-flex items-center gap-2 hover:text-foreground transition-colors">
@@ -81,9 +88,13 @@ export function SiteFooter() {
 
         {/* Bottom Bar */}
         <div className="mt-16 flex flex-col items-center justify-between gap-4 border-t border-border/50 pt-8 sm:flex-row text-xs text-muted-foreground">
-          <p>© {currentYear} {BRAND}. Tüm hakları saklıdır.</p>
+          <p>© {currentYear} {BRAND}. {t.rights}</p>
           <div className="flex items-center gap-2">
-            <span>Türkiye&apos;de <span className="text-brand">❤</span> ile geliştirildi</span>
+            <span>
+              {t.madeIn.before}
+              <span className="text-brand">❤</span>
+              {t.madeIn.after}
+            </span>
           </div>
         </div>
       </div>

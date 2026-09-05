@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import { Plus_Jakarta_Sans, IBM_Plex_Mono } from "next/font/google";
+
+import { localeFromPath } from "@/lib/i18n/config";
 
 import "./globals.css";
 
@@ -30,12 +33,21 @@ export const metadata: Metadata = {
     "Kurumsal müşteriden alacağın 90 gün beklemesin. İmzalı sözleşme, aşamalı teslim ve süresi dolduğunda kendiliğinden gerçekleşen kabul — hepsi silinemeyen bir deftere yazılır.",
 };
 
-export default function RootLayout({
+/**
+ * `lang` follows the URL: the public pages have an English mirror under /en
+ * and everything else is Turkish. The pathname arrives as the x-pathname
+ * header the middleware sets, since a layout cannot read the path any other
+ * way. Reading a header makes this layout dynamic, which is why the header is
+ * only consulted for this one attribute.
+ */
+export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  const pathname = (await headers()).get("x-pathname") ?? "/";
+
   return (
     <html
-      lang="tr"
+      lang={localeFromPath(pathname)}
       suppressHydrationWarning
       className={`${mono.variable} ${jakarta.variable}`}
     >

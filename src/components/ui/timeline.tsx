@@ -8,7 +8,21 @@ interface TimelineEntry {
   content: React.ReactNode;
 }
 
-export const Timeline = ({ data }: { data: TimelineEntry[] }) => {
+/**
+ * The page heading above the timeline used to be hardcoded Turkish here, which
+ * left the English roadmap opening with two Turkish paragraphs. It is a prop
+ * now -- the component draws a timeline, it does not know what the timeline is
+ * about.
+ */
+export const Timeline = ({
+  data,
+  heading,
+  intro,
+}: {
+  data: TimelineEntry[];
+  heading: string;
+  intro: string;
+}) => {
   const ref = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [height, setHeight] = useState(0);
@@ -35,10 +49,10 @@ export const Timeline = ({ data }: { data: TimelineEntry[] }) => {
     >
       <div className="max-w-7xl mx-auto py-20 px-4 md:px-8 lg:px-10">
         <h2 className="text-lg md:text-4xl mb-4 text-black dark:text-white max-w-4xl font-semibold tracking-tight">
-          Aracı Değil, Bağımsız Hakemiz
+          {heading}
         </h2>
         <p className="text-neutral-700 dark:text-neutral-300 text-sm md:text-base max-w-2xl leading-relaxed">
-          Paranızı esir almıyor veya fahiş kesintiler yapmıyoruz. Sadece %10 hizmet bedeliyle projeyi test eden ve sonucu şeffafça raporlayan tarafsız bir hakemiz. İşte Lancerix&apos;in dünden bugüne ve yarına uzanan yolculuğu.
+          {intro}
         </p>
       </div>
 

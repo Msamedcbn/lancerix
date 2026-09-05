@@ -6,12 +6,12 @@ import { alternatesFor } from "@/lib/i18n/config";
 import { HOME_COPY } from "@/lib/i18n/dictionaries/home";
 
 export const metadata: Metadata = {
-  title: HOME_COPY.tr.metaTitle,
-  description: HOME_COPY.tr.metaDescription,
+  title: HOME_COPY.en.metaTitle,
+  description: HOME_COPY.en.metaDescription,
   alternates: alternatesFor("home"),
 };
 
-/** The Turkish landing page. Its English twin is src/app/en/page.tsx. */
-export default async function HomePage() {
-  return <HomeClient verifiedCount={await getVerifiedCount()} locale="tr" />;
+/** The English landing page. Same component as /, different dictionary. */
+export default async function EnglishHomePage() {
+  return <HomeClient verifiedCount={await getVerifiedCount()} locale="en" />;
 }

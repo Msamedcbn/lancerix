@@ -5,11 +5,11 @@ import { alternatesFor } from "@/lib/i18n/config";
 import { ROADMAP_COPY } from "@/lib/i18n/dictionaries/roadmap";
 
 export const metadata: Metadata = {
-  title: ROADMAP_COPY.tr.metaTitle,
-  description: ROADMAP_COPY.tr.metaDescription,
+  title: ROADMAP_COPY.en.metaTitle,
+  description: ROADMAP_COPY.en.metaDescription,
   alternates: alternatesFor("roadmap"),
 };
 
-export default function YolHaritasiPage() {
-  return <RoadmapView locale="tr" />;
+export default function EnglishRoadmapPage() {
+  return <RoadmapView locale="en" />;
 }

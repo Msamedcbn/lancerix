@@ -6,6 +6,12 @@ import Link from "next/link";
 import { gsap, useGSAP } from "@/lib/gsap";
 import { DEFAULT_PLATFORM_FEE_BPS, computeEscrowSplit } from "@/lib/escrow/money";
 import { DEFAULT_STOPAJ_BPS } from "@/lib/tax/stopaj";
+import { LanguageSwitcher } from "@/components/layout/language-switcher";
+import { DEFAULT_LOCALE, PUBLIC_ROUTES, type Locale } from "@/lib/i18n/config";
+import {
+  SYSTEM_FLOW_COPY,
+  type SystemFlowCopy,
+} from "@/lib/i18n/dictionaries/system-flow";
 
 const BRAND = "Lancerix";
 
@@ -39,13 +45,24 @@ const SPLIT = computeEscrowSplit({
   stopajBps: DEFAULT_STOPAJ_BPS,
 });
 
-const tryFormatter = new Intl.NumberFormat("tr-TR", {
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-});
+/**
+ * Grouping and decimal separators follow the reader's locale, not the
+ * currency's: 10.000,00 for a Turkish reader, 10,000.00 for an English one.
+ * The currency is Turkish lira either way -- only the punctuation moves.
+ */
+const AMOUNT_FORMATTERS: Record<Locale, Intl.NumberFormat> = {
+  tr: new Intl.NumberFormat("tr-TR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }),
+  en: new Intl.NumberFormat("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }),
+};
 
-function formatTry(kurus: number): string {
-  return tryFormatter.format(kurus / 100);
+function formatTry(kurus: number, locale: Locale): string {
+  return AMOUNT_FORMATTERS[locale].format(kurus / 100);
 }
 
 /**
@@ -54,24 +71,23 @@ function formatTry(kurus: number): string {
  */
 const share = (kurus: number) => (kurus / SPLIT.clientChargeKurus) * 100;
 
-const SPLIT_ROWS = [
+/**
+ * Amounts and colours for the three split rows, in the order the dictionary
+ * lists them. The labels and notes come from SYSTEM_FLOW_COPY.splitRows, so a
+ * translation cannot reorder or drop one without a type error.
+ */
+const SPLIT_ROW_META = [
   {
-    label: "Platform hizmet bedeli",
-    note: "Sözleşme bedelinin üstüne eklenir, müşteri öder",
     kurus: SPLIT.platformFeeKurus,
     bar: "bg-neutral-600",
     text: "text-neutral-400",
   },
   {
-    label: "Stopaj",
-    note: "Freelancerın brütünden kesilir, vergi dairesine ödenir",
     kurus: SPLIT.taxWithholdingKurus,
     bar: "bg-amber-500/70",
     text: "text-amber-200/80",
   },
   {
-    label: "Freelancer neti",
-    note: "Banka hesabına geçen tutar",
     kurus: SPLIT.freelancerNetKurus,
     bar: "bg-emerald-400",
     text: "text-emerald-200",
@@ -88,9 +104,12 @@ const NODE = "fill-neutral-900 stroke-white/15";
 const LABEL = "fill-neutral-300 text-[13px] font-medium";
 const EDGE = "stroke-neutral-500";
 
-function ContractDiagram() {
+/** Every diagram takes the same shape: the node words plus its own aria label. */
+type DiagramProps = Readonly<{ t: SystemFlowCopy }>;
+
+function ContractDiagram({ t }: DiagramProps) {
   return (
-    <svg viewBox="0 0 320 170" className="h-full w-full" role="img" aria-label="Freelancer, müşteri ve platform aynı sözleşmeyi imzalar">
+    <svg viewBox="0 0 320 170" className="h-full w-full" role="img" aria-label={t.diagramLabels.contract}>
       <g className={EDGE} strokeWidth="1.5" markerEnd="url(#flow-arrow)">
         <path d="M74 58 L134 84" fill="none" />
         <path d="M246 58 L186 84" fill="none" />
@@ -103,37 +122,37 @@ function ContractDiagram() {
         <path d="M144 98 H166" />
       </g>
       <rect x="8" y="26" width="112" height="34" rx="10" className={NODE} strokeWidth="1.5" />
-      <text x="64" y="48" textAnchor="middle" className={LABEL}>Freelancer</text>
+      <text x="64" y="48" textAnchor="middle" className={LABEL}>{t.nodes.freelancer}</text>
       <rect x="200" y="26" width="112" height="34" rx="10" className={NODE} strokeWidth="1.5" />
-      <text x="256" y="48" textAnchor="middle" className={LABEL}>Müşteri</text>
+      <text x="256" y="48" textAnchor="middle" className={LABEL}>{t.nodes.client}</text>
       <rect x="104" y="138" width="112" height="34" rx="10" className={NODE} strokeWidth="1.5" />
-      <text x="160" y="160" textAnchor="middle" className={LABEL}>Platform</text>
+      <text x="160" y="160" textAnchor="middle" className={LABEL}>{t.nodes.platform}</text>
     </svg>
   );
 }
 
-function LockDiagram() {
+function LockDiagram({ t }: DiagramProps) {
   return (
-    <svg viewBox="0 0 320 170" className="h-full w-full" role="img" aria-label="Müşteri tutarı yatırır, para kilitli hesapta tutulur">
+    <svg viewBox="0 0 320 170" className="h-full w-full" role="img" aria-label={t.diagramLabels.lock}>
       <rect x="4" y="60" width="94" height="40" rx="10" className={NODE} strokeWidth="1.5" />
-      <text x="51" y="85" textAnchor="middle" className={LABEL}>Müşteri</text>
+      <text x="51" y="85" textAnchor="middle" className={LABEL}>{t.nodes.client}</text>
       <path d="M104 80 H128" className={EDGE} strokeWidth="1.5" markerEnd="url(#flow-arrow)" fill="none" />
       <rect x="134" y="42" width="86" height="76" rx="12" className="fill-neutral-900 stroke-emerald-400/50" strokeWidth="1.5" />
       <path d="M167 74 v-8 a10 10 0 0 1 20 0 v8" className="stroke-emerald-300/80" strokeWidth="2" fill="none" />
       <rect x="163" y="74" width="28" height="22" rx="5" className="fill-emerald-400/20 stroke-emerald-300/80" strokeWidth="1.5" />
-      <text x="177" y="136" textAnchor="middle" className="fill-neutral-500 text-[12px]">kilitli bakiye</text>
+      <text x="177" y="136" textAnchor="middle" className="fill-neutral-500 text-[12px]">{t.nodes.lockedBalance}</text>
       <path d="M296 80 H228" className="stroke-neutral-700" strokeWidth="1.5" strokeDasharray="4 5" fill="none" />
       <path d="M254 70 L268 90 M268 70 L254 90" className="stroke-rose-400/70" strokeWidth="1.8" strokeLinecap="round" />
       <rect x="222" y="24" width="94" height="34" rx="10" className={NODE} strokeWidth="1.5" />
-      <text x="269" y="46" textAnchor="middle" className={LABEL}>Freelancer</text>
-      <text x="269" y="118" textAnchor="middle" className="fill-neutral-500 text-[12px]">erişim yok</text>
+      <text x="269" y="46" textAnchor="middle" className={LABEL}>{t.nodes.freelancer}</text>
+      <text x="269" y="118" textAnchor="middle" className="fill-neutral-500 text-[12px]">{t.nodes.noAccess}</text>
     </svg>
   );
 }
 
-function MilestoneDiagram() {
+function MilestoneDiagram({ t }: DiagramProps) {
   return (
-    <svg viewBox="0 0 320 170" className="h-full w-full" role="img" aria-label="Proje aşamalara bölünür, her aşama ayrı ödenir">
+    <svg viewBox="0 0 320 170" className="h-full w-full" role="img" aria-label={t.diagramLabels.milestone}>
       <path d="M28 88 H292" className="stroke-neutral-800" strokeWidth="3" strokeLinecap="round" />
       <path d="M28 88 H124" className="stroke-emerald-400" strokeWidth="3" strokeLinecap="round" />
       {[28, 124, 220, 292].map((x, i) => (
@@ -146,22 +165,22 @@ function MilestoneDiagram() {
           strokeWidth="2"
         />
       ))}
-      <text x="28" y="66" textAnchor="middle" className="fill-neutral-400 text-[12px]">Aşama 1</text>
-      <text x="124" y="66" textAnchor="middle" className="fill-emerald-200 text-[12px] font-semibold">Aşama 2</text>
-      <text x="220" y="66" textAnchor="middle" className="fill-neutral-500 text-[12px]">Aşama 3</text>
-      <text x="286" y="66" textAnchor="middle" className="fill-neutral-500 text-[12px]">Teslim</text>
-      <text x="76" y="120" textAnchor="middle" className="fill-neutral-500 text-[12px]">ödendi</text>
-      <text x="172" y="120" textAnchor="middle" className="fill-neutral-500 text-[12px]">kilitte</text>
-      <text x="256" y="120" textAnchor="middle" className="fill-neutral-600 text-[12px]">bekliyor</text>
+      <text x="28" y="66" textAnchor="middle" className="fill-neutral-400 text-[12px]">{t.nodes.phase} 1</text>
+      <text x="124" y="66" textAnchor="middle" className="fill-emerald-200 text-[12px] font-semibold">{t.nodes.phase} 2</text>
+      <text x="220" y="66" textAnchor="middle" className="fill-neutral-500 text-[12px]">{t.nodes.phase} 3</text>
+      <text x="286" y="66" textAnchor="middle" className="fill-neutral-500 text-[12px]">{t.nodes.delivery}</text>
+      <text x="76" y="120" textAnchor="middle" className="fill-neutral-500 text-[12px]">{t.nodes.paid}</text>
+      <text x="172" y="120" textAnchor="middle" className="fill-neutral-500 text-[12px]">{t.nodes.locked}</text>
+      <text x="256" y="120" textAnchor="middle" className="fill-neutral-600 text-[12px]">{t.nodes.pending}</text>
     </svg>
   );
 }
 
-function CountdownDiagram() {
+function CountdownDiagram({ t }: DiagramProps) {
   return (
-    <svg viewBox="0 0 320 170" className="h-full w-full" role="img" aria-label="Teslimden sonra süre işler, itiraz gelmezse ödeme açılır">
+    <svg viewBox="0 0 320 170" className="h-full w-full" role="img" aria-label={t.diagramLabels.countdown}>
       <rect x="4" y="64" width="96" height="40" rx="10" className={NODE} strokeWidth="1.5" />
-      <text x="52" y="89" textAnchor="middle" className={LABEL}>Teslim</text>
+      <text x="52" y="89" textAnchor="middle" className={LABEL}>{t.nodes.submitted}</text>
       <path d="M106 84 H136" className={EDGE} strokeWidth="1.5" markerEnd="url(#flow-arrow)" fill="none" />
       <circle cx="176" cy="84" r="32" className="fill-none stroke-neutral-800" strokeWidth="5" />
       <path
@@ -173,68 +192,44 @@ function CountdownDiagram() {
       <path d="M176 68 v18 h13" className="fill-none stroke-neutral-300" strokeWidth="2" strokeLinecap="round" />
       <path d="M216 84 H244" className={EDGE} strokeWidth="1.5" markerEnd="url(#flow-arrow)" fill="none" />
       <rect x="250" y="64" width="66" height="40" rx="10" className="fill-emerald-500/10 stroke-emerald-400/50" strokeWidth="1.5" />
-      <text x="283" y="89" textAnchor="middle" className="fill-emerald-200 text-[13px] font-medium">Onay</text>
-      <text x="176" y="140" textAnchor="middle" className="fill-neutral-500 text-[12px]">itiraz penceresi</text>
+      <text x="283" y="89" textAnchor="middle" className="fill-emerald-200 text-[13px] font-medium">{t.nodes.approved}</text>
+      <text x="176" y="140" textAnchor="middle" className="fill-neutral-500 text-[12px]">{t.nodes.objectionWindow}</text>
     </svg>
   );
 }
 
-function SplitDiagram() {
+function SplitDiagram({ t }: DiagramProps) {
   return (
-    <svg viewBox="0 0 320 170" className="h-full w-full" role="img" aria-label="Serbest kalan tutar hizmet bedeli, stopaj ve freelancer neti olarak ayrılır">
+    <svg viewBox="0 0 320 170" className="h-full w-full" role="img" aria-label={t.diagramLabels.split}>
       <rect x="4" y="64" width="86" height="40" rx="10" className="fill-neutral-900 stroke-emerald-400/50" strokeWidth="1.5" />
-      <text x="47" y="89" textAnchor="middle" className="fill-emerald-200 text-[13px] font-medium">Serbest</text>
+      <text x="47" y="89" textAnchor="middle" className="fill-emerald-200 text-[13px] font-medium">{t.nodes.released}</text>
       <g className={EDGE} strokeWidth="1.5" fill="none" markerEnd="url(#flow-arrow)">
         <path d="M96 84 C 130 84, 130 30, 168 30" />
         <path d="M96 84 H168" />
         <path d="M96 84 C 130 84, 130 138, 168 138" />
       </g>
       <rect x="174" y="12" width="142" height="34" rx="9" className={NODE} strokeWidth="1.5" />
-      <text x="245" y="34" textAnchor="middle" className="fill-neutral-400 text-[12px]">Hizmet bedeli</text>
+      <text x="245" y="34" textAnchor="middle" className="fill-neutral-400 text-[12px]">{t.nodes.serviceFee}</text>
       <rect x="174" y="67" width="142" height="34" rx="9" className={NODE} strokeWidth="1.5" />
-      <text x="245" y="89" textAnchor="middle" className="fill-amber-200/80 text-[12px]">Stopaj</text>
+      <text x="245" y="89" textAnchor="middle" className="fill-amber-200/80 text-[12px]">{t.nodes.withholding}</text>
       <rect x="174" y="121" width="142" height="34" rx="9" className="fill-emerald-500/10 stroke-emerald-400/40" strokeWidth="1.5" />
-      <text x="245" y="143" textAnchor="middle" className="fill-emerald-200 text-[12px]">Freelancer neti</text>
+      <text x="245" y="143" textAnchor="middle" className="fill-emerald-200 text-[12px]">{t.nodes.freelancerNet}</text>
     </svg>
   );
 }
 
-const FLOW_STEPS = [
-  {
-    step: "01",
-    edge: "DRAFT -> AWAITING_PAYMENT",
-    title: "Üç taraflı sözleşme",
-    body: "Freelancer, müşteri ve platform aynı belgeyi imzalar. Tutar, aşamalar, itiraz süresi ve stopaj oranı imza anında dondurulur; sonradan tek taraflı değişmez.",
-    Diagram: ContractDiagram,
-  },
-  {
-    step: "02",
-    edge: "AWAITING_PAYMENT -> IN_PROGRESS",
-    title: "Para kilitlenir",
-    body: "Müşteri aşamanın tutarını hizmet bedeliyle birlikte, iş başlamadan yatırır. Tutar lisanslı bir ödeme kuruluşunda tutulacak; ne freelancer çekebilir ne müşteri geri alabilir.",
-    Diagram: LockDiagram,
-  },
-  {
-    step: "03",
-    edge: "IN_PROGRESS",
-    title: "Aşama aşama ilerler",
-    body: "Proje tek bir büyük ödeme değil, sırayla açılan aşamalardır. Her aşamanın parası kendi başına kilitlenir ve kendi başına serbest kalır; biri tıkanırsa diğerleri etkilenmez.",
-    Diagram: MilestoneDiagram,
-  },
-  {
-    step: "04",
-    edge: "SUBMITTED -> COMPLETED",
-    title: "Teslim ve geri sayım",
-    body: "Freelancer teslimatı yükler, geri sayım o an başlar. Müşteri onaylarsa aşama hemen kapanır; süre içinde itiraz etmezse de kapanır. Beklemek varsayılan değildir.",
-    Diagram: CountdownDiagram,
-  },
-  {
-    step: "05",
-    edge: "COMPLETED -> RELEASED",
-    title: "Ödeme dağıtılır",
-    body: "Tutar serbest kalır ve tek seferde ayrışır: hizmet bedeli platforma, stopaj vergi dairesine, sözleşme bedelinin kalanı freelancera. Ödeme yalnızca aşama tamamlandıysa ve tutar net hesaba birebir eşitse tetiklenir.",
-    Diagram: SplitDiagram,
-  },
+/**
+ * Step number, the state-machine edge it corresponds to, and its diagram. The
+ * edge strings are the literal transition identifiers from TRANSITIONS in
+ * src/lib/escrow/state-machine.ts, so they are the same in every language --
+ * only the title and body next to them are translated.
+ */
+const FLOW_STEP_META = [
+  { step: "01", edge: "DRAFT -> AWAITING_PAYMENT", Diagram: ContractDiagram },
+  { step: "02", edge: "AWAITING_PAYMENT -> IN_PROGRESS", Diagram: LockDiagram },
+  { step: "03", edge: "IN_PROGRESS", Diagram: MilestoneDiagram },
+  { step: "04", edge: "SUBMITTED -> COMPLETED", Diagram: CountdownDiagram },
+  { step: "05", edge: "COMPLETED -> RELEASED", Diagram: SplitDiagram },
 ] as const;
 
 /* --------------------------------------------------------------------------
@@ -307,9 +302,29 @@ const MARKER_BY_TONE = {
   stop: "url(#graph-arrow-stop)",
 } as const;
 
-export function SystemFlow() {
+export function SystemFlow({
+  locale = DEFAULT_LOCALE,
+}: Readonly<{ locale?: Locale }>) {
   const root = useRef<HTMLElement>(null);
   const track = useRef<HTMLDivElement>(null);
+  const t = SYSTEM_FLOW_COPY[locale];
+
+  // Diagram and edge on one side, words on the other, zipped position by
+  // position. Both sides are fixed-length tuples, so a missing translation is
+  // a type error rather than a blank card.
+  const flowSteps = [
+    { ...FLOW_STEP_META[0], ...t.steps[0] },
+    { ...FLOW_STEP_META[1], ...t.steps[1] },
+    { ...FLOW_STEP_META[2], ...t.steps[2] },
+    { ...FLOW_STEP_META[3], ...t.steps[3] },
+    { ...FLOW_STEP_META[4], ...t.steps[4] },
+  ];
+
+  const splitRows = [
+    { ...SPLIT_ROW_META[0], ...t.splitRows[0] },
+    { ...SPLIT_ROW_META[1], ...t.splitRows[1] },
+    { ...SPLIT_ROW_META[2], ...t.splitRows[2] },
+  ];
 
   useGSAP(
     () => {
@@ -379,7 +394,7 @@ export function SystemFlow() {
           value: target,
           ease: "none",
           onUpdate: () => {
-            node.textContent = formatTry(Math.round(proxy.value));
+            node.textContent = formatTry(Math.round(proxy.value), locale);
           },
           scrollTrigger: {
             trigger: "[data-split]",
@@ -429,7 +444,7 @@ export function SystemFlow() {
       });
 
     },
-    { scope: root },
+    { scope: root, dependencies: [locale] },
   );
 
   return (
@@ -457,26 +472,29 @@ export function SystemFlow() {
 
       <header className="fixed inset-x-0 top-5 z-50 flex justify-center px-4">
         <nav className="flex w-full max-w-3xl items-center gap-2 rounded-full border border-white/10 bg-neutral-900/60 px-3 py-2 backdrop-blur-xl">
-          <Link href="/" className="px-3 text-[0.95rem] font-bold tracking-tight text-white">
+          <Link href={PUBLIC_ROUTES.home[locale]} className="px-3 text-[0.95rem] font-bold tracking-tight text-white">
             {BRAND}
           </Link>
           <div className="hidden items-center gap-1 sm:flex">
             <a href="#akis" className="rounded-full px-3 py-1.5 text-sm text-neutral-400 transition-colors duration-300 hover:bg-white/5 hover:text-white">
-              Akış
+              {t.nav.flow}
             </a>
             <a href="#dagilim" className="rounded-full px-3 py-1.5 text-sm text-neutral-400 transition-colors duration-300 hover:bg-white/5 hover:text-white">
-              Para dağılımı
+              {t.nav.split}
             </a>
             <a href="#durumlar" className="rounded-full px-3 py-1.5 text-sm text-neutral-400 transition-colors duration-300 hover:bg-white/5 hover:text-white">
-              Durum şeması
+              {t.nav.states}
             </a>
           </div>
-          <Link
-            href="/register"
-            className="ml-auto rounded-full bg-white px-4 py-1.5 text-sm font-semibold text-neutral-950 transition-transform duration-300 hover:scale-[1.04]"
-          >
-            Erken erişim
-          </Link>
+          <div className="ml-auto flex items-center gap-2">
+            <LanguageSwitcher locale={locale} variant="dark" />
+            <Link
+              href="/register"
+              className="rounded-full bg-white px-4 py-1.5 text-sm font-semibold text-neutral-950 transition-transform duration-300 hover:scale-[1.04]"
+            >
+              {t.nav.earlyAccess}
+            </Link>
+          </div>
         </nav>
       </header>
 
@@ -495,12 +513,12 @@ export function SystemFlow() {
             >
               <span className="-mb-[0.12em] block overflow-hidden pb-[0.12em]">
                 <span data-hero-line className="block">
-                  Paranın izlediği yol
+                  {t.heroLine1}
                 </span>
               </span>
               <span className="-mb-[0.12em] block overflow-hidden pb-[0.12em]">
                 <span data-hero-line className="block">
-                  baştan sona görünür.
+                  {t.heroLine2}
                 </span>
               </span>
             </h1>
@@ -508,21 +526,20 @@ export function SystemFlow() {
               data-hero-fade
               className="mt-8 max-w-xl text-lg leading-relaxed text-neutral-400 text-pretty"
             >
-              Sözleşmenin imzalandığı andan paranın hesabınıza geçtiği ana kadar
-              her adım, her durum ve her kuruş aşağıda şemayla yazılı.
+              {t.heroBody}
             </p>
             <div data-hero-fade className="mt-10 flex flex-wrap gap-3">
               <a
                 href="#akis"
                 className="rounded-full bg-white px-8 py-4 text-base font-semibold text-neutral-950 transition-transform duration-300 hover:scale-[1.04]"
               >
-                Akışı incele
+                {t.heroPrimary}
               </a>
               <Link
                 href="/register"
                 className="rounded-full border border-white/20 px-8 py-4 text-base font-semibold text-white transition-colors duration-300 hover:bg-white/10"
               >
-                Erken erişime katıl
+                {t.heroSecondary}
               </Link>
             </div>
           </div>
@@ -550,13 +567,9 @@ export function SystemFlow() {
         <div className="mx-auto max-w-6xl rounded-2xl border border-amber-400/25 bg-amber-500/[0.06] px-6 py-5">
           <p className="text-sm leading-relaxed text-amber-100/90">
             <strong className="font-semibold text-amber-200">
-              Aşağıdaki şema hedef mimarimiz, bugünkü sistem değil.
+              {t.bannerStrong}
             </strong>{" "}
-            Şu anda Lancerix bir doğrulama ve raporlama hizmeti: sözleşme,
-            teslim, QA doğrulaması ve kabul süreci (aşağıdaki 4. adım) canlı,
-            ödeme ise taraflar arasında doğrudan çözülüyor. Escrow, stopaj
-            kesintisi ve otomatik ödeme dağıtımı (1, 2, 3 ve 5. adımlar) şirket
-            kuruluşu ve ödeme lisansı sonrasında devreye girecek yol haritamız.
+            {t.bannerBody}
           </p>
         </div>
       </section>
@@ -569,7 +582,7 @@ export function SystemFlow() {
       >
         <div className="mx-auto mb-10 w-full max-w-6xl px-6 md:mb-14">
           <h2 className="max-w-3xl text-3xl font-bold leading-[1.1] tracking-tight text-white md:text-5xl">
-            Beş adım, beş şema, tek yön.
+            {t.flowTitle}
           </h2>
         </div>
 
@@ -578,13 +591,13 @@ export function SystemFlow() {
             ref={track}
             className="flex w-max snap-x snap-mandatory gap-6 px-6 md:snap-none md:px-12"
           >
-            {FLOW_STEPS.map(({ step, edge, title, body, Diagram }) => (
+            {flowSteps.map(({ step, edge, Diagram, title, body }) => (
               <article
                 key={step}
                 className="group flex w-[82vw] max-w-[26rem] shrink-0 snap-center flex-col overflow-hidden rounded-3xl border border-white/10 bg-neutral-900 sm:w-[22rem] md:w-[24rem]"
               >
                 <div className="h-52 border-b border-white/10 bg-neutral-950/60 p-5 transition-transform duration-700 ease-out group-hover:scale-[1.03]">
-                  <Diagram />
+                  <Diagram t={t} />
                 </div>
                 <div className="flex flex-1 flex-col p-7">
                   <div className="flex items-baseline gap-3">
@@ -606,33 +619,30 @@ export function SystemFlow() {
       <section id="dagilim" data-split className="px-6 py-32 md:py-48">
         <div className="mx-auto max-w-5xl">
           <h2 className="max-w-3xl text-3xl font-bold leading-[1.1] tracking-tight text-white md:text-5xl">
-            10.000 TL&apos;lik bir aşamada kim ne öder?
+            {t.splitTitle}
           </h2>
           <p className="mt-5 max-w-2xl text-base leading-relaxed text-neutral-400">
-            Hizmet bedeli freelancerın kazancından kesilmez, sözleşme bedelinin
-            üstüne eklenir ve müşteri tarafından ödenir. Freelancerın eline
-            geçen tutar, platformu hiç kullanmasaydı alacağı tutarın aynısıdır;
-            tek fark, 90 gün önce geçmesidir.
+            {t.splitBody}
           </p>
 
           <div className="mt-14 rounded-3xl border border-white/10 bg-neutral-900 p-7 md:p-12">
             <div className="flex flex-wrap items-baseline justify-between gap-3 border-b border-white/10 pb-7">
               <span className="text-sm font-semibold text-neutral-400">
-                Müşterinin escrow&apos;a yatırdığı
+                {t.splitFundedLabel}
               </span>
               <span className="text-3xl font-black tracking-tight text-white md:text-4xl">
-                {formatTry(SPLIT.clientChargeKurus)}
+                {formatTry(SPLIT.clientChargeKurus, locale)}
                 <span className="ml-2 text-lg font-semibold text-neutral-500">TL</span>
               </span>
             </div>
 
             <div className="mt-9 space-y-9">
-              {SPLIT_ROWS.map((row) => (
+              {splitRows.map((row) => (
                 <div key={row.label}>
                   <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
                     <span className="text-base font-semibold text-white">{row.label}</span>
                     <span className={`text-2xl font-bold tracking-tight ${row.text}`}>
-                      <span data-count={row.kurus}>0,00</span>
+                      <span data-count={row.kurus}>{formatTry(0, locale)}</span>
                       <span className="ml-1.5 text-sm font-semibold text-neutral-500">TL</span>
                     </span>
                   </div>
@@ -649,10 +659,7 @@ export function SystemFlow() {
             </div>
 
             <p className="mt-10 border-t border-white/10 pt-7 text-sm leading-relaxed text-neutral-500">
-              Freelancerın sözleşme bedeli {formatTry(SPLIT.grossKurus)} TL
-              olarak kalır ve serbest meslek makbuzu bu tutar üzerinden kesilir;
-              stopaj da bu tutardan hesaplanır. Oranlar sözleşme kurulduğu anda
-              dondurulur, sonradan değişen bir oran imzalanmış bir işi etkilemez.
+              {t.splitFootnote(formatTry(SPLIT.grossKurus, locale))}
             </p>
           </div>
         </div>
@@ -662,12 +669,10 @@ export function SystemFlow() {
       <section id="durumlar" data-graph className="px-6 py-32 md:py-48">
         <div className="mx-auto max-w-6xl">
           <h2 className="max-w-3xl text-3xl font-bold leading-[1.1] tracking-tight text-white md:text-5xl">
-            Bir aşamanın girebileceği her durum.
+            {t.statesTitle}
           </h2>
           <p className="mt-5 max-w-2xl text-base leading-relaxed text-neutral-400">
-            Aşağıdaki oklar dışında bir geçiş yoktur. Listede olmayan her hareket
-            yazılmadan önce reddedilir, bu yüzden bir aşama sırayı atlayarak
-            ödemeye ulaşamaz.
+            {t.statesBody}
           </p>
 
           <div className="mt-14 overflow-x-auto rounded-3xl border border-white/10 bg-neutral-900 p-5 md:p-10 [scrollbar-width:thin]">
@@ -675,7 +680,7 @@ export function SystemFlow() {
               viewBox="0 -30 1180 490"
               className="h-auto w-full min-w-[52rem]"
               role="img"
-              aria-label="Escrow durum makinesi: DRAFT, AWAITING_PAYMENT, IN_PROGRESS, SUBMITTED, COMPLETED, RELEASED ana hattı ile DISPUTED ve CANCELLED dalları"
+              aria-label={t.diagramLabels.graph}
             >
               {GRAPH_EDGES.map((edge) => (
                 <path
@@ -714,13 +719,13 @@ export function SystemFlow() {
 
           <div className="mt-6 flex flex-wrap gap-x-8 gap-y-3 text-sm text-neutral-500">
             <span className="flex items-center gap-2">
-              <span className="h-2.5 w-6 rounded-full bg-neutral-500" /> Normal akış
+              <span className="h-2.5 w-6 rounded-full bg-neutral-500" /> {t.legendNormal}
             </span>
             <span className="flex items-center gap-2">
-              <span className="h-2.5 w-6 rounded-full bg-amber-400/70" /> İtiraz
+              <span className="h-2.5 w-6 rounded-full bg-amber-400/70" /> {t.legendDispute}
             </span>
             <span className="flex items-center gap-2">
-              <span className="h-2.5 w-6 rounded-full bg-rose-400/60" /> İptal
+              <span className="h-2.5 w-6 rounded-full bg-rose-400/60" /> {t.legendCancel}
             </span>
           </div>
         </div>
@@ -730,7 +735,7 @@ export function SystemFlow() {
       <section data-bento className="px-6 pb-32 md:pb-48">
         <div className="mx-auto max-w-6xl">
           <h2 className="max-w-3xl text-3xl font-bold leading-[1.1] tracking-tight text-white md:text-5xl">
-            Şemayı yerinde tutan dört kural.
+            {t.rulesTitle}
           </h2>
 
           {/* 6 cols x 3 rows = 18 units: 8 + 2 + 2 + 6. No cell is left empty. */}
@@ -746,13 +751,10 @@ export function SystemFlow() {
               <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-neutral-950/75 to-transparent" />
               <div className="relative flex h-full flex-col justify-end p-9 md:p-12">
                 <h3 className="text-3xl font-bold tracking-tight text-white md:text-4xl">
-                  Silinemeyen kayıt defteri
+                  {t.ledgerTitle}
                 </h3>
                 <p className="mt-4 max-w-lg text-base leading-relaxed text-neutral-400">
-                  Durum değişikliği yalnızca defteri aynı işlem içinde yazan tek
-                  bir fonksiyondan geçer. Defterde güncelleme ve silme yoktur;
-                  bir hareket yazıldıktan sonra geri alınamaz, ancak üstüne yeni
-                  bir hareket yazılır.
+                  {t.ledgerBody}
                 </p>
               </div>
             </article>
@@ -761,10 +763,9 @@ export function SystemFlow() {
               data-bento-tile
               className="col-span-2 rounded-3xl border border-white/10 bg-neutral-900 p-8 transition-colors duration-500 hover:bg-neutral-800/80"
             >
-              <h3 className="text-lg font-semibold text-white">Doğrulanmış webhook</h3>
+              <h3 className="text-lg font-semibold text-white">{t.webhookTitle}</h3>
               <p className="mt-2 text-sm leading-relaxed text-neutral-400">
-                Ödeme kuruluşundan gelen her bildirim imzasıyla doğrulanır.
-                Doğrulanmayan bir bildirim hiçbir durumu ilerletmez.
+                {t.webhookBody}
               </p>
             </article>
 
@@ -773,12 +774,11 @@ export function SystemFlow() {
               className="col-span-2 rounded-3xl border border-white/10 bg-neutral-900 p-8 transition-colors duration-500 hover:bg-neutral-800/80"
             >
               <p className="text-4xl font-black tracking-tight text-white">
-                {formatTry(SPLIT.freelancerNetKurus)}
+                {formatTry(SPLIT.freelancerNetKurus, locale)}
               </p>
-              <h3 className="mt-3 text-lg font-semibold text-white">Birebir ödeme</h3>
+              <h3 className="mt-3 text-lg font-semibold text-white">{t.exactTitle}</h3>
               <p className="mt-2 text-sm leading-relaxed text-neutral-400">
-                Ödeme, hesaplanan net tutara tam olarak eşit değilse tetiklenmez.
-                Yaklaşık tutar diye bir şey yoktur.
+                {t.exactBody}
               </p>
             </article>
 
@@ -786,11 +786,9 @@ export function SystemFlow() {
               data-bento-tile
               className="col-span-2 rounded-3xl border border-white/10 bg-neutral-900 p-8 transition-colors duration-500 hover:bg-neutral-800/80 md:col-span-6"
             >
-              <h3 className="text-lg font-semibold text-white">Satır bazında erişim</h3>
+              <h3 className="text-lg font-semibold text-white">{t.rlsTitle}</h3>
               <p className="mt-2 text-sm leading-relaxed text-neutral-400">
-                Freelancer yalnızca kendi işlerini, müşteri yalnızca kendi
-                projelerini görür. İtiraz çözümü ve elle serbest bırakma sadece
-                yöneticide.
+                {t.rlsBody}
               </p>
             </article>
           </div>
@@ -808,20 +806,20 @@ export function SystemFlow() {
             className="font-black leading-[1.02] tracking-[-0.035em] text-white"
             style={{ fontSize: "clamp(2.4rem, 5.2vw, 4.5rem)" }}
           >
-            Şemayı gördünüz. Sıra ilk projede.
+            {t.closingTitle}
           </h2>
           <div className="mt-11 flex flex-wrap justify-center gap-3">
             <Link
               href="/register"
               className="rounded-full bg-white px-9 py-4 text-base font-semibold text-neutral-950 transition-transform duration-300 hover:scale-[1.04]"
             >
-              Erken erişime katıl
+              {t.closingPrimary}
             </Link>
             <Link
-              href="/"
+              href={PUBLIC_ROUTES.home[locale]}
               className="rounded-full border border-white/20 px-9 py-4 text-base font-semibold text-white transition-colors duration-300 hover:bg-white/10"
             >
-              Ana sayfaya dön
+              {t.closingSecondary}
             </Link>
           </div>
         </div>
@@ -831,10 +829,10 @@ export function SystemFlow() {
         <div className="mx-auto flex max-w-6xl flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
           <span className="text-lg font-bold tracking-tight text-white">{BRAND}</span>
           <div className="flex flex-wrap gap-x-8 gap-y-3 text-sm text-neutral-500">
-            <a href="#akis" className="transition-colors hover:text-white">Akış</a>
-            <a href="#dagilim" className="transition-colors hover:text-white">Para dağılımı</a>
-            <a href="#durumlar" className="transition-colors hover:text-white">Durum şeması</a>
-            <Link href="/login" className="transition-colors hover:text-white">Giriş yap</Link>
+            <a href="#akis" className="transition-colors hover:text-white">{t.nav.flow}</a>
+            <a href="#dagilim" className="transition-colors hover:text-white">{t.nav.split}</a>
+            <a href="#durumlar" className="transition-colors hover:text-white">{t.nav.states}</a>
+            <Link href="/login" className="transition-colors hover:text-white">{t.footerLogin}</Link>
           </div>
           <span className="text-sm text-neutral-600">
             {new Date().getFullYear()} {BRAND}

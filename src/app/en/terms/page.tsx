@@ -5,11 +5,11 @@ import { alternatesFor } from "@/lib/i18n/config";
 import { TERMS_COPY } from "@/lib/i18n/dictionaries/terms";
 
 export const metadata: Metadata = {
-  title: TERMS_COPY.tr.metaTitle,
-  description: TERMS_COPY.tr.metaDescription,
+  title: TERMS_COPY.en.metaTitle,
+  description: TERMS_COPY.en.metaDescription,
   alternates: alternatesFor("terms"),
 };
 
-export default function TermsPage() {
-  return <TermsView locale="tr" />;
+export default function EnglishTermsPage() {
+  return <TermsView locale="en" />;
 }

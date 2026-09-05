@@ -17,50 +17,27 @@ import {
   UserCog,
 } from "lucide-react";
 
-import { Mark } from "@/components/brand/mark";
 import { HorizontalAccordion } from "@/components/home/horizontal-accordion";
 import { gsap, useGSAP } from "@/lib/gsap";
 import { QA_TIER_INFO } from "@/lib/validations/delivery";
 import { SiteHeader } from "@/components/layout/site-header";
 import { SiteFooter } from "@/components/layout/site-footer";
+import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/config";
+import { HOME_COPY } from "@/lib/i18n/dictionaries/home";
 
 // Dynamically import WorldMap to avoid SSR issues with canvas/svg if any
 const WorldMap = dynamic(() => import("@/components/ui/world-map"), {
   ssr: false,
 });
 
-const BRAND = "Lancerix";
-
 const HASH =
   "9f2c41ab7e0d5386c1b4a9f70e2d8c35b6a147f9e0c283d5a6b7c8d9e0f1a2b3";
 
-const STEPS = [
-  {
-    title: "1. Sözleşme oluşturulur",
-    body: "İhtiyaçlar, teslim tarihi ve şartlar belirlenir. İki tarafın da onayladığı bu sözleşme kriptografik olarak güvence altına alınır.",
-    icon: FileSignature,
-  },
-  {
-    title: "2. Proje teslim edilir",
-    body: "Geliştirici, hazırladığı uygulamanın kaynak kodunu veya test adresini sisteme yükler ve inceleme süreci başlar.",
-    icon: LinkIcon,
-  },
-  {
-    title: "3. Bağımsız denetim yapılır",
-    body: "Seçtiğiniz pakete göre; yapay zeka destekli otonom bir test aracı veya kıdemli bir yazılım mühendisi projenizi detaylıca inceler.",
-    icon: ScanSearch,
-  },
-  {
-    title: "4. Güvenilir rapor oluşturulur",
-    body: "İnceleme sonucu başarılı ya da başarısız olarak, sonradan asla değiştirilemeyen bir rapora kaydedilip taraflara sunulur.",
-    icon: FileCheck2,
-  },
-  {
-    title: "5. Onay süreci tamamlanır",
-    body: "Müşteri belirtilen süre içinde itirazda bulunmazsa, proje başarılı sayılır. Ödeme, aracı olmadan doğrudan hesabınıza ulaşır.",
-    icon: Clock,
-  },
-] as const;
+/**
+ * One icon per step, in step order. The words live in HOME_COPY, which types
+ * its steps as a five-tuple, so the two lists cannot fall out of step.
+ */
+const STEP_ICONS = [FileSignature, LinkIcon, ScanSearch, FileCheck2, Clock] as const;
 
 const TIERS = ["TIER1", "TIER2", "TIER3", "TIER4"] as const;
 const TIER_ICON = {
@@ -129,9 +106,18 @@ const FIRST_SHOW_THRESHOLD = 5;
 
 export function HomeClient({
   verifiedCount,
-}: Readonly<{ verifiedCount: number | null }>) {
+  locale = DEFAULT_LOCALE,
+}: Readonly<{ verifiedCount: number | null; locale?: Locale }>) {
   const root = useRef<HTMLElement>(null);
   const showVerifiedCount = verifiedCount !== null && verifiedCount >= FIRST_SHOW_THRESHOLD;
+  const t = HOME_COPY[locale];
+  const steps = [
+    { ...t.steps[0], icon: STEP_ICONS[0] },
+    { ...t.steps[1], icon: STEP_ICONS[1] },
+    { ...t.steps[2], icon: STEP_ICONS[2] },
+    { ...t.steps[3], icon: STEP_ICONS[3] },
+    { ...t.steps[4], icon: STEP_ICONS[4] },
+  ];
 
   useGSAP(
     () => {
@@ -163,7 +149,7 @@ export function HomeClient({
 
   return (
     <main ref={root} className="w-full max-w-full overflow-x-hidden bg-background text-foreground">
-      <SiteHeader />
+      <SiteHeader locale={locale} />
 
       {/* --- hero with World Map --------------------------------------------- */}
       <section className="relative overflow-hidden px-6 pt-36 pb-12 text-center md:pt-48 md:pb-16">
@@ -175,18 +161,18 @@ export function HomeClient({
         <div className="relative mx-auto flex max-w-4xl flex-col items-center z-10">
           <span className="mb-8 inline-flex items-center gap-2 rounded-full border border-border glass px-4 py-1.5 text-xs font-medium text-foreground shadow-sm">
             <span className="bg-brand size-1.5 rounded-full animate-pulse" aria-hidden />
-            Bağımsız Kod Doğrulama
+            {t.badge}
           </span>
 
           <h1
             className="font-display max-w-3xl font-medium tracking-tight text-foreground"
             style={{ fontSize: "clamp(2.5rem, 5vw, 4.25rem)", lineHeight: 1.1 }}
           >
-            Projenizin teslimatını şansa bırakmayın.
+            {t.heroTitle}
           </h1>
 
           <p className="mt-6 max-w-2xl text-lg leading-relaxed text-muted-foreground">
-            Yazılım projelerindeki anlaşmazlıkları ortadan kaldırıyoruz. Müşteriyseniz tam istediğiniz kodu teslim aldığınızdan emin olun; geliştiriciyseniz bitirdiğiniz işin haklı onayını anında alın.
+            {t.heroBody}
           </p>
 
           <div className="mt-9 flex flex-wrap justify-center gap-3">
@@ -195,7 +181,7 @@ export function HomeClient({
                 href="/register"
                 className="mac-spring bg-brand text-brand-foreground inline-block rounded-xl px-7 py-3.5 text-base font-medium shadow-md transition-all hover:opacity-90 hover:-translate-y-0.5 active:scale-[0.98]"
               >
-                Hemen başla
+                {t.ctaPrimary}
               </Link>
             </Magnetic>
             <Magnetic>
@@ -203,7 +189,7 @@ export function HomeClient({
                 href="#nasil"
                 className="mac-spring inline-block rounded-xl border border-border bg-background px-7 py-3.5 text-base font-medium text-foreground shadow-sm transition-all hover:bg-muted active:scale-[0.98]"
               >
-                Nasıl çalışır?
+                {t.ctaSecondary}
               </a>
             </Magnetic>
           </div>
@@ -216,20 +202,20 @@ export function HomeClient({
             lineColor="oklch(0.55 0.25 260)"
             dots={[
               {
-                start: { lat: 39.9255, lng: 32.8662, label: "Ankara" },
-                end: { lat: 51.5074, lng: -0.1278, label: "Londra" },
+                start: { lat: 39.9255, lng: 32.8662, label: t.cities.ankara },
+                end: { lat: 51.5074, lng: -0.1278, label: t.cities.london },
               },
               {
-                start: { lat: 39.9255, lng: 32.8662, label: "Ankara" },
-                end: { lat: 40.7128, lng: -74.006, label: "New York" },
+                start: { lat: 39.9255, lng: 32.8662, label: t.cities.ankara },
+                end: { lat: 40.7128, lng: -74.006, label: t.cities.newYork },
               },
               {
-                start: { lat: 39.9255, lng: 32.8662, label: "Ankara" },
-                end: { lat: 35.6764, lng: 139.65, label: "Tokyo" },
+                start: { lat: 39.9255, lng: 32.8662, label: t.cities.ankara },
+                end: { lat: 35.6764, lng: 139.65, label: t.cities.tokyo },
               },
               {
-                start: { lat: 39.9255, lng: 32.8662, label: "Ankara" },
-                end: { lat: -33.8688, lng: 151.2093, label: "Sidney" },
+                start: { lat: 39.9255, lng: 32.8662, label: t.cities.ankara },
+                end: { lat: -33.8688, lng: 151.2093, label: t.cities.sydney },
               }
             ]}
           />
@@ -239,9 +225,7 @@ export function HomeClient({
       {/* --- what this is, in one direct paragraph --------------------------- */}
       <section className="mx-auto max-w-3xl px-6 py-24 text-center md:py-32">
         <p className="text-2xl leading-relaxed font-medium tracking-tight text-foreground md:text-[1.75rem]">
-          Biz bir aracı kurum değil, tarafsız bir hakemiz. Paranızı bünyemizde tutmuyoruz (escrow yok) — ödeme
-          taraflar arasında doğrudan çözülür. Projenin testi ve denetimi için seçtiğiniz bağımsız QA paketine göre
-          ücretlendirme yapıyoruz.
+          {t.positioning}
         </p>
       </section>
 
@@ -255,26 +239,26 @@ export function HomeClient({
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="mono text-[0.68rem] tracking-[0.1em] text-muted-foreground/80">
-                  LX-8FQ2K · QA RAPORU
+                  {t.reportCardId}
                 </p>
                 <p className="mt-1.5 text-base font-medium text-foreground">
-                  Ödeme entegrasyonu — kriter doğrulaması
+                  {t.reportCardTitle}
                 </p>
               </div>
               <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
                 <CheckCircle2 className="size-3.5" aria-hidden />
-                ONAYLANDI
+                {t.reportCardStatus}
               </span>
             </div>
 
             <dl className="mt-6 grid grid-cols-2 gap-y-3 text-sm">
               <div>
-                <dt className="text-xs text-muted-foreground/80">Test Tipi</dt>
-                <dd className="mt-0.5 text-foreground">Otonom QA</dd>
+                <dt className="text-xs text-muted-foreground/80">{t.reportTestTypeLabel}</dt>
+                <dd className="mt-0.5 text-foreground">{t.reportTestTypeValue}</dd>
               </div>
               <div>
-                <dt className="text-xs text-muted-foreground/80">Durum</dt>
-                <dd className="mt-0.5 text-foreground">Tüm kriterler sağlandı</dd>
+                <dt className="text-xs text-muted-foreground/80">{t.reportStateLabel}</dt>
+                <dd className="mt-0.5 text-foreground">{t.reportStateValue}</dd>
               </div>
             </dl>
 
@@ -283,7 +267,7 @@ export function HomeClient({
                 {HASH}
               </p>
               <p className="mt-1.5 text-xs text-muted-foreground/80">
-                Kriptografik özet · Bu rapor kesinlikle değiştirilemez
+                {t.hashCaption}
               </p>
             </div>
           </GlassCard>
@@ -291,9 +275,9 @@ export function HomeClient({
           <GlassCard data-bento-card className="col-span-1 flex flex-col justify-between p-6">
             <Ban className="text-brand size-7" aria-hidden strokeWidth={1.75} />
             <div>
-              <p className="text-sm font-semibold text-foreground">Paranıza Dokunmuyoruz</p>
+              <p className="text-sm font-semibold text-foreground">{t.noMoneyTitle}</p>
               <p className="mt-1 text-sm leading-snug text-muted-foreground">
-                Ödemeler sizin belirlediğiniz kanallar üzerinden, doğrudan taraflar arasında gerçekleşir.
+                {t.noMoneyBody}
               </p>
             </div>
           </GlassCard>
@@ -301,9 +285,9 @@ export function HomeClient({
           <GlassCard data-bento-card className="col-span-1 flex flex-col justify-between p-6">
             <ShieldCheck className="text-brand size-7" aria-hidden strokeWidth={1.75} />
             <div>
-              <p className="text-sm font-semibold text-foreground">Tarafsız İnceleme</p>
+              <p className="text-sm font-semibold text-foreground">{t.impartialTitle}</p>
               <p className="mt-1 text-sm leading-snug text-muted-foreground">
-                Kod kalitesini ve proje isterlerini, hiçbir tarafa bağlı kalmadan tamamen objektif bir şekilde denetliyoruz.
+                {t.impartialBody}
               </p>
             </div>
           </GlassCard>
@@ -313,9 +297,9 @@ export function HomeClient({
             className="col-span-1 flex flex-col justify-center p-6 sm:col-span-2 lg:col-span-2"
           >
             <FileCheck2 className="text-brand mb-3 size-7" aria-hidden strokeWidth={1.75} />
-            <p className="text-sm font-semibold text-foreground">Değiştirilemez Kayıtlar</p>
+            <p className="text-sm font-semibold text-foreground">{t.immutableTitle}</p>
             <p className="mt-1 max-w-md text-sm leading-snug text-muted-foreground">
-              Projedeki her ilerleme zaman damgasıyla birlikte şifrelenir. Olası bir anlaşmazlık durumunda, geriye dönük en güvenilir kanıtı bu kayıtlar oluşturur.
+              {t.immutableBody}
             </p>
           </GlassCard>
         </div>
@@ -325,44 +309,43 @@ export function HomeClient({
       <section id="nasil" className="px-6 pb-24 md:pb-32 bg-muted/20">
         <div className="mx-auto max-w-6xl">
           <div className="mb-8 max-w-lg">
-            <p className="text-brand mono mb-2 text-xs tracking-[0.14em]">ADIM ADIM</p>
+            <p className="text-brand mono mb-2 text-xs tracking-[0.14em]">{t.stepsEyebrow}</p>
             <h2 className="font-display text-3xl font-medium tracking-tight text-foreground md:text-4xl">
-              Sistem nasıl işliyor?
+              {t.stepsTitle}
             </h2>
             <p className="mt-3 text-base leading-relaxed text-muted-foreground">
-              Sürecin nasıl ilerlediğini görmek için adımların üzerine gelin.
+              {t.stepsBody}
             </p>
           </div>
-          <HorizontalAccordion slices={STEPS} theme="light" />
+          <HorizontalAccordion slices={steps} theme="light" />
         </div>
       </section>
 
       {/* --- about us / stats --------------------------------------------- */}
       <section id="hakkimizda" className="px-6 pb-24 md:pb-32">
         <div className="mx-auto max-w-6xl text-center">
-          <p className="text-brand mono mb-2 text-xs tracking-[0.14em]">BİZ KİMİZ</p>
+          <p className="text-brand mono mb-2 text-xs tracking-[0.14em]">{t.aboutEyebrow}</p>
           <h2 className="font-display text-3xl font-medium tracking-tight text-foreground md:text-4xl">
-            Yazılım dünyasındaki güven problemini çözüyoruz.
+            {t.aboutTitle}
           </h2>
           <p className="mx-auto mt-4 max-w-2xl text-lg leading-relaxed text-muted-foreground">
-            Freelance ve ajans projelerinde yaşanan en büyük sorun, işin teslimi ve onayı sırasındaki belirsizliklerdir.
-            Biz, kimsenin hakkının yenmemesi için süreci tamamen şeffaf, test edilebilir ve kayıt altında tutulabilir bir altyapıya dönüştürüyoruz.
+            {t.aboutBody}
           </p>
 
           <div className={`mt-12 grid gap-6 sm:grid-cols-2 ${showVerifiedCount ? "lg:grid-cols-3" : ""}`}>
             {showVerifiedCount ? (
               <GlassCard className="flex flex-col items-center justify-center p-8">
                 <span className="text-4xl font-extrabold text-brand">{verifiedCount}</span>
-                <span className="mt-2 text-sm font-medium text-foreground">Sözleşme Doğrulandı</span>
+                <span className="mt-2 text-sm font-medium text-foreground">{t.statVerified}</span>
               </GlassCard>
             ) : null}
             <GlassCard className="flex flex-col items-center justify-center p-8">
               <span className="text-4xl font-extrabold text-foreground">SHA-256</span>
-              <span className="mt-2 text-sm font-medium text-muted-foreground">Kriptografik İmza</span>
+              <span className="mt-2 text-sm font-medium text-muted-foreground">{t.statSignature}</span>
             </GlassCard>
             <GlassCard className="flex flex-col items-center justify-center p-8">
-              <span className="text-4xl font-extrabold text-brand">5 Gün</span>
-              <span className="mt-2 text-sm font-medium text-foreground">Otomatik Kabul Süresi</span>
+              <span className="text-4xl font-extrabold text-brand">{t.statWindowValue}</span>
+              <span className="mt-2 text-sm font-medium text-foreground">{t.statWindowLabel}</span>
             </GlassCard>
           </div>
         </div>
@@ -372,15 +355,18 @@ export function HomeClient({
       <section id="fiyat" className="px-6 pb-24 md:pb-32 bg-muted/30">
         <div className="mx-auto max-w-6xl">
           <div className="mb-10 text-center">
-            <p className="text-brand mono mb-2 text-xs tracking-[0.14em]">DOĞRULAMA YÖNTEMLERİ</p>
+            <p className="text-brand mono mb-2 text-xs tracking-[0.14em]">{t.pricingEyebrow}</p>
             <h2 className="font-display text-3xl font-medium tracking-tight text-foreground md:text-4xl">
-              Projenize en uygun yöntemi seçin.
+              {t.pricingTitle}
             </h2>
           </div>
 
           <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-4">
             {TIERS.map((tier) => {
+              // Availability stays with QA_TIER_INFO (CLAUDE.md: source of
+              // truth); only the words come from the dictionary.
               const info = QA_TIER_INFO[tier];
+              const copy = t.tiers[tier];
               const Icon = TIER_ICON[tier];
               const featured = tier === "TIER2" && info.available;
               return (
@@ -390,17 +376,17 @@ export function HomeClient({
                 >
                   {!info.available ? (
                     <span className="absolute top-4 right-4 rounded-full bg-muted/80 px-2 py-0.5 text-[0.65rem] font-medium tracking-wide text-muted-foreground uppercase">
-                      Yakında
+                      {t.comingSoon}
                     </span>
                   ) : null}
                   <Icon className="text-brand size-6" aria-hidden strokeWidth={1.75} />
                   <div>
-                    <p className="text-base font-semibold text-foreground">{info.label}</p>
-                    <p className="mono mt-1 text-sm text-muted-foreground">{info.price}</p>
+                    <p className="text-base font-semibold text-foreground">{copy.label}</p>
+                    <p className="mono mt-1 text-sm text-muted-foreground">{copy.price}</p>
                   </div>
-                  <p className="text-sm leading-relaxed text-muted-foreground">{info.hint}</p>
+                  <p className="text-sm leading-relaxed text-muted-foreground">{copy.hint}</p>
                   <ul className="mt-1 flex flex-col gap-1.5 border-t border-border/50 pt-4">
-                    {info.details.map((d) => (
+                    {copy.details.map((d) => (
                       <li key={d} className="flex items-start gap-1.5 text-xs text-muted-foreground">
                         <CheckCircle2 className="text-brand mt-0.5 size-3.5 shrink-0" aria-hidden />
                         {d}
@@ -424,7 +410,7 @@ export function HomeClient({
             className="font-display font-medium tracking-[-0.01em] text-foreground"
             style={{ fontSize: "clamp(1.9rem, 4vw, 3rem)", lineHeight: 1.15 }}
           >
-            İşinizi güvence altına alın.
+            {t.closingTitle}
           </h2>
           <div className="mt-8 flex flex-wrap justify-center gap-3">
             <Magnetic>
@@ -432,7 +418,7 @@ export function HomeClient({
                 href="/register"
                 className="mac-spring bg-brand text-brand-foreground inline-flex items-center gap-2 rounded-xl px-7 py-3.5 text-base font-medium shadow-md transition-all hover:opacity-90 active:scale-[0.98]"
               >
-                Ücretsiz Başla
+                {t.closingPrimary}
                 <ArrowRight className="size-4" aria-hidden />
               </Link>
             </Magnetic>
@@ -441,14 +427,14 @@ export function HomeClient({
                 href="/login"
                 className="mac-spring inline-block rounded-xl border border-border bg-background px-7 py-3.5 text-base font-medium text-foreground shadow-sm transition-all hover:bg-muted active:scale-[0.98]"
               >
-                Giriş yap
+                {t.closingSecondary}
               </Link>
             </Magnetic>
           </div>
         </div>
       </section>
 
-      <SiteFooter />
+      <SiteFooter locale={locale} />
     </main>
   );
 }
