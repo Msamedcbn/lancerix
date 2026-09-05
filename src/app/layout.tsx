@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { Plus_Jakarta_Sans, IBM_Plex_Mono } from "next/font/google";
 
+import { appUrl } from "@/lib/env.server";
 import { localeFromPath } from "@/lib/i18n/config";
 
 import "./globals.css";
@@ -28,9 +29,10 @@ const jakarta = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(appUrl()),
   title: "Lancerix — Sessizlik kabul sayılır",
   description:
-    "Kurumsal müşteriden alacağın 90 gün beklemesin. İmzalı sözleşme, aşamalı teslim ve süresi dolduğunda kendiliğinden gerçekleşen kabul — hepsi silinemeyen bir deftere yazılır.",
+    "Bağımsız kod doğrulama: freelancer ve ajans projelerinde teslim ile kabul arasındaki belirsizliği, kabul kriterlerine dayalı, zaman damgalı bir raporla ortadan kaldırıyoruz.",
 };
 
 /**

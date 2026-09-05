@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { Briefcase, Building2, ClipboardList } from "lucide-react";
 import Link from "next/link";
 
@@ -5,6 +6,12 @@ import { signOut } from "@/app/(auth)/actions";
 import { Sidebar, type NavItem } from "@/components/dashboard-nav";
 import { PublicIdBadge } from "@/components/public-id-badge";
 import { requireSession, type UserRole } from "@/lib/auth/session";
+
+/** Every page behind this layout is one signed-in user's own data -- never a
+ * page for a search result to send a stranger to. */
+export const metadata: Metadata = {
+  robots: { index: false, follow: false },
+};
 
 /**
  * One nav per role. The areas mirror the split in CLAUDE.md: a freelancer sees
