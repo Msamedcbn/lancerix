@@ -46,7 +46,11 @@ export type HomeCopy = {
   immutableBody: string;
   stepsEyebrow: string;
   stepsTitle: string;
+  /** Desktop only -- describes the hover interaction the accordion has there. */
   stepsBody: string;
+  /** Mobile only -- the accordion is a plain vertical list there, so there is
+   * no gesture to explain. */
+  stepsBodyMobile: string;
   /** Exactly five, in order -- STEP_ICONS in home-client.tsx pairs by index. */
   steps: readonly [Step, Step, Step, Step, Step];
   aboutEyebrow: string;
@@ -105,6 +109,7 @@ export const HOME_COPY: Record<Locale, HomeCopy> = {
     stepsEyebrow: "ADIM ADIM",
     stepsTitle: "Sistem nasıl işliyor?",
     stepsBody: "Sürecin nasıl ilerlediğini görmek için adımların üzerine gelin.",
+    stepsBodyMobile: "Sürecin baştan sona nasıl ilerlediği aşağıda, sırasıyla.",
     steps: [
       {
         title: "1. Sözleşme oluşturulur",
@@ -223,6 +228,7 @@ export const HOME_COPY: Record<Locale, HomeCopy> = {
     stepsEyebrow: "STEP BY STEP",
     stepsTitle: "How the system works",
     stepsBody: "Hover over a step to see what happens at that point in the process.",
+    stepsBodyMobile: "How the process runs from start to finish, in order.",
     steps: [
       {
         title: "1. The contract is drawn up",

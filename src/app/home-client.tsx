@@ -313,7 +313,10 @@ export function HomeClient({
             <h2 className="font-display text-3xl font-medium tracking-tight text-foreground md:text-4xl">
               {t.stepsTitle}
             </h2>
-            <p className="mt-3 text-base leading-relaxed text-muted-foreground">
+            <p className="mt-3 text-base leading-relaxed text-muted-foreground md:hidden">
+              {t.stepsBodyMobile}
+            </p>
+            <p className="mt-3 hidden text-base leading-relaxed text-muted-foreground md:block">
               {t.stepsBody}
             </p>
           </div>

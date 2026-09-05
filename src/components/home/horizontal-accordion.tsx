@@ -34,6 +34,13 @@ const THEME = {
  * transform equivalent for "this panel is now wider than that one." Every
  * slice stays keyboard-reachable as a real button, so focus does the same job
  * hover does rather than being a mouse-only party trick.
+ *
+ * The whole recipe is a mouse gesture, though: there is no hover on a phone,
+ * so five panels would sit frozen at their collapsed width forever, and the
+ * one active-by-default panel would have its body copy wrapping one word per
+ * line into a sliver rather than an actual layout. Below md this renders a
+ * plain vertical list instead — every slice's copy visible at once, no
+ * gesture required.
  */
 export function HorizontalAccordion({
   slices,
@@ -43,52 +50,72 @@ export function HorizontalAccordion({
   const t = THEME[theme];
 
   return (
-    <div className="flex h-[26rem] w-full gap-2 overflow-hidden rounded-2xl md:h-[30rem]">
-      {slices.map((slice, i) => {
-        const isActive = i === active;
-        const Icon = slice.icon;
-        return (
-          <button
-            key={slice.title}
-            type="button"
-            onMouseEnter={() => setActive(i)}
-            onFocus={() => setActive(i)}
-            aria-expanded={isActive}
-            className={`group relative flex shrink-0 flex-col justify-end overflow-hidden rounded-2xl p-5 text-left transition-[flex-grow] duration-500 [transition-timing-function:var(--ease-out-quint)] ${t.panel} ${
-              isActive ? "flex-[5]" : "flex-[1]"
-            }`}
-            style={{ minWidth: isActive ? undefined : "3.75rem" }}
-          >
+    <>
+      <div className="flex flex-col gap-3 md:hidden">
+        {slices.map((slice) => {
+          const Icon = slice.icon;
+          return (
             <div
-              aria-hidden
-              className={`absolute inset-0 -z-10 opacity-0 transition-opacity duration-500 ${t.glow} ${
-                isActive ? "opacity-100" : ""
-              }`}
-            />
-
-            <Icon
-              className={`mb-4 size-5 shrink-0 transition-colors duration-300 ${isActive ? t.iconActive : t.icon}`}
-              strokeWidth={1.75}
-            />
-
-            <span
-              className={`text-[0.95rem] leading-tight font-medium whitespace-nowrap transition-[writing-mode] ${t.title} ${
-                isActive ? "" : "[writing-mode:vertical-rl]"
-              }`}
+              key={slice.title}
+              className={`rounded-2xl p-5 ${t.panel}`}
             >
-              {slice.title}
-            </span>
+              <Icon className={`mb-3 size-5 shrink-0 ${t.iconActive}`} strokeWidth={1.75} />
+              <p className={`text-[0.95rem] leading-tight font-medium ${t.title}`}>
+                {slice.title}
+              </p>
+              <p className={`mt-2 text-sm leading-relaxed ${t.body}`}>{slice.body}</p>
+            </div>
+          );
+        })}
+      </div>
 
-            <p
-              className={`mt-3 max-w-xs text-sm leading-relaxed transition-opacity duration-300 ${t.body} ${
-                isActive ? "opacity-100 delay-150" : "pointer-events-none opacity-0"
+      <div className="hidden h-[30rem] w-full gap-2 overflow-hidden rounded-2xl md:flex">
+        {slices.map((slice, i) => {
+          const isActive = i === active;
+          const Icon = slice.icon;
+          return (
+            <button
+              key={slice.title}
+              type="button"
+              onMouseEnter={() => setActive(i)}
+              onFocus={() => setActive(i)}
+              aria-expanded={isActive}
+              className={`group relative flex shrink-0 flex-col justify-end overflow-hidden rounded-2xl p-5 text-left transition-[flex-grow] duration-500 [transition-timing-function:var(--ease-out-quint)] ${t.panel} ${
+                isActive ? "flex-[5]" : "flex-[1]"
               }`}
+              style={{ minWidth: isActive ? undefined : "3.75rem" }}
             >
-              {slice.body}
-            </p>
-          </button>
-        );
-      })}
-    </div>
+              <div
+                aria-hidden
+                className={`absolute inset-0 -z-10 opacity-0 transition-opacity duration-500 ${t.glow} ${
+                  isActive ? "opacity-100" : ""
+                }`}
+              />
+
+              <Icon
+                className={`mb-4 size-5 shrink-0 transition-colors duration-300 ${isActive ? t.iconActive : t.icon}`}
+                strokeWidth={1.75}
+              />
+
+              <span
+                className={`text-[0.95rem] leading-tight font-medium whitespace-nowrap transition-[writing-mode] ${t.title} ${
+                  isActive ? "" : "[writing-mode:vertical-rl]"
+                }`}
+              >
+                {slice.title}
+              </span>
+
+              <p
+                className={`mt-3 max-w-xs text-sm leading-relaxed transition-opacity duration-300 ${t.body} ${
+                  isActive ? "opacity-100 delay-150" : "pointer-events-none opacity-0"
+                }`}
+              >
+                {slice.body}
+              </p>
+            </button>
+          );
+        })}
+      </div>
+    </>
   );
 }
