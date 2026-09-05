@@ -15,14 +15,10 @@ import { counterpartPath, PUBLIC_ROUTES, type Locale } from "@/lib/i18n/config";
  * a registered public page (which should not happen, since this only renders
  * inside them), it falls back to that locale's home rather than rendering a
  * dead link.
- *
- * `variant` exists because /nasil-calisir is a dark page with its own chrome
- * and the shared light header styling would be invisible on it.
  */
 export function LanguageSwitcher({
   locale,
-  variant = "light",
-}: Readonly<{ locale: Locale; variant?: "light" | "dark" }>) {
+}: Readonly<{ locale: Locale }>) {
   const pathname = usePathname();
   const target: Locale = locale === "tr" ? "en" : "tr";
   // counterpartPath returns a plain string; every value it can produce is one
@@ -31,17 +27,12 @@ export function LanguageSwitcher({
   const href = (counterpartPath(pathname, target) ??
     PUBLIC_ROUTES.home[target]) as Route;
 
-  const styles =
-    variant === "dark"
-      ? "border-white/15 text-neutral-400 hover:bg-white/5 hover:text-white"
-      : "border-border text-muted-foreground hover:bg-muted hover:text-foreground";
-
   return (
     <Link
       href={href}
       hrefLang={target}
       aria-label={target === "en" ? "Switch to English" : "Türkçeye geç"}
-      className={`rounded-full border px-2.5 py-1 text-xs font-semibold uppercase tracking-wide transition-colors ${styles}`}
+      className="rounded-full border border-border px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
     >
       {target}
     </Link>

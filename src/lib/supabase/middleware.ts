@@ -4,9 +4,6 @@ import { NextResponse, type NextRequest } from "next/server";
 import { env, isSupabaseConfigured } from "@/lib/env";
 import type { Database } from "@/lib/supabase/database.types";
 
-// /nasil-calisir is marketing, linked from the landing footer. It was missing
-// here, so the one page explaining the system asked visitors to log in first.
-//
 // /sartlar (linked from the signing checkbox and the landing footer) and
 // /report (Faz E #1's shareable QA report link) had the same bug: both are
 // meant to be readable by someone with no account at all -- a prospective
@@ -24,7 +21,6 @@ const PUBLIC_ROUTES = [
   "/register",
   "/auth",
   "/en",
-  "/nasil-calisir",
   "/profile",
   "/sartlar",
   "/yol-haritasi",

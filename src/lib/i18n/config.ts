@@ -26,7 +26,6 @@ export const DEFAULT_LOCALE: Locale = "tr";
  */
 export const PUBLIC_ROUTES = {
   home: { tr: "/", en: "/en" },
-  howItWorks: { tr: "/nasil-calisir", en: "/en/how-it-works" },
   terms: { tr: "/sartlar", en: "/en/terms" },
   roadmap: { tr: "/yol-haritasi", en: "/en/roadmap" },
 } as const satisfies Record<string, Record<Locale, string>>;
