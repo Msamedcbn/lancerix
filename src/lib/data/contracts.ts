@@ -424,6 +424,68 @@ export async function listDisputes() {
  * only id, full_name, and public_id. Selecting the profiles table directly would be
  * refused for a counterparty, and widening that policy would expose their TCKN.
  */
+export type PreviousClient = {
+  id: string;
+  name: string;
+  publicId: string;
+  contractCount: number;
+  lastContractAt: string;
+};
+
+/**
+ * Clients this freelancer has already worked with, most recent first.
+ *
+ * The contract wizard's only way to name a counterparty was to type their
+ * eight-character Lancerix ID from memory, every time, including the fifth
+ * project with the same client. Repeat clients are the economics of freelance
+ * work and the platform already held the answer -- it just never read it back.
+ *
+ * Invited-but-unclaimed contracts are skipped: client_id is null until the
+ * invite is claimed, so there is no account to pick.
+ */
+export async function listPreviousClients(
+  freelancerId: string,
+): Promise<PreviousClient[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("contracts")
+    .select("client_id, created_at")
+    .eq("freelancer_id", freelancerId)
+    .not("client_id", "is", null)
+    .order("created_at", { ascending: false });
+
+  if (error) throw error;
+
+  // Ordered newest-first, so the first row seen per client is their latest.
+  const byClient = new Map<string, { count: number; lastAt: string }>();
+  for (const row of data ?? []) {
+    if (!row.client_id) continue;
+    const seen = byClient.get(row.client_id);
+    if (seen) seen.count += 1;
+    else byClient.set(row.client_id, { count: 1, lastAt: row.created_at });
+  }
+
+  if (byClient.size === 0) return [];
+
+  const names = await displayNames([...byClient.keys()]);
+
+  return [...byClient.entries()].flatMap(([id, { count, lastAt }]) => {
+    const profile = names.get(id);
+    // A name that will not resolve cannot be rendered as a choice; dropping it
+    // is better than a button labelled with a UUID.
+    if (!profile) return [];
+    return [
+      {
+        id,
+        name: profile.name,
+        publicId: profile.publicId,
+        contractCount: count,
+        lastContractAt: lastAt,
+      },
+    ];
+  });
+}
+
 async function displayNames(
   ids: Array<string | null>,
 ): Promise<Map<string, { name: string; publicId: string }>> {

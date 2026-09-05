@@ -4,17 +4,17 @@ import { requireRole } from "@/lib/auth/session";
 import { DEFAULT_PLATFORM_FEE_BPS } from "@/lib/escrow/money";
 import { DEFAULT_STOPAJ_BPS } from "@/lib/tax/stopaj";
 import { payoutBlockers } from "@/lib/validations/profile";
+import { listPreviousClients } from "@/lib/data/contracts";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function NewContractPage() {
   const session = await requireRole("FREELANCER");
 
   const supabase = await createClient();
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("tckn, iban")
-    .eq("id", session.userId)
-    .single();
+  const [{ data: profile }, previousClients] = await Promise.all([
+    supabase.from("profiles").select("tckn, iban").eq("id", session.userId).single(),
+    listPreviousClients(session.userId),
+  ]);
 
   // Only meaningful for QA_PLUS_ESCROW, which pays out through the platform.
   // A QA_ONLY contract settles payment directly between the parties, so
@@ -30,10 +30,14 @@ export default async function NewContractPage() {
         subtitle="Anlaşmayı ve aşamalarını kur"
       />
 
+      {/* Keyed by user so two accounts sharing one browser never restore each
+          other's half-written contract. */}
       <ContractForm
         feeBps={DEFAULT_PLATFORM_FEE_BPS}
         stopajBps={DEFAULT_STOPAJ_BPS}
         payoutBlockers={missing}
+        draftKey={`lancerix:contract-draft:${session.userId}`}
+        previousClients={previousClients}
       />
     </>
   );

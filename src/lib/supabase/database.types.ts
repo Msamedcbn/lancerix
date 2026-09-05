@@ -201,6 +201,39 @@ export type Database = {
           },
         ]
       }
+      contract_message_notices: {
+        Row: {
+          contract_id: string
+          notified_at: string
+          recipient_id: string
+        }
+        Insert: {
+          contract_id: string
+          notified_at?: string
+          recipient_id: string
+        }
+        Update: {
+          contract_id?: string
+          notified_at?: string
+          recipient_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contract_message_notices_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contract_message_notices_recipient_id_fkey"
+            columns: ["recipient_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contract_messages: {
         Row: {
           body: string

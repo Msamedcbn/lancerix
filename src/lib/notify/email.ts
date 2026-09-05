@@ -160,6 +160,53 @@ export async function notifySignatureRequested({
   });
 }
 
+/**
+ * A new message on a contract thread.
+ *
+ * The body is deliberately not included: the thread is part of the contract
+ * record and lives behind auth, and forwarding it into an inbox would put
+ * contract correspondence somewhere neither party's RLS reaches. A preview of
+ * the first line is enough to tell someone whether to open it now.
+ *
+ * Debouncing is the caller's job -- see postMessage in
+ * contracts/[id]/actions/messages.ts -- because whether to send at all depends
+ * on thread state this function has no business reading.
+ */
+export async function notifyNewMessage({
+  toUserId,
+  fallbackEmail,
+  contractId,
+  contractTitle,
+  senderName,
+  preview,
+}: Readonly<{
+  toUserId: string | null;
+  fallbackEmail: string;
+  contractId: string;
+  contractTitle: string;
+  senderName: string;
+  preview: string;
+}>): Promise<SendResult> {
+  const to = await addressFor(toUserId, fallbackEmail);
+  if (!to) return { ok: false, reason: "no address on file for that account" };
+
+  return sendEmail({
+    to,
+    subject: `Yeni mesaj: ${contractTitle}`,
+    body: [
+      `${senderName} sözleşme yazışmasına bir mesaj bıraktı.`,
+      "",
+      `Sözleşme: ${contractTitle}`,
+      `"${preview}"`,
+      "",
+      `Yanıtla: ${appUrlFor(`/contracts/${contractId}`)}`,
+      "",
+      "Yazışma sözleşme kaydının parçasıdır; buradan yanıtlaman kaydın",
+      "eksiksiz kalmasını sağlar.",
+    ].join("\n"),
+  });
+}
+
 export async function notifyDelivery({
   toUserId,
   fallbackEmail,

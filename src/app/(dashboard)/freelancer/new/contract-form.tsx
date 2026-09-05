@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 
 import {
   createContract,
@@ -12,6 +12,7 @@ import {
 } from "@/app/(dashboard)/actions";
 import { Field, TextArea, TextInput } from "@/components/field";
 import { FormFeedback, SubmitButton } from "@/components/form-feedback";
+import type { PreviousClient } from "@/lib/data/contracts";
 import {
   PROJECT_CATEGORIES,
   PROJECT_CATEGORY_INFO,
@@ -45,6 +46,77 @@ const blankPhase = (id: number): Phase => ({
   items: [],
 });
 const blankPhaseItem = (id: number): PhaseItem => ({ id, title: "" });
+
+/* ─────────────────────── Draft persistence ──────────────────── */
+
+/**
+ * The wizard used to hold four steps of work -- counterparty, a long scope
+ * text, an amount, phases and their checklist items -- in React state alone.
+ * Nothing reached a server until "Sözleşmeyi Oluştur", so a refresh, a closed
+ * tab or a stray back gesture threw all of it away. This is the longest single
+ * sitting a freelancer has before they earn anything; losing it here loses the
+ * user, not just the form.
+ *
+ * localStorage rather than a DRAFT contract row on purpose: contracts.status
+ * already defaults to DRAFT and listContracts does not filter on it, so
+ * writing rows here would put half-written contracts on the client's dashboard
+ * next to real ones. Separating "not yet sent" from "sent" is a schema and RLS
+ * change; this is not the place to smuggle it in.
+ *
+ * The cost of the browser-local choice, stated plainly: a draft does not
+ * follow the user to another device.
+ */
+const DRAFT_VERSION = 1;
+const DRAFT_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+const DRAFT_SAVE_DEBOUNCE_MS = 500;
+
+/** Step 3 renders a server-built preview, so a restore never lands past 2. */
+const MAX_RESTORED_STEP = 2;
+
+type DraftSnapshot = {
+  v: number;
+  savedAt: number;
+  step: number;
+  projectCategory: ProjectCategory;
+  clientPublicId: string;
+  useInvite: boolean;
+  inviteEmail: string;
+  companyId: string;
+  title: string;
+  scopeOfWork: string;
+  plannedStartDate: string;
+  projectAmount: string;
+  phases: Phase[];
+};
+
+/** Nothing typed yet means nothing worth restoring -- and nothing worth storing. */
+function isEmptyDraft(d: Omit<DraftSnapshot, "v" | "savedAt" | "step">): boolean {
+  return (
+    d.title.trim() === "" &&
+    d.scopeOfWork.trim() === "" &&
+    d.projectAmount.trim() === "" &&
+    d.plannedStartDate === "" &&
+    d.clientPublicId.trim() === "" &&
+    d.inviteEmail.trim() === "" &&
+    d.phases.length === 0
+  );
+}
+
+function readDraft(key: string): DraftSnapshot | null {
+  try {
+    const raw = window.localStorage.getItem(key);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as DraftSnapshot;
+    if (parsed.v !== DRAFT_VERSION) return null;
+    if (Date.now() - parsed.savedAt > DRAFT_MAX_AGE_MS) return null;
+    if (isEmptyDraft(parsed)) return null;
+    return parsed;
+  } catch {
+    // Private mode, cleared storage, or a shape from an older build. A draft
+    // that cannot be read is the same as no draft.
+    return null;
+  }
+}
 
 /* ────────────────────────── Step Bar ────────────────────────── */
 function StepBar({ current }: Readonly<{ current: number }>) {
@@ -201,7 +273,15 @@ export function ContractForm({
   feeBps,
   stopajBps,
   payoutBlockers,
-}: Readonly<{ feeBps: number; stopajBps: number; payoutBlockers: string[] }>) {
+  draftKey,
+  previousClients,
+}: Readonly<{
+  feeBps: number;
+  stopajBps: number;
+  payoutBlockers: string[];
+  draftKey: string;
+  previousClients: readonly PreviousClient[];
+}>) {
   const [lookup, lookupAction] = useActionState(findCounterparty, LOOKUP_INITIAL);
   const [preview, previewAction] = useActionState(previewContract, PREVIEW_INITIAL);
   const [state, action] = useActionState(createContract, FORM_INITIAL);
@@ -218,6 +298,107 @@ export function ContractForm({
   const [plannedStartDate, setPlannedStartDate] = useState("");
   const [projectAmount, setProjectAmount] = useState("");
   const [phases, setPhases] = useState<Phase[]>([]);
+  const [restoredAt, setRestoredAt] = useState<number | null>(null);
+
+  // Restore runs in an effect, not in useState's initialiser: localStorage
+  // does not exist during SSR, and seeding state from it on the first client
+  // render would be a hydration mismatch.
+  const restoreDone = useRef(false);
+  useEffect(() => {
+    if (restoreDone.current) return;
+    restoreDone.current = true;
+
+    const draft = readDraft(draftKey);
+    if (!draft) return;
+
+    setStep(Math.min(draft.step, MAX_RESTORED_STEP));
+    setProjectCategory(draft.projectCategory);
+    setClientPublicId(draft.clientPublicId);
+    setUseInvite(draft.useInvite);
+    setInviteEmail(draft.inviteEmail);
+    setCompanyId(draft.companyId);
+    setTitle(draft.title);
+    setScopeOfWork(draft.scopeOfWork);
+    setPlannedStartDate(draft.plannedStartDate);
+    setProjectAmount(draft.projectAmount);
+    setPhases(draft.phases);
+    setRestoredAt(draft.savedAt);
+  }, [draftKey]);
+
+  // Saving pauses the moment the contract is submitted, so a successful
+  // creation (which redirects away, and never re-renders this component)
+  // cannot leave the next contract prefilled with this one. If the server
+  // rejects it instead, the next keystroke resumes saving -- see the onChange
+  // reset in resume() below.
+  const savingPaused = useRef(false);
+  useEffect(() => {
+    if (state.error) savingPaused.current = false;
+  }, [state]);
+
+  useEffect(() => {
+    if (!restoreDone.current || savingPaused.current) return;
+
+    const snapshot: DraftSnapshot = {
+      v: DRAFT_VERSION,
+      savedAt: Date.now(),
+      step,
+      projectCategory,
+      clientPublicId,
+      useInvite,
+      inviteEmail,
+      companyId,
+      title,
+      scopeOfWork,
+      plannedStartDate,
+      projectAmount,
+      phases,
+    };
+
+    const timer = setTimeout(() => {
+      try {
+        if (isEmptyDraft(snapshot)) window.localStorage.removeItem(draftKey);
+        else window.localStorage.setItem(draftKey, JSON.stringify(snapshot));
+      } catch {
+        // Storage full or blocked. The form still works; only the safety net
+        // is gone, and telling the user about it mid-typing helps nobody.
+      }
+    }, DRAFT_SAVE_DEBOUNCE_MS);
+
+    return () => clearTimeout(timer);
+  }, [
+    draftKey,
+    step,
+    projectCategory,
+    clientPublicId,
+    useInvite,
+    inviteEmail,
+    companyId,
+    title,
+    scopeOfWork,
+    plannedStartDate,
+    projectAmount,
+    phases,
+  ]);
+
+  const discardDraft = () => {
+    try {
+      window.localStorage.removeItem(draftKey);
+    } catch {
+      // Nothing to do -- the in-memory reset below is what the user asked for.
+    }
+    setRestoredAt(null);
+    setStep(0);
+    setProjectCategory("SOFTWARE");
+    setClientPublicId("");
+    setUseInvite(false);
+    setInviteEmail("");
+    setCompanyId("");
+    setTitle("");
+    setScopeOfWork("");
+    setPlannedStartDate("");
+    setProjectAmount("");
+    setPhases([]);
+  };
 
   const updatePhase = (
     id: number,
@@ -250,6 +431,26 @@ export function ContractForm({
       ),
     );
 
+  // Picking a previous client fills the ID and submits the same lookup form
+  // typing it by hand would, rather than shortcutting straight to "settled".
+  // The lookup is what returns the client's companies, and skipping it would
+  // silently drop the invoicing company step for exactly the repeat clients
+  // most likely to have one.
+  const lookupFormRef = useRef<HTMLFormElement>(null);
+  const [pendingLookup, setPendingLookup] = useState(false);
+  useEffect(() => {
+    if (!pendingLookup) return;
+    setPendingLookup(false);
+    lookupFormRef.current?.requestSubmit();
+  }, [pendingLookup]);
+
+  const pickPreviousClient = (publicId: string) => {
+    setUseInvite(false);
+    setCompanyId("");
+    setClientPublicId(publicId);
+    setPendingLookup(true);
+  };
+
   const inviteEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(inviteEmail.trim());
   const clientSettled = useInvite ? inviteEmailValid : Boolean(lookup.resolved);
   const companies = lookup.resolved?.companies ?? [];
@@ -271,11 +472,63 @@ export function ContractForm({
     <div className="flex flex-col gap-8">
       <StepBar current={step} />
 
+      {restoredAt !== null && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-900/60 dark:bg-amber-950/30">
+          <p className="text-xs leading-relaxed text-amber-800 dark:text-amber-200">
+            Yarım kalan bir taslak bu tarayıcıdan geri yüklendi (
+            {new Date(restoredAt).toLocaleString("tr-TR")}). Müşteriyi tekrar
+            aratman gerekebilir.
+          </p>
+          <button
+            type="button"
+            onClick={discardDraft}
+            className="rounded-xl border border-amber-300 px-3 py-1.5 text-xs font-semibold text-amber-800 hover:bg-amber-100 dark:border-amber-800 dark:text-amber-200 dark:hover:bg-amber-900/40"
+          >
+            Taslağı sil, sıfırdan başla
+          </button>
+        </div>
+      )}
+
       {/* ═══ STEP 0 — Müşteri Arama (ID ile ya da davetle) ═══ */}
       {step === 0 && (
         <div className="fade-in flex flex-col gap-6 max-w-xl">
+          {previousClients.length > 0 && !useInvite && (
+            <div className="flex flex-col gap-2">
+              <p className="text-sm font-medium text-zinc-950 dark:text-zinc-50">
+                Daha önce çalıştığın müşteriler
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {previousClients.map((client) => (
+                  <button
+                    key={client.id}
+                    type="button"
+                    onClick={() => pickPreviousClient(client.publicId)}
+                    className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-left text-xs transition-colors ${
+                      clientPublicId === client.publicId
+                        ? "border-brand bg-brand/5 ring-2 ring-brand/20"
+                        : "border-zinc-200/80 hover:border-zinc-300 hover:bg-zinc-50 dark:border-zinc-800/80 dark:hover:bg-zinc-900"
+                    }`}
+                  >
+                    <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-zinc-900 text-[0.7rem] font-bold text-white dark:bg-zinc-700">
+                      {client.name.charAt(0).toUpperCase()}
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block font-semibold text-zinc-950 dark:text-zinc-50">
+                        {client.name}
+                      </span>
+                      <span className="block text-[0.7rem] text-zinc-500 dark:text-zinc-400">
+                        {client.contractCount} sözleşme &middot;{" "}
+                        {client.lastContractAt.slice(0, 10)}
+                      </span>
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {!useInvite ? (
-            <form action={lookupAction} className="flex flex-col gap-4">
+            <form ref={lookupFormRef} action={lookupAction} className="flex flex-col gap-4">
               <Field
                 label="Müşteri Lancerix ID"
                 htmlFor="lookupPublicId"
@@ -710,7 +963,12 @@ export function ContractForm({
             <button type="button" onClick={() => setStep(2)} className={BACK_BUTTON}>
               &larr; Geri
             </button>
-            <form action={action}>
+            <form
+              action={action}
+              onSubmit={() => {
+                savingPaused.current = true;
+              }}
+            >
               <DraftFields {...draft} />
               <SubmitButton pendingLabel="Oluşturuluyor...">
                 Sözleşmeyi Oluştur
