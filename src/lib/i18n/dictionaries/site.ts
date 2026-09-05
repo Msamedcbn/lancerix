@@ -17,6 +17,7 @@ export type SiteCopy = {
     contact: string;
     howItWorks: string;
     verificationMethods: string;
+    guide: string;
     roadmap: string;
     login: string;
     terms: string;
@@ -44,6 +45,7 @@ export const SITE_COPY: Record<Locale, SiteCopy> = {
       contact: "İletişim",
       howItWorks: "Nasıl Çalışır?",
       verificationMethods: "Doğrulama Yöntemleri",
+      guide: "Teslim ve Kabul Rehberi",
       roadmap: "Yol Haritası (Neredeyiz?)",
       login: "Giriş Yap",
       terms: "Şartlar ve Koşullar",
@@ -68,6 +70,7 @@ export const SITE_COPY: Record<Locale, SiteCopy> = {
       contact: "Contact",
       howItWorks: "How it works",
       verificationMethods: "Verification tiers",
+      guide: "Delivery & Acceptance Guide",
       roadmap: "Roadmap",
       login: "Log in",
       terms: "Terms of service",

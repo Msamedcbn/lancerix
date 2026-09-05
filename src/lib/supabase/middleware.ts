@@ -24,6 +24,7 @@ const PUBLIC_ROUTES = [
   "/profile",
   "/sartlar",
   "/yol-haritasi",
+  "/rehber",
   "/report",
 ];
 

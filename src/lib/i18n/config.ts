@@ -28,6 +28,10 @@ export const PUBLIC_ROUTES = {
   home: { tr: "/", en: "/en" },
   terms: { tr: "/sartlar", en: "/en/terms" },
   roadmap: { tr: "/yol-haritasi", en: "/en/roadmap" },
+  guideDeliveryAcceptance: {
+    tr: "/rehber/freelance-teslim-ve-kabul",
+    en: "/en/guide/freelance-delivery-and-acceptance",
+  },
 } as const satisfies Record<string, Record<Locale, string>>;
 
 export type PublicRouteId = keyof typeof PUBLIC_ROUTES;

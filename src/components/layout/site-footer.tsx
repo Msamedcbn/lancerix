@@ -51,6 +51,9 @@ export function SiteFooter({
                 <Link href={`${home}#fiyat`} className="hover:text-foreground transition-colors">{t.verificationMethods}</Link>
               </li>
               <li>
+                <Link href={PUBLIC_ROUTES.guideDeliveryAcceptance[locale]} className="hover:text-foreground transition-colors">{t.guide}</Link>
+              </li>
+              <li>
                 <Link href={PUBLIC_ROUTES.roadmap[locale]} className="hover:text-foreground transition-colors">{t.roadmap}</Link>
               </li>
               <li>
