@@ -38,6 +38,7 @@ export type HomeCopy = {
   reportStateLabel: string;
   reportStateValue: string;
   hashCaption: string;
+  reportCardLink: string;
   noMoneyTitle: string;
   noMoneyBody: string;
   impartialTitle: string;
@@ -97,6 +98,7 @@ export const HOME_COPY: Record<Locale, HomeCopy> = {
     reportStateLabel: "Durum",
     reportStateValue: "Tüm kriterler sağlandı",
     hashCaption: "Kriptografik özet · Bu rapor kesinlikle değiştirilemez",
+    reportCardLink: "Tam örneği gör →",
     noMoneyTitle: "Paranıza Dokunmuyoruz",
     noMoneyBody:
       "Ödemeler sizin belirlediğiniz kanallar üzerinden, doğrudan taraflar arasında gerçekleşir.",
@@ -216,6 +218,7 @@ export const HOME_COPY: Record<Locale, HomeCopy> = {
     reportStateLabel: "Result",
     reportStateValue: "All criteria met",
     hashCaption: "Cryptographic digest · this report cannot be altered",
+    reportCardLink: "See the full example →",
     noMoneyTitle: "We never touch your money",
     noMoneyBody:
       "Payment happens directly between the two of you, through whatever channel you already use.",

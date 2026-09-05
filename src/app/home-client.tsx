@@ -30,7 +30,9 @@ const WorldMap = dynamic(() => import("@/components/ui/world-map"), {
   ssr: false,
 });
 
-const HASH =
+/** Also used by /report/ornek, so the homepage teaser and the full example
+ * page show the same cryptographic summary rather than two invented ones. */
+export const HASH =
   "9f2c41ab7e0d5386c1b4a9f70e2d8c35b6a147f9e0c283d5a6b7c8d9e0f1a2b3";
 
 /**
@@ -269,6 +271,12 @@ export function HomeClient({
               <p className="mt-1.5 text-xs text-muted-foreground/80">
                 {t.hashCaption}
               </p>
+              <Link
+                href="/report/ornek"
+                className="text-brand mt-3 inline-flex items-center gap-1 text-xs font-semibold hover:underline"
+              >
+                {t.reportCardLink}
+              </Link>
             </div>
           </GlassCard>
 
