@@ -24,11 +24,21 @@ export function stalenessLevel(oldestAt: string | null): "none" | "amber" | "red
  * Countdown and ReviewCountdown components already use inline (days <= 2 is
  * red there) so the dashboard list and the contract page agree on what
  * counts as urgent.
+ *
+ * The red threshold is deliberately the same 2 days as
+ * REMINDER_WINDOW_HOURS (48) in /api/cron/remind-pending-review: the row
+ * turns red in the dashboard on the same pass that sends the reminder email,
+ * so the two channels never contradict each other. Amber is the earlier,
+ * quieter warning the email has no equivalent of. If that cron's window
+ * moves, move DEADLINE_RED_DAYS with it.
  */
+export const DEADLINE_RED_DAYS = 2;
+export const DEADLINE_AMBER_DAYS = 4;
+
 export function deadlineUrgency(deadline: string | null): "none" | "amber" | "red" {
   if (!deadline) return "none";
   const daysLeft = (Date.parse(deadline) - Date.now()) / 86_400_000;
-  if (daysLeft <= 2) return "red";
-  if (daysLeft <= 4) return "amber";
+  if (daysLeft <= DEADLINE_RED_DAYS) return "red";
+  if (daysLeft <= DEADLINE_AMBER_DAYS) return "amber";
   return "none";
 }

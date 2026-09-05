@@ -643,6 +643,48 @@ export async function setPlannedStartDate(
 }
 
 /**
+ * The other half of the start-date handshake: say no. Without this the only
+ * moves were "set once" and "confirm", so a party who could not make the
+ * proposed date had to settle it off-platform. An optional counter date turns
+ * the objection into a proposal in the same submit; see
+ * 20260905000000_reject_start_date.sql for why that pre-confirms the
+ * proposer's own side.
+ */
+export async function rejectStartDate(
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  await requireSession();
+
+  const contractId = String(formData.get("contractId") ?? "");
+  if (!contractId) return FAIL("Sözleşme bulunamadı.");
+
+  const counter = String(formData.get("counterDate") ?? "").trim();
+  if (counter && Number.isNaN(Date.parse(counter))) {
+    return FAIL("Geçerli bir tarih gir.");
+  }
+
+  const note = String(formData.get("note") ?? "").trim();
+  if (note.length > 500) return FAIL("Gerekçe en fazla 500 karakter olabilir.");
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("reject_start_date", {
+    p_contract_id: contractId,
+    ...(counter ? { p_counter_date: counter } : {}),
+    ...(note ? { p_note: note } : {}),
+  });
+
+  if (error) return FAIL(error.message);
+
+  revalidatePath(`/contracts/${contractId}`);
+  return OK(
+    counter
+      ? "Yeni tarih önerildi, karşı tarafın onayı bekleniyor."
+      : "Tarihe itiraz edildi, yeni bir tarih belirlenebilir.",
+  );
+}
+
+/**
  * The freelancer's answer to a revision request: send it back for another
  * look. Closes the REVISION_REQUESTED dead end -- resubmit_contract() moves
  * the contract to PENDING_REVIEW, which sign_contract() also accepts, so the

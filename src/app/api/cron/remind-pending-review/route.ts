@@ -18,6 +18,9 @@ export const dynamic = "force-dynamic";
  * expire-deliveries has already auto-accepted the same row. reminder_sent_at
  * is what actually prevents a duplicate reminder on the next day's run, not
  * this window's width.
+ *
+ * Kept in step with DEADLINE_RED_DAYS in src/lib/data/urgency.ts (2 days):
+ * the dashboard's red dot and this email are meant to appear together.
  */
 const REMINDER_WINDOW_HOURS = 48;
 

@@ -509,6 +509,11 @@ export default async function ContractPage({
               <p className="mt-1 text-xs text-indigo-600/80 dark:text-indigo-400/80">
                 Bir tarih belirle, ardından iki taraf da onayladığında iş resmi olarak başlar.
               </p>
+              {contract.start_date_note && (
+                <p className="mt-3 rounded-xl bg-white/70 px-3 py-2 text-xs leading-relaxed text-indigo-800 dark:bg-zinc-900/60 dark:text-indigo-200">
+                  Önceki tarihe itiraz: “{contract.start_date_note}”
+                </p>
+              )}
             </div>
 
             <SetStartDate contractId={contract.id} />
@@ -531,6 +536,11 @@ export default async function ContractPage({
               <p className="mt-1 text-xs text-indigo-600/80 dark:text-indigo-400/80">
                 İki taraf da tarihi onayladığında iş resmi olarak başlar ve platform hizmet faturası oluşturulur.
               </p>
+              {contract.start_date_note && (
+                <p className="mt-3 rounded-xl bg-white/70 px-3 py-2 text-xs leading-relaxed text-indigo-800 dark:bg-zinc-900/60 dark:text-indigo-200">
+                  İtiraz gerekçesi: “{contract.start_date_note}”
+                </p>
+              )}
               <div className="mt-3 flex items-center gap-3 text-xs">
                 <span className={contract.freelancer_start_confirmed ? "text-emerald-600" : "text-muted-foreground"}>
                   {contract.freelancer_start_confirmed ? "✓" : "○"} Freelancer
