@@ -109,15 +109,29 @@ export function Sidebar({
   }, null);
   const isActive = (href: Route) => href === activeHref;
 
+  // The mobile bar states the screen you're on, the way a native app's nav
+  // bar does, instead of repeating the brand mark on every screen the way a
+  // website header would. A drill-in page with no matching tab (e.g. a
+  // contract detail) has no section to name, so it falls back to the brand.
+  const activeItem = items.find((item) => item.href === activeHref);
+  const ActiveIcon = activeItem ? ICONS[activeItem.icon] : null;
+
   return (
     <>
-      <div className="sticky top-0 z-30 flex items-center justify-between border-b border-border glass px-4 py-3 md:hidden">
-        {header}
+      <div className="sticky top-0 z-30 flex items-center gap-3 border-b border-border glass px-4 py-3 md:hidden">
+        {ActiveIcon ? (
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-brand text-brand-foreground">
+            <ActiveIcon className="size-4" aria-hidden />
+          </span>
+        ) : null}
+        <span className="min-w-0 flex-1 truncate text-[0.95rem] font-semibold tracking-tight text-foreground">
+          {activeItem?.label ?? "Lancerix"}
+        </span>
         <form action={signOutAction}>
           <button
             type="submit"
             aria-label="Çıkış"
-            className="rounded-lg p-2 text-muted-foreground hover:bg-muted hover:text-foreground"
+            className="shrink-0 rounded-lg p-2 text-muted-foreground hover:bg-muted hover:text-foreground"
           >
             <LogOut className="size-[1.1rem]" />
           </button>
@@ -161,7 +175,16 @@ export function Sidebar({
           squeezing every tab down to an unreadable, sub-44px sliver. */}
       <nav
         className="fixed inset-x-0 bottom-0 z-30 flex items-stretch overflow-x-auto border-t border-border glass md:hidden"
-        style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+        style={{
+          paddingBottom: "env(safe-area-inset-bottom)",
+          // .glass's own shadow drops downward, which is correct for the
+          // sticky top bar but invisible here -- a shadow below a
+          // bottom-pinned element falls past the viewport edge. This keeps
+          // the glass highlight but points the elevation shadow up instead,
+          // so the bar actually reads as floating above the content.
+          boxShadow:
+            "inset 0 1px 1px oklch(1 0 0 / 15%), 0 -8px 24px -4px oklch(0 0 0 / 12%)",
+        }}
       >
         {items.map((item) => {
           const active = isActive(item.href);
@@ -172,12 +195,18 @@ export function Sidebar({
               key={item.href}
               href={item.href}
               aria-current={active ? "page" : undefined}
-              className="flex min-w-[4.25rem] flex-1 shrink-0 flex-col items-center gap-1 py-2.5"
+              className="flex min-w-[4.25rem] flex-1 shrink-0 flex-col items-center gap-1 py-2 transition-transform active:scale-95"
             >
-              <Icon
-                className={`size-5 ${active ? "text-brand" : "text-muted-foreground"}`}
-                aria-hidden
-              />
+              <span
+                className={`flex items-center justify-center rounded-xl px-3 py-1 transition-colors ${
+                  active ? "bg-brand/10" : "bg-transparent"
+                }`}
+              >
+                <Icon
+                  className={`size-5 ${active ? "text-brand" : "text-muted-foreground"}`}
+                  aria-hidden
+                />
+              </span>
               <span
                 className={`max-w-full truncate px-1 text-[0.65rem] leading-none ${
                   active ? "text-brand font-medium" : "text-muted-foreground"
