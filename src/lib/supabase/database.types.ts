@@ -1030,6 +1030,76 @@ export type Database = {
           },
         ]
       }
+      project_requests: {
+        Row: {
+          brief: string
+          budget_max_kurus: number | null
+          budget_min_kurus: number | null
+          client_id: string
+          contract_id: string | null
+          created_at: string
+          decided_at: string | null
+          decline_reason: string | null
+          freelancer_email: string
+          freelancer_id: string | null
+          id: string
+          status: Database["public"]["Enums"]["project_request_status"]
+          title: string
+        }
+        Insert: {
+          brief: string
+          budget_max_kurus?: number | null
+          budget_min_kurus?: number | null
+          client_id: string
+          contract_id?: string | null
+          created_at?: string
+          decided_at?: string | null
+          decline_reason?: string | null
+          freelancer_email?: string
+          freelancer_id?: string | null
+          id?: string
+          status?: Database["public"]["Enums"]["project_request_status"]
+          title: string
+        }
+        Update: {
+          brief?: string
+          budget_max_kurus?: number | null
+          budget_min_kurus?: number | null
+          client_id?: string
+          contract_id?: string | null
+          created_at?: string
+          decided_at?: string | null
+          decline_reason?: string | null
+          freelancer_email?: string
+          freelancer_id?: string | null
+          id?: string
+          status?: Database["public"]["Enums"]["project_request_status"]
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_requests_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_requests_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_requests_freelancer_id_fkey"
+            columns: ["freelancer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       qa_agent_runs: {
         Row: {
           confidence_score: number | null
@@ -1414,6 +1484,30 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      claim_invited_request: {
+        Args: { p_request_id: string }
+        Returns: {
+          brief: string
+          budget_max_kurus: number | null
+          budget_min_kurus: number | null
+          client_id: string
+          contract_id: string | null
+          created_at: string
+          decided_at: string | null
+          decline_reason: string | null
+          freelancer_email: string
+          freelancer_id: string | null
+          id: string
+          status: Database["public"]["Enums"]["project_request_status"]
+          title: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "project_requests"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       complete_phase: {
         Args: { p_phase_id: string }
         Returns: {
@@ -1495,6 +1589,61 @@ export type Database = {
         }
         Returns: boolean
       }
+      convert_project_request: {
+        Args: { p_contract_id: string; p_request_id: string }
+        Returns: {
+          brief: string
+          budget_max_kurus: number | null
+          budget_min_kurus: number | null
+          client_id: string
+          contract_id: string | null
+          created_at: string
+          decided_at: string | null
+          decline_reason: string | null
+          freelancer_email: string
+          freelancer_id: string | null
+          id: string
+          status: Database["public"]["Enums"]["project_request_status"]
+          title: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "project_requests"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      create_project_request: {
+        Args: {
+          p_brief?: string
+          p_budget_max_kurus?: number
+          p_budget_min_kurus?: number
+          p_freelancer_email?: string
+          p_freelancer_public_id?: string
+          p_title?: string
+        }
+        Returns: {
+          brief: string
+          budget_max_kurus: number | null
+          budget_min_kurus: number | null
+          client_id: string
+          contract_id: string | null
+          created_at: string
+          decided_at: string | null
+          decline_reason: string | null
+          freelancer_email: string
+          freelancer_id: string | null
+          id: string
+          status: Database["public"]["Enums"]["project_request_status"]
+          title: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "project_requests"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       criterion_config_valid: {
         Args: { p_check_type: string; p_config: Json }
         Returns: boolean
@@ -1502,6 +1651,30 @@ export type Database = {
       current_user_role: {
         Args: never
         Returns: Database["public"]["Enums"]["user_role"]
+      }
+      decline_project_request: {
+        Args: { p_reason: string; p_request_id: string }
+        Returns: {
+          brief: string
+          budget_max_kurus: number | null
+          budget_min_kurus: number | null
+          client_id: string
+          contract_id: string | null
+          created_at: string
+          decided_at: string | null
+          decline_reason: string | null
+          freelancer_email: string
+          freelancer_id: string | null
+          id: string
+          status: Database["public"]["Enums"]["project_request_status"]
+          title: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "project_requests"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       find_by_public_id: {
         Args: { p_public_id: string }
@@ -2042,6 +2215,7 @@ export type Database = {
         | "CONTENT"
         | "MARKETING"
         | "OTHER"
+      project_request_status: "OPEN" | "CONVERTED" | "DECLINED"
       user_role: "FREELANCER" | "CLIENT" | "ADMIN"
     }
     CompositeTypes: {
@@ -2209,6 +2383,7 @@ export const Constants = {
         "MARKETING",
         "OTHER",
       ],
+      project_request_status: ["OPEN", "CONVERTED", "DECLINED"],
       user_role: ["FREELANCER", "CLIENT", "ADMIN"],
     },
   },
