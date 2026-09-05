@@ -87,7 +87,7 @@ export default async function ClientPaymentsPage() {
                   </div>
                 </div>
 
-                <dl className="flex items-center gap-6 text-right shrink-0 relative z-10 pointer-events-none">
+                <dl className="grid grid-cols-3 gap-2 text-right relative z-10 pointer-events-none sm:flex sm:shrink-0 sm:items-center sm:gap-6">
                   <div>
                     <dt className="text-xs text-zinc-500 dark:text-zinc-400">Sözleşme</dt>
                     <dd className="text-sm font-medium">

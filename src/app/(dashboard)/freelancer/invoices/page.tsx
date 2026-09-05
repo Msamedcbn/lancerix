@@ -34,7 +34,7 @@ export default async function FreelancerInvoicesPage() {
                   </p>
                 </div>
 
-                <dl className="flex items-center gap-6 text-right">
+                <dl className="grid grid-cols-3 gap-2 text-right sm:flex sm:items-center sm:gap-6">
                   <div>
                     <dt className="text-xs text-zinc-500 dark:text-zinc-400">
                       Matrah

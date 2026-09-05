@@ -38,16 +38,16 @@ export function WorkflowDiagram({
 
     return (
       <div className="fade-in relative overflow-hidden rounded-2xl border border-indigo-200/80 bg-gradient-to-br from-indigo-50/80 via-white to-purple-50/40 p-6 shadow-sm backdrop-blur-md dark:border-indigo-900/60 dark:from-indigo-950/40 dark:via-zinc-900 dark:to-zinc-900">
-        <div className="flex items-center justify-between gap-4 pb-4 border-b border-indigo-100 dark:border-indigo-900/40">
-          <div className="flex items-center gap-2">
-            <span className="flex size-7 items-center justify-center rounded-xl bg-indigo-600 text-white font-bold text-xs">
+        <div className="flex flex-col gap-3 pb-4 border-b border-indigo-100 dark:border-indigo-900/40 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="flex size-7 shrink-0 items-center justify-center rounded-xl bg-indigo-600 text-white font-bold text-xs">
               QA
             </span>
             <h3 className="text-base font-bold text-zinc-950 dark:text-zinc-50">
               Proje Doğrulama İş Akışı (Workflow)
             </h3>
           </div>
-          <span className="rounded-full bg-indigo-100 px-3 py-1 text-xs font-semibold text-indigo-700 dark:bg-indigo-900/60 dark:text-indigo-300">
+          <span className="self-start rounded-full bg-indigo-100 px-3 py-1 text-xs font-semibold text-indigo-700 shrink-0 dark:bg-indigo-900/60 dark:text-indigo-300 sm:self-auto">
             {criteriaCount} Kabul Kriteri
           </span>
         </div>

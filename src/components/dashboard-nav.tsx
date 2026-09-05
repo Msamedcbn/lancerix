@@ -156,9 +156,11 @@ export function Sidebar({
         <div className="border-t border-border p-4">{footer}</div>
       </aside>
 
-      {/* Mobile: a full-width tab bar. */}
+      {/* Mobile: a full-width tab bar. More items than fit at a comfortable
+          width (the admin nav has eight) scroll horizontally instead of
+          squeezing every tab down to an unreadable, sub-44px sliver. */}
       <nav
-        className="fixed inset-x-0 bottom-0 z-30 flex items-stretch border-t border-border glass md:hidden"
+        className="fixed inset-x-0 bottom-0 z-30 flex items-stretch overflow-x-auto border-t border-border glass md:hidden"
         style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
       >
         {items.map((item) => {
@@ -170,7 +172,7 @@ export function Sidebar({
               key={item.href}
               href={item.href}
               aria-current={active ? "page" : undefined}
-              className="flex flex-1 flex-col items-center gap-1 py-2.5"
+              className="flex min-w-[4.25rem] flex-1 shrink-0 flex-col items-center gap-1 py-2.5"
             >
               <Icon
                 className={`size-5 ${active ? "text-brand" : "text-muted-foreground"}`}

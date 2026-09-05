@@ -437,7 +437,7 @@ export default async function ContractPage({
           </span>
         }
         action={
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <span className="rounded-full border border-border bg-muted px-2.5 py-0.5 text-xs font-medium text-foreground/80 dark:border-border/50 dark:bg-muted/80 dark:text-muted-foreground">
               {PROJECT_CATEGORY_INFO[contract.project_category].label}
             </span>
