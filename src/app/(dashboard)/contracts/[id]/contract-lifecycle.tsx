@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import { PencilLine, XCircle } from "lucide-react";
 
 import {
   confirmStartDate,
@@ -33,16 +34,18 @@ export function ContractActions({
           <button
             type="button"
             onClick={() => setMode("revise")}
-            className="rounded-xl border border-orange-200 bg-orange-50 px-4 py-2 text-xs font-semibold text-orange-700 hover:bg-orange-100 active:scale-[0.98] transition-colors dark:border-orange-800/60 dark:bg-orange-950/40 dark:text-orange-300 dark:hover:bg-orange-950/60"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-orange-200 bg-orange-50 px-4 py-2 text-xs font-semibold text-orange-700 hover:bg-orange-100 active:scale-[0.98] transition-colors dark:border-orange-800/60 dark:bg-orange-950/40 dark:text-orange-300 dark:hover:bg-orange-950/60"
           >
-            ✏️ Revizyon İste
+            <PencilLine className="size-3.5" aria-hidden />
+            Revizyon İste
           </button>
           <button
             type="button"
             onClick={() => setMode("reject")}
-            className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-xs font-semibold text-rose-700 hover:bg-rose-100 active:scale-[0.98] transition-colors dark:border-rose-800/60 dark:bg-rose-950/40 dark:text-rose-300 dark:hover:bg-rose-950/60"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-xs font-semibold text-rose-700 hover:bg-rose-100 active:scale-[0.98] transition-colors dark:border-rose-800/60 dark:bg-rose-950/40 dark:text-rose-300 dark:hover:bg-rose-950/60"
           >
-            ❌ Reddet
+            <XCircle className="size-3.5" aria-hidden />
+            Reddet
           </button>
         </div>
       </div>

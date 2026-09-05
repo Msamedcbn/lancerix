@@ -1,5 +1,6 @@
 import type { Route } from "next";
 import Link from "next/link";
+import { CheckCircle2 } from "lucide-react";
 
 import { PageHeading } from "@/components/page-shell";
 import { requireRole } from "@/lib/auth/session";
@@ -90,8 +91,9 @@ export default async function AdminHomePage() {
       />
 
       {allClear ? (
-        <p className="rounded-2xl border border-emerald-200 bg-emerald-50/60 p-5 text-sm text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-300">
-          🎉 Her şey temiz — dikkat gerektiren bir şey yok.
+        <p className="flex items-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50/60 p-5 text-sm text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-300">
+          <CheckCircle2 className="size-4 shrink-0" aria-hidden />
+          Her şey temiz — dikkat gerektiren bir şey yok.
         </p>
       ) : null}
 

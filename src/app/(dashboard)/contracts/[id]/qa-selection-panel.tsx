@@ -83,7 +83,7 @@ export function QaSelectionPanel({
             </div>
             {qaFeeKurus === 0 && (qaTier === "TIER1" || qaTier === "TIER2") ? (
               <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
-                🎉 İlk sözleşme hediyesi — doğrulama kaydı ücreti bu sözleşmede alınmıyor.
+                İlk sözleşme hediyesi — doğrulama kaydı ücreti bu sözleşmede alınmıyor.
               </p>
             ) : null}
             {qaReviewer ? (
@@ -144,7 +144,7 @@ export function QaSelectionPanel({
                     </div>
                     {freelancerFirstPaidTier && (value === "TIER1" || value === "TIER2") ? (
                       <span className="tnum rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-bold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
-                        🎉 İlk sözleşme ücretsiz
+                        İlk sözleşme ücretsiz
                       </span>
                     ) : (
                       <span className="tnum rounded-full bg-zinc-100 px-2.5 py-0.5 text-xs font-bold text-zinc-800 dark:bg-zinc-800 dark:text-zinc-200">

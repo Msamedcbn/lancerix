@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState } from "react";
+import { Building2, CalendarClock, FileText, ListChecks } from "lucide-react";
 
 import {
   createContract,
@@ -194,7 +195,8 @@ function CounterpartyCard({
               key={c.id}
               className="inline-flex items-center gap-1.5 rounded-xl border border-zinc-200/80 bg-white/80 px-3 py-1.5 text-xs font-medium text-zinc-700 dark:border-zinc-700 dark:bg-zinc-800/60 dark:text-zinc-300"
             >
-              🏢 {c.legal_name}
+              <Building2 className="size-3.5 shrink-0" aria-hidden />
+              {c.legal_name}
               {c.vkn && (
                 <span className="text-zinc-400 dark:text-zinc-500">VKN {c.vkn}</span>
               )}
@@ -951,8 +953,9 @@ export function ContractForm({
           {preview.document && (
             <>
               <div className="flex items-center justify-between">
-                <p className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">
-                  📄 Sözleşme Önizlemesi
+                <p className="flex items-center gap-1.5 text-xs font-semibold text-zinc-500 dark:text-zinc-400">
+                  <FileText className="size-3.5 shrink-0" aria-hidden />
+                  Sözleşme Önizlemesi
                 </p>
                 <span className="rounded-full bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 dark:bg-emerald-950/40 dark:border-emerald-800/60 dark:text-emerald-300">
                   Hazır
@@ -967,8 +970,9 @@ export function ContractForm({
           {/* Phase summary */}
           {phases.length > 0 && (
             <div className="rounded-2xl border border-zinc-200/80 bg-white/90 p-5 dark:border-zinc-800/80 dark:bg-zinc-900/80">
-              <h3 className="text-sm font-bold text-zinc-950 dark:text-zinc-50 mb-3">
-                📋 İş Akışı ({phases.length} Faz)
+              <h3 className="mb-3 flex items-center gap-1.5 text-sm font-bold text-zinc-950 dark:text-zinc-50">
+                <ListChecks className="size-4 shrink-0" aria-hidden />
+                İş Akışı ({phases.length} Faz)
               </h3>
               <ol className="flex flex-col gap-2">
                 {phases.map((p, i) => (
@@ -995,10 +999,13 @@ export function ContractForm({
 
           {plannedStartDate && (
             <div className="rounded-2xl border border-indigo-200/80 bg-indigo-50/50 p-4 dark:border-indigo-800/60 dark:bg-indigo-950/30">
-              <p className="text-sm text-indigo-700 dark:text-indigo-300">
-                📅 Planlanan Başlangıç: <strong>{plannedStartDate}</strong>
-                <span className="block mt-1 text-xs font-normal text-indigo-600/80 dark:text-indigo-400/80">
-                  İki taraf da bu tarihi onayladığında iş resmi olarak başlar.
+              <p className="flex items-start gap-2 text-sm text-indigo-700 dark:text-indigo-300">
+                <CalendarClock className="mt-0.5 size-4 shrink-0" aria-hidden />
+                <span>
+                  Planlanan Başlangıç: <strong>{plannedStartDate}</strong>
+                  <span className="block mt-1 text-xs font-normal text-indigo-600/80 dark:text-indigo-400/80">
+                    İki taraf da bu tarihi onayladığında iş resmi olarak başlar.
+                  </span>
                 </span>
               </p>
             </div>

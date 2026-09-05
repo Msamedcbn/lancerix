@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Download } from "lucide-react";
 
 import { PageHeading, Panel } from "@/components/page-shell";
 import { StatusBadge } from "@/components/status-badge";
@@ -92,7 +93,8 @@ export default async function ContractRecordPage({
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium text-zinc-950 hover:bg-zinc-50 active:scale-[0.98] dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-50 dark:hover:bg-zinc-900"
             >
-              📄 PDF indir
+              <Download className="size-3.5" aria-hidden />
+              PDF indir
             </a>
           }
         >
