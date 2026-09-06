@@ -30,7 +30,7 @@ const jakarta = Plus_Jakarta_Sans({
 
 export const metadata: Metadata = {
   metadataBase: new URL(appUrl()),
-  title: "Lancerix — Sessizlik kabul sayılır",
+  title: "Lancerix — Bağımsız Kod Doğrulama",
   description:
     "Bağımsız kod doğrulama: freelancer ve ajans projelerinde teslim ile kabul arasındaki belirsizliği, kabul kriterlerine dayalı, zaman damgalı bir raporla ortadan kaldırıyoruz.",
 };

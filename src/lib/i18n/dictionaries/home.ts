@@ -72,9 +72,9 @@ export type HomeCopy = {
 
 export const HOME_COPY: Record<Locale, HomeCopy> = {
   tr: {
-    metaTitle: "Lancerix — Sessizlik kabul sayılır",
+    metaTitle: "Lancerix — Bağımsız Kod Doğrulama",
     metaDescription:
-      "Kurumsal müşteriden alacağın 90 gün beklemesin. İmzalı sözleşme, aşamalı teslim ve süresi dolduğunda kendiliğinden gerçekleşen kabul — hepsi silinemeyen bir deftere yazılır.",
+      "Bağımsız teknik doğrulama: imzalı sözleşme, kabul kriterlerine karşı kontrol edilen teslim ve hiçbir tarafın değiştiremeyeceği zaman damgalı bir rapor. Ödeme taraflar arasında doğrudan çözülür.",
     badge: "Bağımsız Kod Doğrulama",
     heroTitle: "Projenizin teslimatını şansa bırakmayın.",
     heroBody:
@@ -192,7 +192,7 @@ export const HOME_COPY: Record<Locale, HomeCopy> = {
     closingSecondary: "Giriş yap",
   },
   en: {
-    metaTitle: "Lancerix — Silence counts as acceptance",
+    metaTitle: "Lancerix — Independent Code Verification",
     metaDescription:
       "Independent technical verification for software handovers. A signed contract, a delivery checked against the acceptance criteria both sides agreed on, and a timestamped report neither party can edit afterwards.",
     badge: "Independent code verification",
