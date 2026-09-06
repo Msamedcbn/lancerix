@@ -1,16 +1,12 @@
 import { NextResponse, type NextRequest } from "next/server";
 
+import { safeNextPath } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = request.nextUrl;
   const code = searchParams.get("code");
-  const requestedNext = searchParams.get("next");
-  // Reject protocol-relative and absolute targets so `next` cannot redirect off-site.
-  const next =
-    requestedNext?.startsWith("/") && !requestedNext.startsWith("//")
-      ? requestedNext
-      : "/dashboard";
+  const next = safeNextPath(searchParams.get("next")) ?? "/dashboard";
 
   if (code) {
     const supabase = await createClient();

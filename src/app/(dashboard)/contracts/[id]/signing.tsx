@@ -51,13 +51,21 @@ export function SignContract({
 
   if (criteriaMissing || qaTierMissing) {
     return (
-      <p className="text-sm leading-relaxed text-zinc-500 dark:text-zinc-400">
-        {criteriaMissing && qaTierMissing
-          ? "Kabul kriterleri ve QA paketi henüz girilmedi. İmza, ikisi de kaydedilince açılır."
-          : criteriaMissing
-            ? "Kabul kriterleri henüz girilmedi. İmza, kriterler kaydedilince açılır."
-            : "QA paketi henüz seçilmedi. İmza, paket seçilince açılır."}
-      </p>
+      <div className="flex flex-col gap-2">
+        <p className="text-sm leading-relaxed text-zinc-500 dark:text-zinc-400">
+          {criteriaMissing && qaTierMissing
+            ? "Kabul kriterleri ve QA paketi henüz girilmedi. İmza, ikisi de kaydedilince açılır."
+            : criteriaMissing
+              ? "Kabul kriterleri henüz girilmedi. İmza, kriterler kaydedilince açılır."
+              : "QA paketi henüz seçilmedi. İmza, paket seçilince açılır."}
+        </p>
+        <Link
+          href="#mesajlar"
+          className="inline-flex w-fit items-center gap-1.5 text-xs font-semibold text-brand hover:underline"
+        >
+          Karşı tarafa mesaj gönder &rarr;
+        </Link>
+      </div>
     );
   }
 

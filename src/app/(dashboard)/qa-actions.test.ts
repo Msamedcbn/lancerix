@@ -113,7 +113,8 @@ describe("setQaSelection", () => {
     });
   });
 
-  it("surfaces a locked-selection error from the RPC", async () => {
+  it("surfaces a locked-selection error as a fixed Turkish message, and logs the raw error server-side", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
     rpcImpl = failRpc("contract already has a signature -- the QA selection is locked");
     const { setQaSelection } = await import("./qa-actions");
     const result = await setQaSelection(
@@ -124,8 +125,11 @@ describe("setQaSelection", () => {
         reviewerId: REVIEWER_ID,
       }),
     );
-    expect(result.error).toBe(
+    expect(result.error).toBe("QA paketi kaydedilemedi.");
+    expect(consoleError).toHaveBeenCalledWith(
+      "[FAIL]",
       "contract already has a signature -- the QA selection is locked",
     );
+    consoleError.mockRestore();
   });
 });

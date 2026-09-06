@@ -36,9 +36,14 @@ export default async function ClientInvoicesPage() {
         <PageHeading title="Faturalar" subtitle="Şirketine kesilen belgeler" />
 
         <div className="mt-6 flex flex-col gap-4">
-          <h2 className="text-lg font-bold tracking-tight text-zinc-950 dark:text-zinc-50">
-            Escrow Faturaları
-          </h2>
+          <div>
+            <h2 className="text-lg font-bold tracking-tight text-zinc-950 dark:text-zinc-50">
+              Escrow Faturaları
+            </h2>
+            <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
+              Aşamalı, emanet ödemeli sözleşmeler için — Faz 2&apos;de aktif olacak.
+            </p>
+          </div>
           {released.length === 0 ? (
             <EmptyState
               title="Henüz fatura yok"

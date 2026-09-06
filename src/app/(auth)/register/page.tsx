@@ -1,7 +1,9 @@
 "use client";
 
+import type { Route } from "next";
 import Link from "next/link";
-import { useActionState } from "react";
+import { useSearchParams } from "next/navigation";
+import { Suspense, useActionState } from "react";
 
 import { register, type AuthFormState } from "@/app/(auth)/actions";
 import { Mark } from "@/components/brand/mark";
@@ -22,8 +24,10 @@ const ROLES = [
   },
 ] as const;
 
-export default function RegisterPage() {
+function RegisterForm() {
   const [state, formAction, pending] = useActionState(register, INITIAL);
+  const next = useSearchParams().get("next");
+  const loginHref = (next ? `/login?next=${encodeURIComponent(next)}` : "/login") as Route;
 
   return (
     <main className="grid min-h-[100dvh] lg:grid-cols-[1fr_1.1fr]">
@@ -67,6 +71,8 @@ export default function RegisterPage() {
           </p>
 
           <form action={formAction} className="flex flex-col gap-5">
+            {next ? <input type="hidden" name="next" value={next} /> : null}
+
             <Field label="Ad soyad" htmlFor="fullName">
               <TextInput id="fullName" name="fullName" required />
             </Field>
@@ -139,7 +145,7 @@ export default function RegisterPage() {
             <p className="text-center text-sm text-zinc-500">
               Zaten kayıtlı mısın?{" "}
               <Link
-                href="/login"
+                href={loginHref}
                 className="text-zinc-950 underline underline-offset-4"
               >
                 Giriş yap
@@ -149,5 +155,13 @@ export default function RegisterPage() {
         </div>
       </section>
     </main>
+  );
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense fallback={null}>
+      <RegisterForm />
+    </Suspense>
   );
 }

@@ -800,6 +800,17 @@ export function ContractForm({
       {step === 2 && (
         <div className="fade-in flex max-w-3xl flex-col gap-8">
 
+          <div className="flex items-start gap-3 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-xs leading-relaxed text-sky-900 dark:border-sky-800/60 dark:bg-sky-950/30 dark:text-sky-100">
+            <svg className="mt-0.5 size-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span>
+              <strong className="font-semibold">Kabul kriterlerini bu adımda girmiyorsun.</strong> Sözleşmeyi
+              gönderdikten sonra müşteri, imzalamadan önce kabul kriterlerini kendisi belirleyecek — bu senin
+              imzanı da beklemeye alır, o yüzden müşteriye bunu hatırlatman gerekebilir.
+            </span>
+          </div>
+
           {/* ── Workflow Phases ── */}
           <fieldset className="flex flex-col gap-5">
             <div className="flex flex-col gap-1 pb-3 border-b border-zinc-200/60 dark:border-zinc-800/60">
@@ -922,8 +933,8 @@ export function ContractForm({
           </fieldset>
 
           <p className="rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-xs leading-relaxed text-zinc-600 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300">
-            Kabul kriterlerini müşteri belirler — sözleşmeyi gönderdikten sonra
-            müşteri, imzalamadan önce kabul kriterlerini kendisi girecek.
+            Hatırlatma: kabul kriterlerini müşteri girecek (yukarıda belirtildi) —
+            sözleşmeyi gönderince sıra onda.
           </p>
 
           <div className="flex items-center gap-3">

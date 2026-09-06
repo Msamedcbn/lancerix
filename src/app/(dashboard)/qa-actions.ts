@@ -7,10 +7,11 @@ import { after } from "next/server";
 
 import { requireRole, requireSession } from "@/lib/auth/session";
 import { getContract } from "@/lib/data/contracts";
-import { FAIL, firstIssue, OK, type FormState } from "@/lib/forms";
+import { FAIL, firstIssue, OK, toUserMessage, type FormState } from "@/lib/forms";
 import { createQaOrderCheckout } from "@/lib/lemonsqueezy";
-import { notifyDeliverySubmitted, notifyQaOutcome } from "@/lib/notify/email";
+import { notifyDeliverySubmitted, notifyQaOutcome, notifyReviewerAssigned } from "@/lib/notify/email";
 import { processTier2Order } from "@/lib/qa/agent";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import {
   clientDecisionSchema,
@@ -57,7 +58,7 @@ export async function setQaSelection(
     // null. Tier 1/2 take this path.
     ...(reviewerId ? { p_reviewer_id: reviewerId } : {}),
   });
-  if (error) return FAIL(error.message);
+  if (error) return FAIL(toUserMessage(error, "QA paketi kaydedilemedi."));
 
   revalidatePath(`/contracts/${contractId}`);
   return OK("QA paketi kaydedildi.");
@@ -104,7 +105,7 @@ export async function submitQaDelivery(
     ...(parsed.data.notes ? { p_notes: parsed.data.notes } : {}),
   });
 
-  if (error) return FAIL(error.message);
+  if (error) return FAIL(toUserMessage(error, "Teslim gönderilemedi."));
 
   let mailNotice = "";
   const tier = contract.qa_tier as QaTier | null;
@@ -140,6 +141,52 @@ export async function submitQaDelivery(
     if (order) {
       after(() => processTier2Order(order.id));
     }
+  }
+
+  const reviewerId = contract.qa_reviewer_id;
+  if ((tier === "TIER3" || tier === "TIER4") && reviewerId && delivery) {
+    // The token was issued inside submit_qa_delivery() itself (same
+    // transaction as the qa_tier_orders row) -- fetched back and emailed
+    // here, after the response, via the service-role client only. The
+    // freelancer's own session must never see this: it is a write-capable
+    // link for a specific reviewer, and qa_reviewer_tokens carries no RLS
+    // policy for exactly that reason (2026-09-06 four-role audit, Finding 1).
+    const deliveryId = delivery.id;
+    after(async () => {
+      const admin = createAdminClient();
+      const { data: order } = await admin
+        .from("qa_tier_orders")
+        .select("id")
+        .eq("delivery_id", deliveryId)
+        .eq("reviewer_id", reviewerId)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (!order) return;
+
+      const [{ data: token }, { data: reviewer }] = await Promise.all([
+        admin
+          .from("qa_reviewer_tokens")
+          .select("token")
+          .eq("tier_order_id", order.id)
+          .is("used_at", null)
+          .maybeSingle(),
+        admin
+          .from("qa_reviewers")
+          .select("profile_id, full_name, email, profile:profiles(full_name, email)")
+          .eq("id", reviewerId)
+          .single(),
+      ]);
+      if (!token || !reviewer) return;
+
+      await notifyReviewerAssigned({
+        toUserId: reviewer.profile_id,
+        fallbackEmail: reviewer.email ?? "",
+        contractTitle: contract.title,
+        reviewerName: reviewer.profile?.full_name ?? reviewer.full_name ?? "",
+        token: token.token,
+      });
+    });
   }
 
   revalidatePath(`/contracts/${contractId}`);
@@ -231,7 +278,7 @@ export async function decideDelivery(
     p_reason: parsed.data.note ?? undefined,
   });
 
-  if (error) return FAIL(error.message);
+  if (error) return FAIL(toUserMessage(error, "Karar işlenemedi."));
 
   const contract = await getContract(contractId, session.userId);
   if (contract) {
@@ -278,7 +325,7 @@ export async function toggleQaReportShare(
     p_share: share,
   });
 
-  if (error) return FAIL(error.message);
+  if (error) return FAIL(toUserMessage(error, "Paylaşım ayarı değiştirilemedi."));
 
   revalidatePath(`/contracts/${contractId}`);
   return OK(share ? "Paylaşım linki oluşturuldu." : "Paylaşım kapatıldı.");

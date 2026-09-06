@@ -1,9 +1,11 @@
 "use server";
 
+import type { Route } from "next";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { appUrl } from "@/lib/env.server";
+import { safeNextPath } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { loginSchema, registerSchema } from "@/lib/validations/auth";
 
@@ -19,12 +21,13 @@ export async function login(
   });
   if (!parsed.success) return { error: "Enter a valid email and password." };
 
+  const next = safeNextPath(formData.get("next")?.toString());
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithPassword(parsed.data);
   if (error) return { error: error.message };
 
   revalidatePath("/", "layout");
-  redirect("/dashboard");
+  redirect((next ?? "/dashboard") as Route);
 }
 
 export async function register(
@@ -41,13 +44,17 @@ export async function register(
     return { error: parsed.error.issues[0]?.message ?? "Invalid details." };
   }
 
+  const next = safeNextPath(formData.get("next")?.toString());
   const { email, password, fullName, role } = parsed.data;
   const supabase = await createClient();
+  const callbackUrl = new URL(`${appUrl()}/auth/callback`);
+  if (next) callbackUrl.searchParams.set("next", next);
+
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
-      emailRedirectTo: `${appUrl()}/auth/callback`,
+      emailRedirectTo: callbackUrl.toString(),
       // Consumed by the handle_new_user trigger to seed the profile row.
       data: { full_name: fullName, role },
     },
@@ -62,10 +69,14 @@ export async function register(
   // a bare sign-in form.
   if (data.session) {
     revalidatePath("/", "layout");
-    redirect("/dashboard");
+    redirect((next ?? "/dashboard") as Route);
   }
 
-  redirect("/login?checkEmail=1");
+  redirect(
+    (next
+      ? `/login?checkEmail=1&next=${encodeURIComponent(next)}`
+      : "/login?checkEmail=1") as Route,
+  );
 }
 
 export async function signOut() {

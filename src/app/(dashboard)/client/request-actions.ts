@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { requireRole, requireSession } from "@/lib/auth/session";
-import { FAIL, firstIssue, OK, type FormState } from "@/lib/forms";
+import { FAIL, firstIssue, OK, toUserMessage, type FormState } from "@/lib/forms";
 import { notifyProjectRequest } from "@/lib/notify/email";
 import { createClient } from "@/lib/supabase/server";
 import { projectRequestSchema } from "@/lib/validations/project-request";
@@ -51,7 +51,7 @@ export async function createProjectRequest(
     p_budget_max_kurus: parsed.data.budgetMax ?? undefined,
   });
 
-  if (error) return FAIL(error.message);
+  if (error) return FAIL(toUserMessage(error, "Talep oluşturulamadı."));
   if (!request) return FAIL("Talep oluşturulamadı.");
 
   // Best-effort, same rule as every other notification in this app: the
@@ -97,7 +97,7 @@ export async function declineProjectRequest(
     p_reason: reason,
   });
 
-  if (error) return FAIL(error.message);
+  if (error) return FAIL(toUserMessage(error, "Talep reddedilemedi."));
 
   revalidatePath("/freelancer");
   return OK("Talep reddedildi.");

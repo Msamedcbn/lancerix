@@ -15,6 +15,11 @@ import type { Database } from "@/lib/supabase/database.types";
 // no account was bounced to /login from a marketing link.
 //
 // /en covers the whole English mirror of these pages in one entry.
+//
+// /reviewer-report (2026-09-06 four-role audit, Finding 1) is the one route
+// where forgetting this listing would be worse than a marketing-page bounce:
+// a reviewer has no Lancerix account at all, so redirecting them to /login
+// would be a dead end, not just a wrong page.
 const PUBLIC_ROUTES = [
   "/",
   "/login",
@@ -26,6 +31,7 @@ const PUBLIC_ROUTES = [
   "/yol-haritasi",
   "/rehber",
   "/report",
+  "/reviewer-report",
 ];
 
 /**

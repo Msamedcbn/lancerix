@@ -20,7 +20,8 @@ import { TERMS_VERSION } from "@/lib/contracts/terms";
 import { getContract } from "@/lib/data/contracts";
 import { notifyContractInvite } from "@/lib/notify/email";
 import { DEFAULT_STOPAJ_BPS } from "@/lib/tax/stopaj";
-import { FAIL, firstIssue, OK, type FormState } from "@/lib/forms";
+import { FAIL, firstIssue, OK, toUserMessage, type FormState } from "@/lib/forms";
+import { STATUS_LABEL } from "@/components/status-badge";
 import { createClient } from "@/lib/supabase/server";
 import {
   toCheckConfig,
@@ -66,13 +67,13 @@ export async function saveProfile(
   if (error) {
     return FAIL(
       error.code === "23505"
-        ? "That TCKN is already registered to another account."
+        ? "Bu TCKN başka bir hesaba kayıtlı."
         : error.message,
     );
   }
 
   revalidatePath("/", "layout");
-  return OK("Profile saved.");
+  return OK("Profil kaydedildi.");
 }
 
 export async function saveCompany(
@@ -108,10 +109,10 @@ export async function saveCompany(
           public_id: Math.random().toString(36).slice(2, 10).toUpperCase(),
         });
 
-  if (error) return FAIL(error.message);
+  if (error) return FAIL(toUserMessage(error, "Şirket bilgileri kaydedilemedi."));
 
   revalidatePath("/client/company");
-  return OK("Company saved.");
+  return OK("Şirket bilgileri kaydedildi.");
 }
 
 // ---------------------------------------------------------------------------
@@ -331,7 +332,7 @@ export async function createContract(
       .rpc("find_by_public_id", { p_public_id: parsed.data.clientPublicId })
       .maybeSingle();
 
-    if (lookupError) return FAIL(lookupError.message);
+    if (lookupError) return FAIL(toUserMessage(lookupError, "Müşteri arama sırasında bir hata oluştu."));
     if (!client) return FAIL("Bu ID ile kayıtlı kullanıcı bulunamadı.");
     if (client.role !== "CLIENT") {
       return FAIL("Bu hesap işveren olarak kayıtlı değil.");
@@ -365,7 +366,7 @@ export async function createContract(
     .select("id")
     .single();
 
-  if (error) return FAIL(error.message);
+  if (error) return FAIL(toUserMessage(error, "Sözleşme oluşturulamadı."));
 
   let inviteMailFailed = false;
   if (clientEmail) {
@@ -400,7 +401,7 @@ export async function createContract(
         check_config: toCheckConfig(c),
       })),
     );
-    if (criteriaError) return FAIL(criteriaError.message);
+    if (criteriaError) return FAIL(toUserMessage(criteriaError, "Kabul kriterleri kaydedilemedi."));
 
     // Insert workflow phases if any, then their checklist items -- items
     // reference the phase row's real id, so phases must be inserted (and the
@@ -419,7 +420,7 @@ export async function createContract(
           })),
         )
         .select("id, sequence_no");
-      if (phasesError) return FAIL(phasesError.message);
+      if (phasesError) return FAIL(toUserMessage(phasesError, "İş akışı fazları kaydedilemedi."));
 
       const idBySequence = new Map((insertedPhases ?? []).map((row) => [row.sequence_no, row.id]));
       const itemRows = parsed.data.phases.flatMap((phase, index) => {
@@ -435,7 +436,7 @@ export async function createContract(
         const { error: itemsError } = await supabase
           .from("workflow_phase_items")
           .insert(itemRows);
-        if (itemsError) return FAIL(itemsError.message);
+        if (itemsError) return FAIL(toUserMessage(itemsError, "Faz maddeleri kaydedilemedi."));
       }
     }
 
@@ -467,7 +468,7 @@ export async function createContract(
     .eq("id", contract.id)
     .single();
 
-  if (termsError) return FAIL(termsError.message);
+  if (termsError) return FAIL(toUserMessage(termsError, "Sözleşme koşulları okunamadı."));
 
   for (const m of parsed.data.milestones) assertMilestoneGross(m.amount);
 
@@ -483,7 +484,7 @@ export async function createContract(
     })),
   );
 
-  if (milestoneError) return FAIL(milestoneError.message);
+  if (milestoneError) return FAIL(toUserMessage(milestoneError, "Aşamalar kaydedilemedi."));
 
   revalidatePath("/freelancer");
   redirect(`/contracts/${contract.id}`);
@@ -598,7 +599,7 @@ export async function rejectContract(
     p_reason: reason,
   });
 
-  if (error) return FAIL(error.message);
+  if (error) return FAIL(toUserMessage(error, "Sözleşme reddedilemedi."));
 
   revalidatePath(`/contracts/${contractId}`);
   return OK("Sözleşme reddedildi.");
@@ -622,7 +623,7 @@ export async function requestRevision(
     p_note: note,
   });
 
-  if (error) return FAIL(error.message);
+  if (error) return FAIL(toUserMessage(error, "Revizyon talebi gönderilemedi."));
 
   revalidatePath(`/contracts/${contractId}`);
   return OK("Revizyon talebi gönderildi.");
@@ -642,7 +643,7 @@ export async function confirmStartDate(
     p_contract_id: contractId,
   });
 
-  if (error) return FAIL(error.message);
+  if (error) return FAIL(toUserMessage(error, "Başlangıç tarihi onaylanamadı."));
 
   revalidatePath(`/contracts/${contractId}`);
   return OK("Başlangıç tarihi onaylandı.");
@@ -672,7 +673,7 @@ export async function setPlannedStartDate(
     p_date: date,
   });
 
-  if (error) return FAIL(error.message);
+  if (error) return FAIL(toUserMessage(error, "Başlangıç tarihi kaydedilemedi."));
 
   revalidatePath(`/contracts/${contractId}`);
   return OK("Başlangıç tarihi belirlendi.");
@@ -710,7 +711,7 @@ export async function rejectStartDate(
     ...(note ? { p_note: note } : {}),
   });
 
-  if (error) return FAIL(error.message);
+  if (error) return FAIL(toUserMessage(error, "Karşı teklif gönderilemedi."));
 
   revalidatePath(`/contracts/${contractId}`);
   return OK(
@@ -740,7 +741,7 @@ export async function resubmitContract(
     p_contract_id: contractId,
   });
 
-  if (error) return FAIL(error.message);
+  if (error) return FAIL(toUserMessage(error, "Sözleşme yeniden gönderilemedi."));
 
   revalidatePath(`/contracts/${contractId}`);
   return OK("Sözleşme yeniden gönderildi. Karşı taraf tekrar inceleyecek.");
@@ -760,7 +761,7 @@ export async function transitionMilestone(
   const to = String(formData.get("toStatus") ?? "") as EscrowStatus;
   const reason = String(formData.get("reason") ?? "").trim() || undefined;
 
-  if (!milestoneId || !to) return FAIL("Missing milestone or target status.");
+  if (!milestoneId || !to) return FAIL("Aşama veya hedef durum eksik.");
 
   const supabase = await createClient();
   const { error } = await supabase.rpc("transition_milestone", {
@@ -769,10 +770,10 @@ export async function transitionMilestone(
     p_reason: reason,
   });
 
-  if (error) return FAIL(error.message);
+  if (error) return FAIL(toUserMessage(error, "Aşama durumu güncellenemedi."));
 
   revalidatePath("/", "layout");
-  return OK(`Milestone moved to ${to.toLowerCase().replace("_", " ")}.`);
+  return OK(`Aşama durumu güncellendi: ${STATUS_LABEL[to] ?? to}.`);
 }
 
 export async function raiseDispute(
@@ -785,7 +786,7 @@ export async function raiseDispute(
   const reason = String(formData.get("reason") ?? "").trim();
 
   if (reason.length < 10) {
-    return FAIL("Explain the dispute in at least ten characters.");
+    return FAIL("İtirazını en az on karakterle açıkla.");
   }
 
   const supabase = await createClient();
@@ -794,17 +795,17 @@ export async function raiseDispute(
     raised_by: session.userId,
     reason,
   });
-  if (disputeError) return FAIL(disputeError.message);
+  if (disputeError) return FAIL(toUserMessage(disputeError, "İtiraz kaydı oluşturulamadı."));
 
   const { error } = await supabase.rpc("transition_milestone", {
     p_milestone_id: milestoneId,
     p_to_status: "DISPUTED",
     p_reason: reason,
   });
-  if (error) return FAIL(error.message);
+  if (error) return FAIL(toUserMessage(error, "İtiraz işlenemedi."));
 
   revalidatePath("/", "layout");
-  return OK("Dispute opened. An administrator will review it.");
+  return OK("İtiraz açıldı. Bir yönetici inceleyecek.");
 }
 
 // ---------------------------------------------------------------------------
@@ -844,7 +845,7 @@ export async function addAcceptanceCriteria(
     .from("acceptance_criteria")
     .delete()
     .eq("contract_id", contractId);
-  if (deleteError) return FAIL(deleteError.message);
+  if (deleteError) return FAIL(toUserMessage(deleteError, "Eski kriterler silinemedi."));
 
   const { error: insertError } = await supabase.from("acceptance_criteria").insert(
     parsed.data.map((c, index) => ({
@@ -855,7 +856,7 @@ export async function addAcceptanceCriteria(
       check_config: toCheckConfig(c),
     })),
   );
-  if (insertError) return FAIL(insertError.message);
+  if (insertError) return FAIL(toUserMessage(insertError, "Kabul kriterleri kaydedilemedi."));
 
   revalidatePath(`/contracts/${contractId}`);
   return OK("Kabul kriterleri kaydedildi.");
@@ -880,7 +881,7 @@ export async function signContract(
 ): Promise<FormState> {
   const session = await requireSession();
   const contractId = String(formData.get("contractId") ?? "");
-  if (!contractId) return FAIL("Missing contract.");
+  if (!contractId) return FAIL("Sözleşme eksik.");
 
   // The terms box is a real gate, not decoration: without it the signature
   // row would record a document hash but no evidence the party accepted
@@ -890,7 +891,7 @@ export async function signContract(
   }
 
   const contract = await getContract(contractId, session.userId);
-  if (!contract) return FAIL("Contract not found.");
+  if (!contract) return FAIL("Sözleşme bulunamadı.");
   if (contract.freelancer_id !== session.userId && contract.client_id !== session.userId) {
     return FAIL("Bu sözleşmeyi imzalama yetkiniz yok.");
   }
@@ -923,7 +924,7 @@ export async function signContract(
     p_terms_version: TERMS_VERSION,
   });
 
-  if (error) return FAIL(error.message);
+  if (error) return FAIL(toUserMessage(error, "İmza kaydedilemedi."));
 
   revalidatePath(`/contracts/${contractId}`);
   return OK("İmzalandı.");
@@ -938,7 +939,7 @@ export async function submitDelivery(
 ): Promise<FormState> {
   const session = await requireRole("FREELANCER");
   const milestoneId = String(formData.get("milestoneId") ?? "");
-  if (!milestoneId) return FAIL("Missing milestone.");
+  if (!milestoneId) return FAIL("Aşama eksik.");
 
   const supabase = await createClient();
 
@@ -960,7 +961,7 @@ export async function submitDelivery(
     p_to_status: "SUBMITTED",
   });
 
-  if (error) return FAIL(error.message);
+  if (error) return FAIL(toUserMessage(error, "Teslim gönderilemedi."));
 
   revalidatePath("/", "layout");
   return OK("Teslim edildi.");

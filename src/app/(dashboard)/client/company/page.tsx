@@ -1,4 +1,4 @@
-import { Building2 } from "lucide-react";
+import { AlertTriangle, Building2 } from "lucide-react";
 
 import { CompanyForm } from "@/app/(dashboard)/client/company/company-form";
 import { EmptyState, PageHeading, Panel } from "@/components/page-shell";
@@ -9,12 +9,37 @@ export default async function ClientCompanyPage() {
   await requireRole("CLIENT");
 
   const supabase = await createClient();
-  const { data: company } = await supabase
+  const { data: company, error } = await supabase
     .from("companies")
     .select("id, legal_name, vkn, tax_office, address")
     .order("created_at", { ascending: true })
     .limit(1)
     .maybeSingle();
+
+  if (error) {
+    return (
+      <>
+        <PageHeading
+          title="Şirket"
+          subtitle="Faturaların kesileceği tüzel kişilik"
+        />
+        <div className="fade-in flex items-center gap-4 rounded-2xl border border-dashed border-amber-300 bg-amber-50/50 p-6 dark:border-amber-900 dark:bg-amber-950/20">
+          <span className="flex size-14 shrink-0 items-center justify-center rounded-2xl bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
+            <AlertTriangle className="size-6" aria-hidden />
+          </span>
+          <div>
+            <h2 className="text-lg font-bold text-zinc-950 dark:text-zinc-50">
+              Şirket bilgisi yüklenemedi
+            </h2>
+            <p className="mt-0.5 text-sm text-zinc-500 dark:text-zinc-400">
+              Sayfayı yenileyip tekrar dene. Bilgin varsa silinmedi, geçici bir
+              yükleme sorunu olabilir.
+            </p>
+          </div>
+        </div>
+      </>
+    );
+  }
 
   const billingComplete = Boolean(company?.vkn && company?.tax_office && company?.address);
   const initial = company?.legal_name?.trim().charAt(0).toUpperCase() ?? "?";

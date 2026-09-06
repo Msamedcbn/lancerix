@@ -27,7 +27,6 @@ export default async function FreelancerProjectsPage() {
   const openRequests = requests.filter((r) => r.status === "OPEN");
 
   const qaContractsCount = contracts.filter((c) => c.product_type === "QA_ONLY").length;
-  const escrowContractsCount = contracts.length - qaContractsCount;
 
   return (
     <div className="flex flex-col gap-8">
@@ -72,21 +71,16 @@ export default async function FreelancerProjectsPage() {
       <NeedsActionList contracts={contracts} />
 
       {contracts.length > 0 ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2">
           <Stat
             label="Toplam Proje"
             value={contracts.length}
-            hint={`${qaContractsCount} QA Doğrulama, ${escrowContractsCount} Escrow`}
+            hint="Tümü QA Doğrulama — escrow Faz 2'de aktif olacak"
           />
           <Stat
             label="QA Doğrulama"
             value={qaContractsCount}
             hint="Kriter bazlı hızlı doğrulama"
-          />
-          <Stat
-            label="Escrow Hak Ediş"
-            value={escrowContractsCount}
-            hint="Aşama bazlı güvenli ödeme"
           />
         </div>
       ) : null}

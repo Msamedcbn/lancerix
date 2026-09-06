@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { requireSession } from "@/lib/auth/session";
-import { FAIL, firstIssue, OK, type FormState } from "@/lib/forms";
+import { FAIL, firstIssue, OK, toUserMessage, type FormState } from "@/lib/forms";
 import { notifyNewMessage } from "@/lib/notify/email";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -152,7 +152,7 @@ export async function postMessage(
     phase_id: parsed.data.phaseId,
   });
 
-  if (error) return FAIL(error.message);
+  if (error) return FAIL(toUserMessage(error, "Mesaj gönderilemedi."));
 
   await notifyCounterparty(
     parsed.data.contractId,

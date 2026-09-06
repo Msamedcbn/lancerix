@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { Route } from "next";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import type { Enums } from "@/lib/supabase/database.types";
@@ -25,6 +26,18 @@ export const HOME_FOR: Record<UserRole, Route> = {
 };
 
 /**
+ * Validates a `next` redirect target from a query param or form field.
+ *
+ * Only a same-origin relative path is accepted -- `//evil.example` and
+ * `https://evil.example` are both rejected, since either would otherwise
+ * carry a signed-in user's session cookies off-site on a post-auth redirect.
+ */
+export function safeNextPath(value: string | null | undefined): string | null {
+  if (!value) return null;
+  return value.startsWith("/") && !value.startsWith("//") ? value : null;
+}
+
+/**
  * The signed-in user together with their profile row.
  *
  * The role lives in `profiles`, not in the auth token, so that changing it is
@@ -37,7 +50,15 @@ export async function requireSession(): Promise<Session> {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) redirect("/login");
+  if (!user) {
+    // Middleware already redirects logged-out visits with ?next=<path> (see
+    // updateSession() in supabase/middleware.ts) -- this branch is the rarer
+    // backstop (e.g. a session that expired between the middleware check and
+    // this render), so it carries the same x-pathname header the root layout
+    // reads, to land back on the same page after signing in.
+    const pathname = (await headers()).get("x-pathname");
+    redirect(pathname ? `/login?next=${encodeURIComponent(pathname)}` : "/login");
+  }
 
   const { data: profile } = await supabase
     .from("profiles")

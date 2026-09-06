@@ -1150,6 +1150,7 @@ export type Database = {
           id: string
           pdf_storage_path: string | null
           results: Json
+          reviewer_id: string | null
           share_token: string | null
           status: string
           tier_order_id: string
@@ -1162,6 +1163,7 @@ export type Database = {
           id?: string
           pdf_storage_path?: string | null
           results: Json
+          reviewer_id?: string | null
           share_token?: string | null
           status: string
           tier_order_id: string
@@ -1174,6 +1176,7 @@ export type Database = {
           id?: string
           pdf_storage_path?: string | null
           results?: Json
+          reviewer_id?: string | null
           share_token?: string | null
           status?: string
           tier_order_id?: string
@@ -1187,7 +1190,62 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "qa_reports_reviewer_id_fkey"
+            columns: ["reviewer_id"]
+            isOneToOne: false
+            referencedRelation: "qa_reviewers"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "qa_reports_tier_order_id_fkey"
+            columns: ["tier_order_id"]
+            isOneToOne: false
+            referencedRelation: "qa_tier_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      qa_reviewer_tokens: {
+        Row: {
+          admin_notified_at: string | null
+          created_at: string
+          expires_at: string
+          id: string
+          reviewer_id: string
+          tier_order_id: string
+          token: string
+          used_at: string | null
+        }
+        Insert: {
+          admin_notified_at?: string | null
+          created_at?: string
+          expires_at: string
+          id?: string
+          reviewer_id: string
+          tier_order_id: string
+          token: string
+          used_at?: string | null
+        }
+        Update: {
+          admin_notified_at?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          reviewer_id?: string
+          tier_order_id?: string
+          token?: string
+          used_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "qa_reviewer_tokens_reviewer_id_fkey"
+            columns: ["reviewer_id"]
+            isOneToOne: false
+            referencedRelation: "qa_reviewers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "qa_reviewer_tokens_tier_order_id_fkey"
             columns: ["tier_order_id"]
             isOneToOne: false
             referencedRelation: "qa_tier_orders"
@@ -1201,9 +1259,11 @@ export type Database = {
           avatar_storage_path: string | null
           bio: string | null
           created_at: string
+          email: string | null
+          full_name: string | null
           id: string
           level: string
-          profile_id: string
+          profile_id: string | null
           rate_kurus: number | null
           specialties: string[]
           years_experience: number
@@ -1213,9 +1273,11 @@ export type Database = {
           avatar_storage_path?: string | null
           bio?: string | null
           created_at?: string
+          email?: string | null
+          full_name?: string | null
           id?: string
           level: string
-          profile_id: string
+          profile_id?: string | null
           rate_kurus?: number | null
           specialties?: string[]
           years_experience: number
@@ -1225,9 +1287,11 @@ export type Database = {
           avatar_storage_path?: string | null
           bio?: string | null
           created_at?: string
+          email?: string | null
+          full_name?: string | null
           id?: string
           level?: string
-          profile_id?: string
+          profile_id?: string | null
           rate_kurus?: number | null
           specialties?: string[]
           years_experience?: number
@@ -1392,6 +1456,37 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      _record_qa_report: {
+        Args: {
+          p_contract_id: string
+          p_delivery_id: string
+          p_document_sha256: string
+          p_findings: string
+          p_reviewer_id?: string
+          p_status: string
+        }
+        Returns: {
+          client_note: string | null
+          client_review_deadline: string | null
+          contract_id: string
+          decided_at: string | null
+          id: string
+          milestone_id: string | null
+          notes: string | null
+          pr_url: string | null
+          reminder_sent_at: string | null
+          staging_url: string
+          status: Database["public"]["Enums"]["delivery_status"]
+          submitted_at: string
+          submitted_by: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "deliveries"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       apply_bps: { Args: { amount: number; bps: number }; Returns: number }
       auto_escalate_qa_tier: {
         Args: { p_order_id: string; p_reason: string }
@@ -1907,6 +2002,15 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      reviewer_report_token_info: {
+        Args: { p_token: string }
+        Returns: {
+          contract_title: string
+          reason: string
+          reviewer_level: string
+          valid: boolean
+        }[]
+      }
       set_planned_start_date: {
         Args: { p_contract_id: string; p_date: string }
         Returns: {
@@ -2092,6 +2196,15 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      submit_reviewer_report: {
+        Args: {
+          p_document_sha256: string
+          p_findings: string
+          p_status: string
+          p_token: string
+        }
+        Returns: undefined
+      }
       toggle_qa_report_share: {
         Args: { p_report_id: string; p_share: boolean }
         Returns: {
@@ -2102,6 +2215,7 @@ export type Database = {
           id: string
           pdf_storage_path: string | null
           results: Json
+          reviewer_id: string | null
           share_token: string | null
           status: string
           tier_order_id: string

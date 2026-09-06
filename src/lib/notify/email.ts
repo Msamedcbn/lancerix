@@ -413,6 +413,103 @@ export async function notifyAutoAccepted({
 }
 
 /**
+ * A new Tier 3/4 reviewer was just added to the roster (2026-09-06 four-role
+ * audit, Finding 1). No account exists yet at this point for the common
+ * case addReviewer() now supports -- this is a plain heads-up, not a link to
+ * anything, since there is nothing to act on until a client actually
+ * selects them (that is notifyReviewerAssigned, below).
+ */
+export async function notifyReviewerAdded({
+  to,
+  fullName,
+}: Readonly<{ to: string; fullName: string }>): Promise<SendResult> {
+  return sendEmail({
+    to,
+    subject: "Lancerix mühendis kadrosuna eklendin",
+    body: [
+      `Merhaba ${fullName},`,
+      "",
+      "Lancerix'te bir müşteri seni QA doğrulama mühendisi olarak seçtiğinde",
+      "buraya bir e-posta gelecek -- o e-postadaki linkten, hesap açmana gerek",
+      "kalmadan raporunu doğrudan yazabileceksin.",
+      "",
+      "Şimdilik yapman gereken bir şey yok.",
+    ].join("\n"),
+  });
+}
+
+/**
+ * A client selected this reviewer and the freelancer delivered -- there is
+ * now something real to review. The link is single-use and expires in 14
+ * days (submit_qa_delivery() issues it, expire-reviewer-tokens.ts's cron
+ * clears it out and tells the admin if it goes unused).
+ *
+ * fallbackEmail is the reviewer's own qa_reviewers.email for the no-account
+ * case; toUserId is set only when profile_id is not null.
+ */
+export async function notifyReviewerAssigned({
+  toUserId,
+  fallbackEmail,
+  contractTitle,
+  reviewerName,
+  token,
+}: Readonly<{
+  toUserId: string | null;
+  fallbackEmail: string;
+  contractTitle: string;
+  reviewerName: string;
+  token: string;
+}>): Promise<SendResult> {
+  const to = await addressFor(toUserId, fallbackEmail);
+  if (!to) return { ok: false, reason: "no address on file for that reviewer" };
+
+  return sendEmail({
+    to,
+    subject: `Yeni QA incelemesi: ${contractTitle}`,
+    body: [
+      `Merhaba ${reviewerName},`,
+      "",
+      `"${contractTitle}" sözleşmesi için QA incelemesine seçildin.`,
+      "",
+      `Raporunu buradan gönder: ${appUrlFor(`/reviewer-report/${token}`)}`,
+      "",
+      "Bu link tek kullanımlıktır ve 14 gün içinde kullanılmazsa geçersiz",
+      "olur -- hesap açmana gerek yok, linke tıklayıp doğrudan raporunu",
+      "yazabilirsin.",
+    ].join("\n"),
+  });
+}
+
+/**
+ * A reviewer's link expired before they used it (2026-09-06 four-role audit)
+ * -- the one path the admin re-enters the loop on, since removing them as
+ * the manual relay for the happy path must not mean losing visibility when
+ * a reviewer simply never acts. Sent once per token by
+ * expire-reviewer-tokens' cron.
+ */
+export async function notifyReviewerTokenExpired({
+  contractTitle,
+  reviewerName,
+}: Readonly<{ contractTitle: string; reviewerName: string }>): Promise<SendResult> {
+  const to = process.env.ADMIN_DIGEST_EMAIL;
+  if (!to) return { ok: false, reason: "ADMIN_DIGEST_EMAIL is not set" };
+
+  return sendEmail({
+    to,
+    subject: `Reviewer raporu gelmedi: ${contractTitle}`,
+    body: [
+      `${reviewerName}, "${contractTitle}" için 14 gün içinde rapor göndermedi`,
+      "ve linki geçersiz oldu.",
+      "",
+      `Panel: ${appUrlFor("/admin/qa-queue")}`,
+      "",
+      "Reviewer'a ulaşıp durumu sorman ya da /admin/reviewers üzerinden",
+      "sözleşmeye yeni bir reviewer atayıp müşteriyi bilgilendirmen gerekebilir.",
+    ].join("\n"),
+  });
+}
+
+/**
  * The daily admin digest -- sent to a fixed ADMIN_DIGEST_EMAIL, not a user
  * lookup, since there is one operator and no in-app concept yet of "who
  * gets ops mail" worth building. The cron only calls this when at least one

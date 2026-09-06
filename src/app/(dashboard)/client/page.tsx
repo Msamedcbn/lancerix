@@ -36,7 +36,7 @@ export default async function ClientPaymentsPage() {
 
       <PageHeading
         title="Sözleşmeler ve Ödemeler"
-        subtitle="Sözleşmelerin ve ödeme durumların. QA sözleşmelerinde ödeme taraflar arasında doğrudan çözülür, escrow yalnızca aşamalı sözleşmelerde geçerlidir."
+        subtitle="Sözleşmelerin ve ödeme durumların. QA doğrulama sözleşmelerinde ödeme taraflar arasında doğrudan çözülür — Lancerix parayı tutmaz, sadece raporu sağlar. Escrow (bir aracının ödemeyi teslime kadar güvenle tutması) Faz 2'de aktif olacak, bugün hiçbir sözleşme bu türde değil."
       />
 
       <NeedsActionList contracts={contracts} />

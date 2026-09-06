@@ -1,5 +1,6 @@
 "use client";
 
+import type { Route } from "next";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useActionState } from "react";
@@ -50,6 +51,8 @@ function Notice() {
 
 function LoginForm() {
   const [state, formAction, pending] = useActionState(login, INITIAL);
+  const next = useSearchParams().get("next");
+  const registerHref = (next ? `/register?next=${encodeURIComponent(next)}` : "/register") as Route;
 
   return (
     <main className="grid min-h-[100dvh] lg:grid-cols-[1fr_1.1fr]">
@@ -99,6 +102,8 @@ function LoginForm() {
           </Suspense>
 
           <form action={formAction} className="flex flex-col gap-5">
+            {next ? <input type="hidden" name="next" value={next} /> : null}
+
             <Field label="E-posta" htmlFor="email">
               <TextInput id="email" name="email" type="email" required />
             </Field>
@@ -127,7 +132,7 @@ function LoginForm() {
             <p className="text-center text-sm text-zinc-500">
               Hesabın yok mu?{" "}
               <Link
-                href="/register"
+                href={registerHref}
                 className="text-zinc-950 underline underline-offset-4"
               >
                 Kayıt ol
@@ -141,5 +146,9 @@ function LoginForm() {
 }
 
 export default function LoginPage() {
-  return <LoginForm />;
+  return (
+    <Suspense fallback={null}>
+      <LoginForm />
+    </Suspense>
+  );
 }

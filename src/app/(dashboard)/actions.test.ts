@@ -77,14 +77,20 @@ describe("rejectContract", () => {
     });
   });
 
-  it("surfaces an RPC error as FAIL instead of throwing", async () => {
+  it("surfaces an RPC error as a fixed Turkish message, never the raw error, but logs the raw error server-side", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
     rpcImpl = failRpc("contract cannot be rejected in status ACTIVE");
     const { rejectContract } = await import("./actions");
     const result = await rejectContract(
       { error: null },
       formData({ contractId: CONTRACT_ID, reason: "Artık geç kaldı ama denedim." }),
     );
-    expect(result.error).toBe("contract cannot be rejected in status ACTIVE");
+    expect(result.error).toBe("Sözleşme reddedilemedi.");
+    expect(consoleError).toHaveBeenCalledWith(
+      "[FAIL]",
+      "contract cannot be rejected in status ACTIVE",
+    );
+    consoleError.mockRestore();
   });
 });
 
@@ -134,14 +140,20 @@ describe("resubmitContract", () => {
     });
   });
 
-  it("surfaces the SQL guard's error when the contract isn't awaiting resubmission", async () => {
+  it("surfaces the SQL guard's error as a fixed Turkish message, and logs the raw error server-side", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
     rpcImpl = failRpc("contract is not awaiting resubmission (status ACTIVE)");
     const { resubmitContract } = await import("./actions");
     const result = await resubmitContract(
       { error: null },
       formData({ contractId: CONTRACT_ID }),
     );
-    expect(result.error).toBe("contract is not awaiting resubmission (status ACTIVE)");
+    expect(result.error).toBe("Sözleşme yeniden gönderilemedi.");
+    expect(consoleError).toHaveBeenCalledWith(
+      "[FAIL]",
+      "contract is not awaiting resubmission (status ACTIVE)",
+    );
+    consoleError.mockRestore();
   });
 });
 

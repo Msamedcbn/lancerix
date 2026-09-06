@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { requireSession } from "@/lib/auth/session";
-import { FAIL, firstIssue, OK, type FormState } from "@/lib/forms";
+import { FAIL, firstIssue, OK, toUserMessage, type FormState } from "@/lib/forms";
 import { createClient } from "@/lib/supabase/server";
 import { profileSchema, publicProfileSchema } from "@/lib/validations/profile";
 
@@ -46,7 +46,7 @@ export async function updatePublicProfile(
     })
     .eq("id", session.userId);
 
-  if (error) return FAIL(error.message);
+  if (error) return FAIL(toUserMessage(error, "Profil güncellenemedi."));
 
   revalidatePath("/profil");
   revalidatePath(`/profile/${session.publicId}`);
@@ -85,7 +85,7 @@ export async function updatePayoutInfo(
     })
     .eq("id", session.userId);
 
-  if (error) return FAIL(error.message);
+  if (error) return FAIL(toUserMessage(error, "Faturalandırma bilgileri kaydedilemedi."));
 
   revalidatePath("/profil");
   return OK("Faturalandırma bilgilerin kaydedildi.");
