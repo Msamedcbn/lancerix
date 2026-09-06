@@ -12,6 +12,7 @@ import {
   LayoutDashboard,
   ListChecks,
   LogOut,
+  Plus,
   Receipt,
   ScrollText,
   Search,
@@ -50,9 +51,20 @@ export type NavIcon =
   | "layout-dashboard"
   | "search"
   | "inbox"
-  | "user-plus";
+  | "user-plus"
+  | "plus";
 
-export type NavItem = { href: Route; label: string; icon: NavIcon };
+/**
+ * `primary` marks the one item (per role, at most) that gets the floating
+ * center button on mobile -- the create/start action a native app would
+ * surface as a thumb-reachable FAB instead of burying it in the row.
+ */
+export type NavItem = {
+  href: Route;
+  label: string;
+  icon: NavIcon;
+  primary?: boolean;
+};
 
 const ICONS: Record<NavIcon, typeof Briefcase> = {
   briefcase: Briefcase,
@@ -73,6 +85,7 @@ const ICONS: Record<NavIcon, typeof Briefcase> = {
   search: Search,
   inbox: Inbox,
   "user-plus": UserPlus,
+  plus: Plus,
 };
 
 /**
@@ -115,6 +128,13 @@ export function Sidebar({
   // contract detail) has no section to name, so it falls back to the brand.
   const activeItem = items.find((item) => item.href === activeHref);
   const ActiveIcon = activeItem ? ICONS[activeItem.icon] : null;
+
+  // Its array position (not a fixed 50%) sets the floating button's
+  // horizontal offset, so it lines up with the gap it leaves in the row
+  // below regardless of how many items that role has.
+  const primaryIndex = items.findIndex((item) => item.primary);
+  const primaryItem = primaryIndex === -1 ? null : items[primaryIndex]!;
+  const PrimaryIcon = primaryItem ? ICONS[primaryItem.icon] : null;
 
   return (
     <>
@@ -187,6 +207,16 @@ export function Sidebar({
         }}
       >
         {items.map((item) => {
+          if (item.primary) {
+            // Left empty on purpose: the floating button below sits above
+            // this exact slot. Rendered here (not skipped) so the remaining
+            // tabs keep the same width as if it were a normal item, instead
+            // of stretching to fill the gap.
+            return (
+              <span key={item.href} aria-hidden className="min-w-[4.25rem] flex-1 shrink-0" />
+            );
+          }
+
           const active = isActive(item.href);
           const Icon = ICONS[item.icon];
 
@@ -218,6 +248,26 @@ export function Sidebar({
           );
         })}
       </nav>
+
+      {/* A separate fixed element, not a flex child of the bar above: the
+          bar needs overflow-x-auto for roles with more tabs than fit (see
+          admin), and CSS has no way to let one axis scroll while the other
+          stays visible on the same box -- setting overflow-y to visible
+          there would be silently forced back to auto. Floating this on top
+          instead sidesteps that entirely. */}
+      {primaryItem && PrimaryIcon ? (
+        <Link
+          href={primaryItem.href}
+          aria-label={primaryItem.label}
+          className="fixed z-40 flex size-14 -translate-x-1/2 items-center justify-center rounded-full bg-brand text-brand-foreground shadow-lg shadow-brand/30 ring-4 ring-background transition-transform active:scale-95 md:hidden"
+          style={{
+            left: `${((primaryIndex + 0.5) / items.length) * 100}%`,
+            bottom: "calc(env(safe-area-inset-bottom) + 1.25rem)",
+          }}
+        >
+          <PrimaryIcon className="size-6" aria-hidden />
+        </Link>
+      ) : null}
     </>
   );
 }
