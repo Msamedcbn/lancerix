@@ -89,7 +89,7 @@ export const HOME_COPY: Record<Locale, HomeCopy> = {
       sydney: "Sidney",
     },
     positioning:
-      "Biz bir aracı kurum değil, tarafsız bir hakemiz. Paranızı bünyemizde tutmuyoruz (escrow yok) — ödeme taraflar arasında doğrudan çözülür. Projenin testi ve denetimi için seçtiğiniz bağımsız QA paketine göre ücretlendirme yapıyoruz.",
+      "Biz bir aracı kurum değiliz — bağımsız bir teknik doğrulama servisiyiz. Paranızı bünyemizde tutmuyoruz (escrow yok); ödeme taraflar arasında doğrudan çözülür. Sözleşmenizdeki kabul kriterlerine göre teslimatı kontrol edip, kimsenin sonradan değiştiremeyeceği zaman damgalı bir rapor üretiyoruz.",
     reportCardId: "LX-8FQ2K · QA RAPORU",
     reportCardTitle: "Ödeme entegrasyonu — kriter doğrulaması",
     reportCardStatus: "ONAYLANDI",
@@ -209,7 +209,7 @@ export const HOME_COPY: Record<Locale, HomeCopy> = {
       sydney: "Sydney",
     },
     positioning:
-      "We are not a middleman — we are a neutral referee. We never hold your money (there is no escrow); payment is settled directly between the two parties. What you pay us for is the independent QA tier you choose to test and audit the work.",
+      "We are not a middleman — we are an independent technical verification service. We never hold your money (there is no escrow); payment is settled directly between the two parties. We check the delivery against the acceptance criteria written into your contract and produce a timestamped report that neither party can alter afterwards.",
     reportCardId: "LX-8FQ2K · QA REPORT",
     reportCardTitle: "Payment integration — criteria verification",
     reportCardStatus: "PASSED",

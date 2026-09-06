@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 
 import { ProfileCard } from "@/components/profile-card";
 import { getPublicProfile } from "@/lib/data/profile";
+import { socialMetadata } from "@/lib/seo";
 
 export async function generateMetadata({
   params,
@@ -11,12 +12,11 @@ export async function generateMetadata({
   const profile = await getPublicProfile(publicId);
   if (!profile) return { title: "Profil bulunamadı — Lancerix" };
 
-  return {
-    title: `${profile.full_name} — Lancerix`,
-    description:
-      profile.headline ??
-      `${profile.full_name} kullanıcısının Lancerix profili.`,
-  };
+  const title = `${profile.full_name} — Lancerix`;
+  const description =
+    profile.headline ?? `${profile.full_name} kullanıcısının Lancerix profili.`;
+
+  return { title, description, ...socialMetadata({ title, description }) };
 }
 
 /**

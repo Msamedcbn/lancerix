@@ -1,4 +1,12 @@
 /**
+ * The arc's path data, exported so the favicon/OG-image generators
+ * (src/app/icon.tsx, apple-icon.tsx, src/lib/og-image.tsx) draw the exact
+ * same mark instead of a hand-copied approximation that could drift from it.
+ */
+export const MARK_PATH_D = "M12 4 A 8 8 0 1 1 4.273 9.930";
+export const MARK_DOT = { cx: 4.273, cy: 9.93, r: 1.85 };
+
+/**
  * The Lancerix mark.
  *
  * An arc that has travelled 285 degrees and stopped, with a filled terminal
@@ -22,13 +30,8 @@ export function Mark({
       aria-label={title}
       aria-hidden={title ? undefined : true}
     >
-      <path
-        d="M12 4 A 8 8 0 1 1 4.273 9.930"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="butt"
-      />
-      <circle cx="4.273" cy="9.93" r="1.85" className="fill-brand" />
+      <path d={MARK_PATH_D} stroke="currentColor" strokeWidth="2" strokeLinecap="butt" />
+      <circle cx={MARK_DOT.cx} cy={MARK_DOT.cy} r={MARK_DOT.r} className="fill-brand" />
     </svg>
   );
 }

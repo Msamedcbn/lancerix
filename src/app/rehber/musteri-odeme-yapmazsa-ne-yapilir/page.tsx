@@ -2,29 +2,29 @@ import type { Metadata } from "next";
 
 import { GuideView } from "@/components/public/guide-view";
 import { PUBLIC_ROUTES } from "@/lib/i18n/config";
-import { GUIDE_DELIVERY_ACCEPTANCE_COPY } from "@/lib/i18n/dictionaries/guide-teslim-kabul";
+import { GUIDE_MUSTERI_ODEMEZSE_COPY } from "@/lib/i18n/dictionaries/guide-musteri-odemezse";
 import { pageMetadata } from "@/lib/seo";
 
 export const metadata: Metadata = pageMetadata({
-  id: "guideDeliveryAcceptance",
+  id: "guideClientNonPayment",
   locale: "tr",
-  title: GUIDE_DELIVERY_ACCEPTANCE_COPY.tr.metaTitle,
-  description: GUIDE_DELIVERY_ACCEPTANCE_COPY.tr.metaDescription,
+  title: GUIDE_MUSTERI_ODEMEZSE_COPY.tr.metaTitle,
+  description: GUIDE_MUSTERI_ODEMEZSE_COPY.tr.metaDescription,
 });
 
-export default function FreelanceTeslimVeKabulPage() {
+export default function MusteriOdemeYapmazsaNeYapilirPage() {
   return (
     <GuideView
-      copy={GUIDE_DELIVERY_ACCEPTANCE_COPY.tr}
+      copy={GUIDE_MUSTERI_ODEMEZSE_COPY.tr}
       locale="tr"
       related={[
         {
-          href: PUBLIC_ROUTES.guideQaVerification.tr,
-          label: "Bağımsız QA Doğrulama Nedir",
-        },
-        {
           href: PUBLIC_ROUTES.guideNoCompanyProtection.tr,
           label: "Şirket Kurmadan Freelance Çalışırken Kendini Nasıl Korursun",
+        },
+        {
+          href: PUBLIC_ROUTES.guideDeliveryAcceptance.tr,
+          label: "Freelance Teslim ve Kabul Rehberi",
         },
       ]}
     />

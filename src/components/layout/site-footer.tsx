@@ -57,6 +57,15 @@ export function SiteFooter({
                 <Link href={PUBLIC_ROUTES.guideQaVerification[locale]} className="hover:text-foreground transition-colors">{t.guideQa}</Link>
               </li>
               <li>
+                <Link href={PUBLIC_ROUTES.guideNoCompanyProtection[locale]} className="hover:text-foreground transition-colors">{t.guideNoCompany}</Link>
+              </li>
+              <li>
+                <Link href={PUBLIC_ROUTES.guideClientNonPayment[locale]} className="hover:text-foreground transition-colors">{t.guideClientNonPayment}</Link>
+              </li>
+              <li>
+                <Link href={PUBLIC_ROUTES.trustArchitecture[locale]} className="hover:text-foreground transition-colors">{t.trustArchitecture}</Link>
+              </li>
+              <li>
                 <Link href={PUBLIC_ROUTES.roadmap[locale]} className="hover:text-foreground transition-colors">{t.roadmap}</Link>
               </li>
               <li>

@@ -3,7 +3,14 @@ import { notFound } from "next/navigation";
 
 import { QaReportCard } from "@/components/public/qa-report-card";
 import { getPublicQaReport } from "@/lib/data/public-report";
+import { socialMetadata } from "@/lib/seo";
 
+/**
+ * No canonical/path here: a token URL is unique per share and not meant to
+ * rank on its own (see robots.ts / the noindex-by-omission-from-PUBLIC_ROUTES
+ * comment in sitemap.ts) -- the Open Graph tags exist so the link itself
+ * looks like Lancerix when a freelancer pastes it to a client, not for search.
+ */
 export async function generateMetadata({
   params,
 }: Readonly<{ params: Promise<{ token: string }> }>): Promise<Metadata> {
@@ -11,10 +18,10 @@ export async function generateMetadata({
   const report = await getPublicQaReport(token);
   if (!report) return { title: "Rapor bulunamadı — Lancerix" };
 
-  return {
-    title: `${report.contractTitle} — Doğrulama Raporu — Lancerix`,
-    description: "Lancerix üzerinde bağımsız olarak doğrulanmış bir teslim raporu.",
-  };
+  const title = `${report.contractTitle} — Doğrulama Raporu — Lancerix`;
+  const description = "Lancerix üzerinde bağımsız olarak doğrulanmış bir teslim raporu.";
+
+  return { title, description, ...socialMetadata({ title, description }) };
 }
 
 /**

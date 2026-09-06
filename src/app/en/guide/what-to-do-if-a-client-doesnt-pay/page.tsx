@@ -2,29 +2,29 @@ import type { Metadata } from "next";
 
 import { GuideView } from "@/components/public/guide-view";
 import { PUBLIC_ROUTES } from "@/lib/i18n/config";
-import { GUIDE_DELIVERY_ACCEPTANCE_COPY } from "@/lib/i18n/dictionaries/guide-teslim-kabul";
+import { GUIDE_MUSTERI_ODEMEZSE_COPY } from "@/lib/i18n/dictionaries/guide-musteri-odemezse";
 import { pageMetadata } from "@/lib/seo";
 
 export const metadata: Metadata = pageMetadata({
-  id: "guideDeliveryAcceptance",
+  id: "guideClientNonPayment",
   locale: "en",
-  title: GUIDE_DELIVERY_ACCEPTANCE_COPY.en.metaTitle,
-  description: GUIDE_DELIVERY_ACCEPTANCE_COPY.en.metaDescription,
+  title: GUIDE_MUSTERI_ODEMEZSE_COPY.en.metaTitle,
+  description: GUIDE_MUSTERI_ODEMEZSE_COPY.en.metaDescription,
 });
 
-export default function EnglishFreelanceDeliveryAcceptancePage() {
+export default function EnglishWhatToDoIfAClientDoesntPayPage() {
   return (
     <GuideView
-      copy={GUIDE_DELIVERY_ACCEPTANCE_COPY.en}
+      copy={GUIDE_MUSTERI_ODEMEZSE_COPY.en}
       locale="en"
       related={[
         {
-          href: PUBLIC_ROUTES.guideQaVerification.en,
-          label: "What Is Independent QA Verification",
-        },
-        {
           href: PUBLIC_ROUTES.guideNoCompanyProtection.en,
           label: "How To Protect Yourself Freelancing Without A Company",
+        },
+        {
+          href: PUBLIC_ROUTES.guideDeliveryAcceptance.en,
+          label: "Freelance Delivery & Acceptance Guide",
         },
       ]}
     />

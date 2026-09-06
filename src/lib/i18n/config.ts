@@ -36,6 +36,18 @@ export const PUBLIC_ROUTES = {
     tr: "/rehber/bagimsiz-qa-dogrulama-nedir",
     en: "/en/guide/independent-qa-verification",
   },
+  trustArchitecture: {
+    tr: "/guven-mimarisi",
+    en: "/en/trust-architecture",
+  },
+  guideNoCompanyProtection: {
+    tr: "/rehber/sirket-kurmadan-freelance-korunma",
+    en: "/en/guide/protecting-yourself-as-an-individual-freelancer",
+  },
+  guideClientNonPayment: {
+    tr: "/rehber/musteri-odeme-yapmazsa-ne-yapilir",
+    en: "/en/guide/what-to-do-if-a-client-doesnt-pay",
+  },
 } as const satisfies Record<string, Record<Locale, string>>;
 
 export type PublicRouteId = keyof typeof PUBLIC_ROUTES;
@@ -58,12 +70,6 @@ export function localeFromPath(pathname: string): Locale {
   return pathname === "/en" || pathname.startsWith("/en/") ? "en" : "tr";
 }
 
-/** hreflang alternates for a public page, for Next's metadata `alternates`. */
-export function alternatesFor(id: PublicRouteId) {
-  return {
-    languages: {
-      tr: PUBLIC_ROUTES[id].tr,
-      en: PUBLIC_ROUTES[id].en,
-    },
-  };
-}
+// Full <head> metadata (canonical, hreflang, Open Graph, Twitter Card) is
+// built by pageMetadata() in @/lib/seo, not here -- this file stays limited
+// to locale/route data with zero "next" Metadata-type or SEO-copy concerns.

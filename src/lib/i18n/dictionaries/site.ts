@@ -19,6 +19,9 @@ export type SiteCopy = {
     verificationMethods: string;
     guide: string;
     guideQa: string;
+    guideNoCompany: string;
+    guideClientNonPayment: string;
+    trustArchitecture: string;
     roadmap: string;
     login: string;
     terms: string;
@@ -48,6 +51,9 @@ export const SITE_COPY: Record<Locale, SiteCopy> = {
       verificationMethods: "Doğrulama Yöntemleri",
       guide: "Teslim ve Kabul Rehberi",
       guideQa: "Bağımsız QA Doğrulama Nedir",
+      guideNoCompany: "Şirket Kurmadan Korunma",
+      guideClientNonPayment: "Müşteri Ödemezse Ne Yapılır",
+      trustArchitecture: "Güven Mimarisi",
       roadmap: "Yol Haritası (Neredeyiz?)",
       login: "Giriş Yap",
       terms: "Şartlar ve Koşullar",
@@ -74,6 +80,9 @@ export const SITE_COPY: Record<Locale, SiteCopy> = {
       verificationMethods: "Verification tiers",
       guide: "Delivery & Acceptance Guide",
       guideQa: "What Is Independent QA Verification",
+      guideNoCompany: "Freelancing Without A Company",
+      guideClientNonPayment: "What If A Client Doesn't Pay",
+      trustArchitecture: "Trust Architecture",
       roadmap: "Roadmap",
       login: "Log in",
       terms: "Terms of service",

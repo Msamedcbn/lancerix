@@ -32,6 +32,7 @@ const PUBLIC_ROUTES = [
   "/rehber",
   "/report",
   "/reviewer-report",
+  "/guven-mimarisi",
 ];
 
 /**

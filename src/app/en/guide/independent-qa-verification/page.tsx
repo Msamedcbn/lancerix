@@ -1,14 +1,16 @@
 import type { Metadata } from "next";
 
 import { GuideView } from "@/components/public/guide-view";
-import { alternatesFor, PUBLIC_ROUTES } from "@/lib/i18n/config";
+import { PUBLIC_ROUTES } from "@/lib/i18n/config";
 import { GUIDE_QA_VERIFICATION_COPY } from "@/lib/i18n/dictionaries/guide-qa-nedir";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
+  id: "guideQaVerification",
+  locale: "en",
   title: GUIDE_QA_VERIFICATION_COPY.en.metaTitle,
   description: GUIDE_QA_VERIFICATION_COPY.en.metaDescription,
-  alternates: alternatesFor("guideQaVerification"),
-};
+});
 
 export default function EnglishIndependentQaVerificationPage() {
   return (

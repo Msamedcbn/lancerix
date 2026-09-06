@@ -4,6 +4,7 @@ import { Plus_Jakarta_Sans, IBM_Plex_Mono } from "next/font/google";
 
 import { appUrl } from "@/lib/env.server";
 import { localeFromPath } from "@/lib/i18n/config";
+import { socialMetadata } from "@/lib/seo";
 
 import "./globals.css";
 
@@ -28,11 +29,23 @@ const jakarta = Plus_Jakarta_Sans({
   display: "swap",
 });
 
+const DEFAULT_TITLE = "Lancerix — Bağımsız Kod Doğrulama";
+const DEFAULT_DESCRIPTION =
+  "Bağımsız kod doğrulama: freelancer ve ajans projelerinde teslim ile kabul arasındaki belirsizliği, kabul kriterlerine dayalı, zaman damgalı bir raporla ortadan kaldırıyoruz.";
+
+/**
+ * Fallback only -- every real public page overrides this via pageMetadata()
+ * or socialMetadata() in @/lib/seo (see src/app/page.tsx and friends). This
+ * exists for the handful of routes that don't call either, most notably the
+ * (dashboard) segment, which sets its own `robots: { index: false }` and
+ * inherits everything else from here -- harmless on a page nothing should
+ * ever link or index.
+ */
 export const metadata: Metadata = {
   metadataBase: new URL(appUrl()),
-  title: "Lancerix — Bağımsız Kod Doğrulama",
-  description:
-    "Bağımsız kod doğrulama: freelancer ve ajans projelerinde teslim ile kabul arasındaki belirsizliği, kabul kriterlerine dayalı, zaman damgalı bir raporla ortadan kaldırıyoruz.",
+  title: DEFAULT_TITLE,
+  description: DEFAULT_DESCRIPTION,
+  ...socialMetadata({ title: DEFAULT_TITLE, description: DEFAULT_DESCRIPTION }),
 };
 
 /**

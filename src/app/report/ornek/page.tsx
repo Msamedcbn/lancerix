@@ -3,11 +3,16 @@ import type { Metadata } from "next";
 import { HASH } from "@/app/home-client";
 import { QaReportCard } from "@/components/public/qa-report-card";
 import type { PublicQaReport } from "@/lib/data/public-report";
+import { socialMetadata } from "@/lib/seo";
+
+const TITLE = "Örnek QA Doğrulama Raporu — Lancerix";
+const DESCRIPTION =
+  "Bağımsız bir QA doğrulama raporu neye benzer? Kabul kriterleri, sonuç ve değiştirilemez kriptografik zaman damgasıyla örnek bir rapor.";
 
 export const metadata: Metadata = {
-  title: "Örnek QA Doğrulama Raporu — Lancerix",
-  description:
-    "Bağımsız bir QA doğrulama raporu neye benzer? Kabul kriterleri, sonuç ve değiştirilemez kriptografik zaman damgasıyla örnek bir rapor.",
+  title: TITLE,
+  description: DESCRIPTION,
+  ...socialMetadata({ title: TITLE, description: DESCRIPTION, path: "/report/ornek" }),
 };
 
 /**

@@ -2,25 +2,25 @@ import type { Metadata } from "next";
 
 import { GuideView } from "@/components/public/guide-view";
 import { PUBLIC_ROUTES } from "@/lib/i18n/config";
-import { GUIDE_QA_VERIFICATION_COPY } from "@/lib/i18n/dictionaries/guide-qa-nedir";
+import { GUVEN_MIMARISI_COPY } from "@/lib/i18n/dictionaries/guide-guven-mimarisi";
 import { pageMetadata } from "@/lib/seo";
 
 export const metadata: Metadata = pageMetadata({
-  id: "guideQaVerification",
+  id: "trustArchitecture",
   locale: "tr",
-  title: GUIDE_QA_VERIFICATION_COPY.tr.metaTitle,
-  description: GUIDE_QA_VERIFICATION_COPY.tr.metaDescription,
+  title: GUVEN_MIMARISI_COPY.tr.metaTitle,
+  description: GUVEN_MIMARISI_COPY.tr.metaDescription,
 });
 
-export default function BagimsizQaDogrulamaNedirPage() {
+export default function GuvenMimarisiPage() {
   return (
     <GuideView
-      copy={GUIDE_QA_VERIFICATION_COPY.tr}
+      copy={GUVEN_MIMARISI_COPY.tr}
       locale="tr"
       related={[
         {
-          href: PUBLIC_ROUTES.guideDeliveryAcceptance.tr,
-          label: "Freelance Teslim ve Kabul Rehberi",
+          href: PUBLIC_ROUTES.guideQaVerification.tr,
+          label: "Bağımsız QA Doğrulama Nedir",
         },
         { href: "/report/ornek", label: "Örnek bir doğrulama raporu gör" },
       ]}
