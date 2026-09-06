@@ -135,16 +135,21 @@ async function QaTestersTab() {
 
   return (
     <Rows>
-      {reviewers.map((r) => (
-        <Link key={r.id} href={`/admin/users/${r.profile_id}`}>
+      {reviewers.map((r) => {
+        const row = (
           <Row>
             <div className="flex items-center justify-between gap-4">
               <div className="min-w-0">
                 <p className="truncate text-sm font-medium text-zinc-950 dark:text-zinc-50">
-                  {r.profile.full_name}
+                  {r.displayName}
+                  {!r.hasAccount && (
+                    <span className="ml-1.5 rounded-full bg-sky-50 px-1.5 py-0.5 text-[0.65rem] font-semibold text-sky-700 dark:bg-sky-950/40 dark:text-sky-300">
+                      Hesabı yok
+                    </span>
+                  )}
                 </p>
                 <p className="mt-0.5 truncate text-xs text-zinc-500 dark:text-zinc-400">
-                  {r.profile.email}
+                  {r.displayEmail}
                 </p>
               </div>
               <div className="flex shrink-0 items-center gap-3">
@@ -163,8 +168,18 @@ async function QaTestersTab() {
               </div>
             </div>
           </Row>
-        </Link>
-      ))}
+        );
+
+        // No profile_id means no user-detail page to link to (2026-09-06
+        // four-role audit: a reviewer added by email alone).
+        return r.profile_id ? (
+          <Link key={r.id} href={`/admin/users/${r.profile_id}`}>
+            {row}
+          </Link>
+        ) : (
+          <div key={r.id}>{row}</div>
+        );
+      })}
     </Rows>
   );
 }

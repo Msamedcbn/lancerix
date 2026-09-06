@@ -14,15 +14,26 @@ import type { QaReviewer } from "@/lib/data/admin-qa";
 
 const INITIAL: FormState = { error: null };
 
-/** Adding an engineer -- they need an account already, looked up by email. */
+/**
+ * Adding an engineer -- no account required (2026-09-06). If the e-posta
+ * matches an existing Lancerix account, that account's own name is used
+ * instead of the one typed here; otherwise fullName/email are stored
+ * directly on the roster row.
+ */
 export function AddReviewerForm() {
   const [state, action] = useActionState(addReviewer, INITIAL);
 
   return (
     <form action={action} className="flex flex-col gap-4">
-      <Field label="E-posta" htmlFor="email" hint="Mühendisin zaten kayıtlı olduğu hesabın e-postası.">
-        <TextInput id="email" name="email" type="email" placeholder="ornek@sirket.com" required />
-      </Field>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Field label="Ad soyad" htmlFor="fullName" hint="Zaten kayıtlı bir hesap varsa o hesabın adı kullanılır.">
+          <TextInput id="fullName" name="fullName" placeholder="Ayşe Yılmaz" required />
+        </Field>
+
+        <Field label="E-posta" htmlFor="email" hint="Hesabı yoksa buraya bilgilendirme e-postası gider.">
+          <TextInput id="email" name="email" type="email" placeholder="ornek@sirket.com" required />
+        </Field>
+      </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Seviye" htmlFor="level">

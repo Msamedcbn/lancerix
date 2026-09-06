@@ -56,20 +56,6 @@ export async function listQaQueue(client?: Client): Promise<QaQueueRow[]> {
     }));
 }
 
-/** The full roster, active and retired -- an admin needs to see who to bring back. */
-export async function listAllReviewers(): Promise<QaReviewer[]> {
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("qa_reviewers")
-    .select("*")
-    .order("active", { ascending: false })
-    .order("level", { ascending: true })
-    .order("years_experience", { ascending: false });
-
-  if (error) throw error;
-  return data ?? [];
-}
-
 export type PlatformInvoiceRow = PlatformInvoice & {
   contract: Pick<Tables<"contracts">, "id" | "title"> | null;
 };

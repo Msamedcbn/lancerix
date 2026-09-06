@@ -9,7 +9,8 @@ import { z } from "zod";
 import { requireRole } from "@/lib/auth/session";
 import { logAdminEvent } from "@/lib/data/admin-activity";
 import { MoneyError, parseTryToKurus } from "@/lib/escrow/money";
-import { FAIL, firstIssue, OK, type FormState } from "@/lib/forms";
+import { FAIL, firstIssue, OK, toUserMessage, type FormState } from "@/lib/forms";
+import { notifyReviewerAdded } from "@/lib/notify/email";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
@@ -307,6 +308,7 @@ export async function submitQaReport(
 
 const reviewerSchema = z.object({
   email: z.string().trim().email("Geçerli bir e-posta gir."),
+  fullName: z.string().trim().min(2, "İsim en az 2 karakter olmalı."),
   level: z.enum(["PRINCIPAL", "SENIOR"]),
   yearsExperience: z.coerce.number().int().positive("Yıl sayısı pozitif olmalı."),
   specialties: z
@@ -326,9 +328,13 @@ const reviewerSchema = z.object({
 /**
  * Adding an engineer to the Tier 3/4 roster.
  *
- * The engineer needs a profile already -- find_counterparty is the same
- * exact-email lookup a freelancer uses to invite a client, reused here so we
- * never need a second way to turn an email into a profile id.
+ * No account is required (2026-09-06 four-role audit, Finding 1): a reviewer
+ * never logs in (the token-link report flow needs no session), so requiring
+ * one up front was a dead-end for the exact case this exists to serve --
+ * onboarding a real tester for the first time. find_counterparty is still
+ * tried first (an existing account's own name/email stay authoritative if
+ * one exists), and qa_reviewers.full_name/email carry the identity when it
+ * doesn't.
  */
 export async function addReviewer(
   _prev: FormState,
@@ -338,6 +344,7 @@ export async function addReviewer(
 
   const parsed = reviewerSchema.safeParse({
     email: formData.get("email"),
+    fullName: formData.get("fullName"),
     level: formData.get("level"),
     yearsExperience: formData.get("yearsExperience"),
     specialties: formData.get("specialties") ?? "",
@@ -351,24 +358,35 @@ export async function addReviewer(
     "find_counterparty",
     { p_email: parsed.data.email },
   );
-  if (lookupError) return FAIL(lookupError.message);
-  const profile = found?.[0];
+  if (lookupError) return FAIL(toUserMessage(lookupError, "Hesap arama sırasında bir hata oluştu."));
+  const profile = found?.[0] ?? null;
+
+  const { error, data: reviewer } = await supabase
+    .from("qa_reviewers")
+    .insert({
+      profile_id: profile?.id ?? null,
+      full_name: profile ? null : parsed.data.fullName,
+      email: profile ? null : parsed.data.email,
+      level: parsed.data.level,
+      years_experience: parsed.data.yearsExperience,
+      specialties: parsed.data.specialties,
+      bio: parsed.data.bio,
+    })
+    .select("id")
+    .single();
+  if (error) return FAIL(toUserMessage(error, "Mühendis eklenemedi."));
+
+  await logAdminEvent(session.userId, "reviewer_added", "qa_reviewer", reviewer.id, {
+    level: parsed.data.level,
+    hasAccount: profile !== null,
+  });
+
   if (!profile) {
-    return FAIL("Bu e-postayla kayıtlı bir hesap bulunamadı. Önce mühendis bir hesap açmalı.");
+    const sent = await notifyReviewerAdded({ to: parsed.data.email, fullName: parsed.data.fullName });
+    if (!sent.ok) {
+      return OK("Mühendis kadroya eklendi, ama bilgilendirme e-postası iletilemedi.");
+    }
   }
-
-  const { error } = await supabase.from("qa_reviewers").insert({
-    profile_id: profile.id,
-    level: parsed.data.level,
-    years_experience: parsed.data.yearsExperience,
-    specialties: parsed.data.specialties,
-    bio: parsed.data.bio,
-  });
-  if (error) return FAIL(error.message);
-
-  await logAdminEvent(session.userId, "reviewer_added", "profile", profile.id, {
-    level: parsed.data.level,
-  });
 
   revalidatePath("/admin/reviewers");
   return OK("Mühendis kadroya eklendi.");

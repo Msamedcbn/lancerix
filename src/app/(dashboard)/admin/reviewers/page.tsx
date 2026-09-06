@@ -1,6 +1,6 @@
 import { EmptyState, PageHeading, Panel, Row, Rows } from "@/components/page-shell";
 import { requireRole } from "@/lib/auth/session";
-import { listAllReviewers } from "@/lib/data/admin-qa";
+import { listReviewersWithProfile } from "@/lib/data/admin-users";
 
 import { AddReviewerForm, ReviewerActiveToggle, ReviewerRateForm } from "./reviewer-form";
 
@@ -11,7 +11,7 @@ const LEVEL_LABEL: Record<string, string> = {
 
 export default async function AdminReviewersPage() {
   await requireRole("ADMIN");
-  const reviewers = await listAllReviewers();
+  const reviewers = await listReviewersWithProfile();
 
   return (
     <>
@@ -37,10 +37,18 @@ export default async function AdminReviewersPage() {
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <p className="text-sm font-semibold text-zinc-950 dark:text-zinc-50">
-                      {LEVEL_LABEL[r.level] ?? r.level}
+                      {r.displayName}
                     </p>
-                    <p className="tnum text-xs text-zinc-500 dark:text-zinc-400">
-                      {r.years_experience}+ yıl deneyim
+                    <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
+                      {r.displayEmail}
+                      {!r.hasAccount && (
+                        <span className="ml-1.5 rounded-full bg-sky-50 px-1.5 py-0.5 text-[0.65rem] font-semibold text-sky-700 dark:bg-sky-950/40 dark:text-sky-300">
+                          Hesabı yok
+                        </span>
+                      )}
+                    </p>
+                    <p className="tnum mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                      {LEVEL_LABEL[r.level] ?? r.level} · {r.years_experience}+ yıl deneyim
                     </p>
                   </div>
 
@@ -77,11 +85,16 @@ export default async function AdminReviewersPage() {
                   </p>
                 ) : null}
 
-                <div className="flex items-center gap-2 border-t border-zinc-100 pt-3 dark:border-zinc-800">
+                <div className="flex flex-wrap items-center gap-2 border-t border-zinc-100 pt-3 dark:border-zinc-800">
                   <span className="text-xs text-zinc-500 dark:text-zinc-400">
                     Tier 3/4 ücreti:
                   </span>
                   <ReviewerRateForm reviewer={r} />
+                  {r.rate_kurus === null ? (
+                    <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[0.7rem] font-semibold text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
+                      Ücret girilmedi -- Tier 3/4&apos;te seçilemez
+                    </span>
+                  ) : null}
                 </div>
               </div>
             </Row>

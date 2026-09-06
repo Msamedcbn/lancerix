@@ -2,8 +2,10 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 
 import { Panel, PageHeading, EmptyState } from "@/components/page-shell";
+import { ProjectRequestCard } from "@/components/project-request-card";
 import { requireRole } from "@/lib/auth/session";
 import { getProfileDetail } from "@/lib/data/admin-users";
+import type { ProjectRequestRow } from "@/lib/data/project-requests";
 
 import { UserNotes } from "./user-notes";
 import {
@@ -52,6 +54,26 @@ function ContractList({
           ))}
         </ul>
       )}
+    </Panel>
+  );
+}
+
+function RequestList({
+  title,
+  requests,
+  counterpartyLabel,
+}: Readonly<{
+  title: string;
+  requests: ProjectRequestRow[];
+  counterpartyLabel: string;
+}>) {
+  return (
+    <Panel title={title}>
+      <div className="flex flex-col gap-4">
+        {requests.map((r) => (
+          <ProjectRequestCard key={r.id} request={r} counterpartyLabel={counterpartyLabel} />
+        ))}
+      </div>
     </Panel>
   );
 }
@@ -147,6 +169,22 @@ export default async function AdminUserDetailPage({
 
       {profile.role === "CLIENT" ? (
         <ContractList title="Müşteri olduğu sözleşmeler" contracts={profile.contractsAsClient} />
+      ) : null}
+
+      {profile.role === "FREELANCER" && profile.requestsAsFreelancer.length > 0 ? (
+        <RequestList
+          title="Gelen proje talepleri"
+          requests={profile.requestsAsFreelancer}
+          counterpartyLabel="Müşteri"
+        />
+      ) : null}
+
+      {profile.role === "CLIENT" && profile.requestsAsClient.length > 0 ? (
+        <RequestList
+          title="Gönderdiği proje talepleri"
+          requests={profile.requestsAsClient}
+          counterpartyLabel="Geliştirici"
+        />
       ) : null}
 
       {profile.role === "ADMIN" ? (

@@ -2,13 +2,15 @@ import type { Route } from "next";
 import Link from "next/link";
 import { CheckCircle2 } from "lucide-react";
 
-import { PageHeading } from "@/components/page-shell";
+import { PageHeading, Stat } from "@/components/page-shell";
 import { requireRole } from "@/lib/auth/session";
 import {
   getDashboardCounts,
   stalenessLevel,
   type DashboardSection,
 } from "@/lib/data/admin-dashboard";
+import { getBusinessMetrics } from "@/lib/data/admin-metrics";
+import { formatKurus } from "@/lib/escrow/money";
 
 const CARD_TONE = {
   none: "border-zinc-200/80 dark:border-zinc-800/80",
@@ -69,7 +71,13 @@ function Card({
 
 export default async function AdminHomePage() {
   await requireRole("ADMIN");
-  const data = await getDashboardCounts();
+  const [data, metrics] = await Promise.all([
+    getDashboardCounts(),
+    getBusinessMetrics(),
+  ]);
+
+  const totalRevenueKurus = metrics.revenue.qaFeesKurus + metrics.revenue.platformFeesKurus;
+  const totalUsers = metrics.users.freelancers + metrics.users.clients;
 
   const allClear =
     data.qaQueue.ok &&
@@ -108,6 +116,39 @@ export default async function AdminHomePage() {
           section={data.unclaimedInvites}
           staleness={false}
         />
+      </div>
+
+      {/* İş durumu: "ne kadar sağlıklıyız", yukarıdaki aksiyon kartlarından
+          ayrı bir soru -- oradaki kart yanlışsa iş kaçırırsın, buradaki
+          sayı yanlışsa işi yanlış okursun. Sayılar gerçek ve şu an sıfır
+          olabilir (2026-09-05 itibarıyla dış kullanıcı yok); sıfır burada
+          bir hata değil, dürüst bir rakam. */}
+      <div className="flex flex-col gap-4">
+        <h2 className="text-base font-semibold text-zinc-950 dark:text-zinc-50">
+          İş durumu
+        </h2>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <Stat
+            label="Aktif sözleşme"
+            value={metrics.contracts.active}
+            hint={`${metrics.contracts.fulfilled} tamamlandı, ${metrics.contracts.awaitingAction} imza/aksiyon bekliyor`}
+          />
+          <Stat
+            label="İncelenen teslim"
+            value={metrics.deliveries.inReview}
+            hint={`${metrics.deliveries.accepted} kabul, ${metrics.deliveries.rejected} red`}
+          />
+          <Stat
+            label="Toplam gelir"
+            value={formatKurus(totalRevenueKurus)}
+            hint={`${formatKurus(metrics.revenue.qaFeesKurus)} QA ücreti, ${formatKurus(metrics.revenue.platformFeesKurus)} platform bedeli`}
+          />
+          <Stat
+            label="Kullanıcılar"
+            value={totalUsers}
+            hint={`${metrics.users.freelancers} freelancer, ${metrics.users.clients} müşteri · son 7 günde +${metrics.users.newLast7Days}`}
+          />
+        </div>
       </div>
     </>
   );
