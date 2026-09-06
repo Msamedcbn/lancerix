@@ -12,6 +12,7 @@ import {
   LayoutDashboard,
   ListChecks,
   LogOut,
+  MoreHorizontal,
   Receipt,
   ScrollText,
   Search,
@@ -24,7 +25,7 @@ import {
 import type { Route } from "next";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 /**
  * A string key, not a component reference: a Server Component may pass this
@@ -109,6 +110,22 @@ export function Sidebar({
   }, null);
   const isActive = (href: Route) => href === activeHref;
 
+  // iOS/Android tab-bar convention: five slots, max. Past that, a bar either
+  // scrolls (undiscoverable -- nothing hints there's more, as admin's eight
+  // items just did) or squeezes every label into an unreadable sliver.
+  // Neither beats the standard fix: keep the first four, fold the rest
+  // behind a "More" sheet.
+  const MAX_MOBILE_TABS = 5;
+  const hasOverflow = items.length > MAX_MOBILE_TABS;
+  const visibleItems = hasOverflow ? items.slice(0, MAX_MOBILE_TABS - 1) : items;
+  const overflowItems = hasOverflow ? items.slice(MAX_MOBILE_TABS - 1) : [];
+  const overflowActive = overflowItems.some((item) => isActive(item.href));
+
+  const [moreOpen, setMoreOpen] = useState(false);
+  useEffect(() => {
+    setMoreOpen(false);
+  }, [pathname]);
+
   return (
     <>
       <div className="sticky top-0 z-30 flex items-center justify-between border-b border-border glass px-4 py-3 md:hidden">
@@ -156,14 +173,13 @@ export function Sidebar({
         <div className="border-t border-border p-4">{footer}</div>
       </aside>
 
-      {/* Mobile: a full-width tab bar. More items than fit at a comfortable
-          width (the admin nav has eight) scroll horizontally instead of
-          squeezing every tab down to an unreadable, sub-44px sliver. */}
+      {/* Mobile: a full-width tab bar, capped at five slots (see
+          MAX_MOBILE_TABS above) so it never needs to scroll or squeeze. */}
       <nav
-        className="fixed inset-x-0 bottom-0 z-30 flex items-stretch overflow-x-auto border-t border-border glass md:hidden"
+        className="fixed inset-x-0 bottom-0 z-30 flex items-stretch border-t border-border glass md:hidden"
         style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
       >
-        {items.map((item) => {
+        {visibleItems.map((item) => {
           const active = isActive(item.href);
           const Icon = ICONS[item.icon];
 
@@ -188,7 +204,64 @@ export function Sidebar({
             </Link>
           );
         })}
+
+        {hasOverflow ? (
+          <button
+            type="button"
+            onClick={() => setMoreOpen((open) => !open)}
+            aria-expanded={moreOpen}
+            aria-haspopup="menu"
+            className="flex min-w-[4.25rem] flex-1 shrink-0 flex-col items-center gap-1 py-2.5"
+          >
+            <MoreHorizontal
+              className={`size-5 ${overflowActive ? "text-brand" : "text-muted-foreground"}`}
+              aria-hidden
+            />
+            <span
+              className={`max-w-full truncate px-1 text-[0.65rem] leading-none ${
+                overflowActive ? "text-brand font-medium" : "text-muted-foreground"
+              }`}
+            >
+              Daha fazla
+            </span>
+          </button>
+        ) : null}
       </nav>
+
+      {hasOverflow && moreOpen ? (
+        <>
+          <button
+            type="button"
+            aria-label="Kapat"
+            onClick={() => setMoreOpen(false)}
+            className="fixed inset-0 z-30 md:hidden"
+          />
+          <div
+            className="glass fixed inset-x-4 z-40 flex flex-col gap-0.5 rounded-2xl border border-border p-2 shadow-lg md:hidden"
+            style={{ bottom: "calc(env(safe-area-inset-bottom) + 4.75rem)" }}
+          >
+            {overflowItems.map((item) => {
+              const active = isActive(item.href);
+              const Icon = ICONS[item.icon];
+
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  aria-current={active ? "page" : undefined}
+                  onClick={() => setMoreOpen(false)}
+                  className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm ${
+                    active ? "bg-brand-muted text-brand font-medium" : "text-foreground"
+                  }`}
+                >
+                  <Icon className="size-[1.05rem] shrink-0" aria-hidden />
+                  {item.label}
+                </Link>
+              );
+            })}
+          </div>
+        </>
+      ) : null}
     </>
   );
 }

@@ -23,31 +23,38 @@ export const metadata: Metadata = {
  * Server Component and only plain data may cross into Sidebar, a Client
  * Component (see dashboard-nav.tsx for why).
  */
+/**
+ * Order matters here beyond desktop reading order: Sidebar's mobile bar
+ * shows at most 5 slots (see MAX_MOBILE_TABS in dashboard-nav.tsx), so for
+ * a role with more than that, everything past the 4th item collapses into
+ * a "Daha fazla" sheet. The first four below are each role's most
+ * frequently-needed destinations; the rest are the more occasional ones.
+ */
 const NAV: Record<UserRole, readonly NavItem[]> = {
   FREELANCER: [
     { href: "/freelancer", label: "Projeler", icon: "briefcase" },
     { href: "/freelancer/requests", label: "Talepler", icon: "inbox" },
     { href: "/freelancer/earnings", label: "Kazanç", icon: "wallet" },
-    { href: "/freelancer/invoices", label: "Makbuzlar", icon: "receipt" },
     { href: "/profil", label: "Profilim", icon: "user" },
+    { href: "/freelancer/invoices", label: "Makbuzlar", icon: "receipt" },
     { href: "/freelancer/settings", label: "Ayarlar", icon: "settings" },
   ],
   CLIENT: [
     { href: "/client", label: "Ödemeler", icon: "credit-card" },
     { href: "/client/approvals", label: "Onaylar", icon: "check-circle" },
     { href: "/client/requests", label: "Geliştirici çağır", icon: "user-plus" },
+    { href: "/profil", label: "Profilim", icon: "user" },
     { href: "/client/invoices", label: "Faturalar", icon: "file-text" },
     { href: "/client/company", label: "Şirket", icon: "building" },
-    { href: "/profil", label: "Profilim", icon: "user" },
   ],
   ADMIN: [
     { href: "/admin", label: "Panel", icon: "layout-dashboard" },
+    { href: "/admin/qa-queue", label: "QA kuyruğu", icon: "list-checks" },
+    { href: "/admin/disputes", label: "İtirazlar", icon: "alert-triangle" },
     { href: "/admin/search", label: "Arama", icon: "search" },
     { href: "/admin/users", label: "Kullanıcılar", icon: "contact" },
-    { href: "/admin/qa-queue", label: "QA kuyruğu", icon: "list-checks" },
     { href: "/admin/reviewers", label: "Mühendisler", icon: "users" },
     { href: "/admin/invoices", label: "Faturalar", icon: "file-text" },
-    { href: "/admin/disputes", label: "İtirazlar", icon: "alert-triangle" },
     { href: "/admin/audit", label: "Kayıt defteri", icon: "scroll" },
   ],
 };
