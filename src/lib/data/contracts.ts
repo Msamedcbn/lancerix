@@ -265,7 +265,17 @@ export async function getContract(
     .eq("id", contractId)
     .maybeSingle();
 
-  if (firstError) throw firstError;
+  // 22P02 = invalid_text_representation -- contractId isn't a well-formed
+  // UUID at all (someone pasted the human-readable reference, e.g.
+  // "LX-MTQE2PDL", instead of the URL). That's a not-found, not a real
+  // failure: without this, Postgres's rejection propagates as an
+  // unhandled throw, and the page shows the generic "something went
+  // wrong, usually temporary" error boundary instead of a 404 -- which
+  // is actively misleading since retrying never helps a malformed id.
+  if (firstError) {
+    if (firstError.code === "22P02") return null;
+    throw firstError;
+  }
   if (!first) return null;
 
   // Unclaimed invite (F-3, 2026-09-03): attach client_id the moment its

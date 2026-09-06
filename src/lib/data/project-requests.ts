@@ -92,7 +92,13 @@ export async function getProjectRequest(
     .eq("id", id)
     .maybeSingle();
 
-  if (error) throw error;
+  // 22P02 = invalid_text_representation -- a malformed id (not a real
+  // UUID) is a not-found, not a server error. See the identical fix and
+  // full rationale in getContract() (src/lib/data/contracts.ts).
+  if (error) {
+    if (error.code === "22P02") return null;
+    throw error;
+  }
   if (!first) return null;
 
   // An email invite has freelancer_id NULL until the invited address opens it.
