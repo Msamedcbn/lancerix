@@ -28,7 +28,6 @@ const NAV: Record<UserRole, readonly NavItem[]> = {
     { href: "/freelancer", label: "Projeler", icon: "briefcase" },
     { href: "/freelancer/requests", label: "Talepler", icon: "inbox" },
     { href: "/freelancer/earnings", label: "Kazanç", icon: "wallet" },
-    { href: "/freelancer/new", label: "Yeni proje", icon: "plus", primary: true },
     { href: "/freelancer/invoices", label: "Makbuzlar", icon: "receipt" },
     { href: "/profil", label: "Profilim", icon: "user" },
     { href: "/freelancer/settings", label: "Ayarlar", icon: "settings" },
@@ -36,7 +35,7 @@ const NAV: Record<UserRole, readonly NavItem[]> = {
   CLIENT: [
     { href: "/client", label: "Ödemeler", icon: "credit-card" },
     { href: "/client/approvals", label: "Onaylar", icon: "check-circle" },
-    { href: "/client/requests", label: "Geliştirici çağır", icon: "user-plus", primary: true },
+    { href: "/client/requests", label: "Geliştirici çağır", icon: "user-plus" },
     { href: "/client/invoices", label: "Faturalar", icon: "file-text" },
     { href: "/client/company", label: "Şirket", icon: "building" },
     { href: "/profil", label: "Profilim", icon: "user" },
