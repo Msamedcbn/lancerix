@@ -39,10 +39,13 @@ export function TotalCostBreakdown({
           </dd>
         </div>
         <div className="flex items-center justify-between py-2">
-          <dt className="text-sm text-foreground/80 dark:text-muted-foreground">
+          <dt className="flex items-center gap-2 text-sm text-foreground/80 dark:text-muted-foreground">
             Platform Komisyonu (%{feePct})
+            <span className="inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700 dark:border-amber-800/60 dark:bg-amber-950/40 dark:text-amber-300">
+              Şu an tahsil edilmiyor
+            </span>
           </dt>
-          <dd className="tnum text-sm font-semibold text-foreground dark:text-foreground">
+          <dd className="tnum text-sm font-semibold text-muted-foreground dark:text-muted-foreground">
             <Money kurus={commissionKurus} />
           </dd>
         </div>
