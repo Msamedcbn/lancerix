@@ -2,11 +2,12 @@
 
 import { useActionState, useState } from "react";
 
-import { addAcceptanceCriteria, type FormState } from "@/app/(dashboard)/actions";
+import { addAcceptanceCriteria } from "@/app/(dashboard)/criteria-actions";
 import { TextArea } from "@/components/field";
 import { FormFeedback, SubmitButton } from "@/components/form-feedback";
 import { Panel } from "@/components/page-shell";
 import type { AcceptanceCriterion } from "@/lib/data/contracts";
+import type { FormState } from "@/lib/forms";
 import { PROJECT_CATEGORY_INFO, type ProjectCategory } from "@/lib/validations/project-category";
 
 const INITIAL: FormState = { error: null };

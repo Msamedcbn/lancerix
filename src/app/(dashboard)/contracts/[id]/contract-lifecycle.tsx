@@ -10,9 +10,9 @@ import {
   requestRevision,
   resubmitContract,
   setPlannedStartDate,
-  type FormState,
-} from "@/app/(dashboard)/actions";
+} from "@/app/(dashboard)/contract-lifecycle-actions";
 import { FormFeedback, SubmitButton } from "@/components/form-feedback";
+import type { FormState } from "@/lib/forms";
 
 const INITIAL: FormState = { error: null };
 

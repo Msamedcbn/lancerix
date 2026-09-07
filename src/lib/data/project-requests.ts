@@ -31,6 +31,18 @@ export async function listOutgoingRequests(
   return withNames("client_id", clientId, "freelancer_id");
 }
 
+/**
+ * The contract wizard addresses a client by public ID, but a request stores
+ * client_id. Empty string when it cannot be resolved, which leaves the
+ * freelancer to pick the client by hand rather than submitting a contract
+ * addressed to nobody.
+ */
+export async function resolveClientPublicId(clientId: string): Promise<string> {
+  const supabase = await createClient();
+  const { data } = await supabase.rpc("party_display_names", { p_ids: [clientId] });
+  return data?.[0]?.public_id ?? "";
+}
+
 async function withNames(
   mineColumn: "client_id" | "freelancer_id",
   userId: string,

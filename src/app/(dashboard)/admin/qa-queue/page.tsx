@@ -4,6 +4,7 @@ import { Money } from "@/components/money";
 import { EmptyState, PageHeading, Panel, Row, Rows } from "@/components/page-shell";
 import { requireRole } from "@/lib/auth/session";
 import { listPendingQaOrders, listQaQueue } from "@/lib/data/admin-qa";
+import { LEVEL_LABEL, type ReviewerLevel } from "@/lib/labels";
 
 import { MarkOrderPaidForm } from "./mark-order-paid-form";
 import { QaReportForm } from "./qa-report-form";
@@ -12,11 +13,6 @@ const TIER_LABEL: Record<string, string> = {
   TIER2: "Agentic QA",
   TIER3: "Agentic + Manuel Tester",
   TIER4: "Sadece Manuel Tester",
-};
-
-const LEVEL_LABEL: Record<string, string> = {
-  PRINCIPAL: "Principal / Lead",
-  SENIOR: "Senior",
 };
 
 export default async function AdminQaQueuePage() {
@@ -113,7 +109,7 @@ export default async function AdminQaQueuePage() {
                   ) : null}
                   {d.order.reviewer ? (
                     <span>
-                      Atanan: {LEVEL_LABEL[d.order.reviewer.level] ?? d.order.reviewer.level} ·{" "}
+                      Atanan: {LEVEL_LABEL[d.order.reviewer.level as ReviewerLevel] ?? d.order.reviewer.level} ·{" "}
                       {d.order.reviewer.years_experience}+ yıl
                     </span>
                   ) : null}

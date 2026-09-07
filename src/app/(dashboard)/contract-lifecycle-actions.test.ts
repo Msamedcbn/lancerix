@@ -55,7 +55,7 @@ beforeEach(() => {
 
 describe("rejectContract", () => {
   it("refuses a reason under 5 characters without calling the RPC", async () => {
-    const { rejectContract } = await import("./actions");
+    const { rejectContract } = await import("./contract-lifecycle-actions");
     const result = await rejectContract(
       { error: null },
       formData({ contractId: CONTRACT_ID, reason: "kısa" }),
@@ -65,7 +65,7 @@ describe("rejectContract", () => {
   });
 
   it("calls reject_contract with the contract id and reason", async () => {
-    const { rejectContract } = await import("./actions");
+    const { rejectContract } = await import("./contract-lifecycle-actions");
     const result = await rejectContract(
       { error: null },
       formData({ contractId: CONTRACT_ID, reason: "Fiyat teklifi kabul edilemez." }),
@@ -80,7 +80,7 @@ describe("rejectContract", () => {
   it("surfaces an RPC error as a fixed Turkish message, never the raw error, but logs the raw error server-side", async () => {
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
     rpcImpl = failRpc("contract cannot be rejected in status ACTIVE");
-    const { rejectContract } = await import("./actions");
+    const { rejectContract } = await import("./contract-lifecycle-actions");
     const result = await rejectContract(
       { error: null },
       formData({ contractId: CONTRACT_ID, reason: "Artık geç kaldı ama denedim." }),
@@ -96,7 +96,7 @@ describe("rejectContract", () => {
 
 describe("requestRevision", () => {
   it("refuses a note under 5 characters without calling the RPC", async () => {
-    const { requestRevision } = await import("./actions");
+    const { requestRevision } = await import("./contract-lifecycle-actions");
     const result = await requestRevision(
       { error: null },
       formData({ contractId: CONTRACT_ID, note: "ok" }),
@@ -106,7 +106,7 @@ describe("requestRevision", () => {
   });
 
   it("calls request_revision with the contract id and note", async () => {
-    const { requestRevision } = await import("./actions");
+    const { requestRevision } = await import("./contract-lifecycle-actions");
     const result = await requestRevision(
       { error: null },
       formData({ contractId: CONTRACT_ID, note: "İkinci madde netleşmeli." }),
@@ -121,14 +121,14 @@ describe("requestRevision", () => {
 
 describe("resubmitContract", () => {
   it("requires a contract id", async () => {
-    const { resubmitContract } = await import("./actions");
+    const { resubmitContract } = await import("./contract-lifecycle-actions");
     const result = await resubmitContract({ error: null }, formData({}));
     expect(result.error).toBeTruthy();
     expect(capturedCall).toBeNull();
   });
 
   it("calls resubmit_contract with just the contract id", async () => {
-    const { resubmitContract } = await import("./actions");
+    const { resubmitContract } = await import("./contract-lifecycle-actions");
     const result = await resubmitContract(
       { error: null },
       formData({ contractId: CONTRACT_ID }),
@@ -143,7 +143,7 @@ describe("resubmitContract", () => {
   it("surfaces the SQL guard's error as a fixed Turkish message, and logs the raw error server-side", async () => {
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
     rpcImpl = failRpc("contract is not awaiting resubmission (status ACTIVE)");
-    const { resubmitContract } = await import("./actions");
+    const { resubmitContract } = await import("./contract-lifecycle-actions");
     const result = await resubmitContract(
       { error: null },
       formData({ contractId: CONTRACT_ID }),
@@ -159,7 +159,7 @@ describe("resubmitContract", () => {
 
 describe("confirmStartDate", () => {
   it("calls confirm_start_date with the contract id", async () => {
-    const { confirmStartDate } = await import("./actions");
+    const { confirmStartDate } = await import("./contract-lifecycle-actions");
     const result = await confirmStartDate(
       { error: null },
       formData({ contractId: CONTRACT_ID }),

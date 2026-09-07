@@ -1,13 +1,8 @@
 import { Briefcase, Globe, MapPin } from "lucide-react";
 
 import type { PublicProfile } from "@/lib/data/profile";
+import { ROLE_LABEL } from "@/lib/labels";
 import { SERVICE_CATALOG } from "@/lib/validations/services";
-
-const ROLE_LABEL: Record<PublicProfile["role"], string> = {
-  FREELANCER: "Freelancer",
-  CLIENT: "İşveren",
-  ADMIN: "Yönetici",
-};
 
 /**
  * A profile as a counterparty sees it.

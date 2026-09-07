@@ -4,26 +4,15 @@ import { Money } from "@/components/money";
 import { EmptyState, PageHeading } from "@/components/page-shell";
 import { requireRole } from "@/lib/auth/session";
 import { listPlatformInvoices } from "@/lib/data/admin-qa";
+import {
+  INVOICE_STATUS_LABEL as STATUS_LABEL,
+  INVOICE_STATUS_TONE as STATUS_TONE,
+  INVOICE_TYPE_LABEL as TYPE_LABEL,
+  type PlatformInvoiceStatus,
+  type PlatformInvoiceType,
+} from "@/lib/labels";
 
 import { InvoiceActions } from "./invoice-actions";
-
-const TYPE_LABEL: Record<string, string> = {
-  WORK_START: "İş başlangıcı",
-  QA_SERVICE: "QA hizmeti",
-  CUSTOM: "Özel",
-};
-
-const STATUS_LABEL: Record<string, string> = {
-  PENDING: "Bekliyor",
-  PAID: "Ödendi",
-  CANCELLED: "İptal",
-};
-
-const STATUS_TONE: Record<string, string> = {
-  PENDING: "bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300",
-  PAID: "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300",
-  CANCELLED: "bg-zinc-100 text-zinc-500 dark:bg-zinc-900 dark:text-zinc-400",
-};
 
 export default async function AdminInvoicesPage() {
   await requireRole("ADMIN");
@@ -74,16 +63,16 @@ export default async function AdminInvoicesPage() {
                     )}
                   </td>
                   <td className="px-5 py-3 text-zinc-500 dark:text-zinc-400">
-                    {TYPE_LABEL[inv.invoice_type] ?? inv.invoice_type}
+                    {TYPE_LABEL[inv.invoice_type as PlatformInvoiceType] ?? inv.invoice_type}
                   </td>
                   <td className="px-5 py-3 text-right">
                     <Money kurus={inv.amount_kurus} className="font-medium" />
                   </td>
                   <td className="px-5 py-3">
                     <span
-                      className={`rounded-full px-2.5 py-1 text-xs font-semibold ${STATUS_TONE[inv.status] ?? ""}`}
+                      className={`rounded-full px-2.5 py-1 text-xs font-semibold ${STATUS_TONE[inv.status as PlatformInvoiceStatus] ?? ""}`}
                     >
-                      {STATUS_LABEL[inv.status] ?? inv.status}
+                      {STATUS_LABEL[inv.status as PlatformInvoiceStatus] ?? inv.status}
                     </span>
                   </td>
                   <td className="px-5 py-3">

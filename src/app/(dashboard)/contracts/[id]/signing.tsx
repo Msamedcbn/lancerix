@@ -3,8 +3,9 @@
 import Link from "next/link";
 import { useActionState, useState } from "react";
 
-import { signContract, type FormState } from "@/app/(dashboard)/actions";
+import { signContract } from "@/app/(dashboard)/signing-actions";
 import { FormFeedback, SubmitButton } from "@/components/form-feedback";
+import type { FormState } from "@/lib/forms";
 
 const INITIAL: FormState = { error: null };
 

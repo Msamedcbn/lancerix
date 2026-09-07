@@ -2,9 +2,10 @@
 
 import { useActionState } from "react";
 
-import { saveCompany, type FormState } from "@/app/(dashboard)/actions";
+import { saveCompany } from "@/app/(dashboard)/settings-actions";
 import { Field, TextInput } from "@/components/field";
 import { FormFeedback, SubmitButton } from "@/components/form-feedback";
+import type { FormState } from "@/lib/forms";
 
 const INITIAL: FormState = { error: null };
 

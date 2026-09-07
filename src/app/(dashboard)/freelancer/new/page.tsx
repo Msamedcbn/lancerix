@@ -1,12 +1,12 @@
 import { ContractForm } from "@/app/(dashboard)/freelancer/new/contract-form";
 import { PageHeading } from "@/components/page-shell";
 import { requireRole } from "@/lib/auth/session";
+import { listPreviousClients } from "@/lib/data/contracts";
+import { getMyProfile } from "@/lib/data/profile";
+import { getProjectRequest, resolveClientPublicId } from "@/lib/data/project-requests";
 import { DEFAULT_PLATFORM_FEE_BPS } from "@/lib/escrow/money";
 import { DEFAULT_STOPAJ_BPS } from "@/lib/tax/stopaj";
 import { payoutBlockers } from "@/lib/validations/profile";
-import { listPreviousClients } from "@/lib/data/contracts";
-import { getProjectRequest } from "@/lib/data/project-requests";
-import { createClient } from "@/lib/supabase/server";
 
 export default async function NewContractPage({
   searchParams,
@@ -14,18 +14,15 @@ export default async function NewContractPage({
   const session = await requireRole("FREELANCER");
   const { request: requestId } = await searchParams;
 
-  const supabase = await createClient();
-  const [{ data: profile }, previousClients] = await Promise.all([
-    supabase.from("profiles").select("tckn, iban").eq("id", session.userId).single(),
+  const [profile, previousClients] = await Promise.all([
+    getMyProfile(session.userId),
     listPreviousClients(session.userId),
   ]);
 
   // Only meaningful for QA_PLUS_ESCROW, which pays out through the platform.
   // A QA_ONLY contract settles payment directly between the parties, so
   // TCKN/IBAN never block it -- ContractForm decides whether to show this.
-  const missing = profile
-    ? payoutBlockers({ tckn: profile.tckn, iban: profile.iban })
-    : ["TCKN", "IBAN"];
+  const missing = payoutBlockers({ tckn: profile.tckn, iban: profile.iban });
 
   // Converting a client's request. Anything other than an OPEN request
   // addressed to this freelancer is ignored rather than refused: the wizard
@@ -36,7 +33,7 @@ export default async function NewContractPage({
     request && request.status === "OPEN" && request.freelancer_id === session.userId
       ? {
           id: request.id,
-          clientPublicId: await clientPublicIdOf(request.client_id),
+          clientPublicId: await resolveClientPublicId(request.client_id),
           title: request.title,
           brief: request.brief,
         }
@@ -64,15 +61,4 @@ export default async function NewContractPage({
       />
     </>
   );
-}
-
-/**
- * The wizard addresses a client by public ID, but a request stores client_id.
- * Empty string when it cannot be resolved, which leaves the freelancer to pick
- * the client by hand rather than submitting a contract addressed to nobody.
- */
-async function clientPublicIdOf(clientId: string): Promise<string> {
-  const supabase = await createClient();
-  const { data } = await supabase.rpc("party_display_names", { p_ids: [clientId] });
-  return data?.[0]?.public_id ?? "";
 }

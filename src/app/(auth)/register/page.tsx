@@ -7,7 +7,7 @@ import { Suspense, useActionState } from "react";
 
 import { register, type AuthFormState } from "@/app/(auth)/actions";
 import { Mark } from "@/components/brand/mark";
-import { Field, TextInput } from "@/components/field";
+import { Field, Select, TextInput } from "@/components/field";
 
 const INITIAL: AuthFormState = { error: null };
 
@@ -22,6 +22,14 @@ const ROLES = [
     label: "İşverenim",
     hint: "İş veriyorum, teslimi QA raporuyla onaylıyorum",
   },
+] as const;
+
+const REFERRAL_OPTIONS = [
+  { value: "GOOGLE", label: "Google / arama" },
+  { value: "SOCIAL_MEDIA", label: "Sosyal medya" },
+  { value: "FRIEND_REFERRAL", label: "Arkadaş tavsiyesi" },
+  { value: "ADVERTISEMENT", label: "Reklam" },
+  { value: "OTHER", label: "Diğer" },
 ] as const;
 
 function RegisterForm() {
@@ -124,6 +132,17 @@ function RegisterForm() {
                 ))}
               </div>
             </fieldset>
+
+            <Field label="Bizi nereden duydunuz? (opsiyonel)" htmlFor="referralSource">
+              <Select id="referralSource" name="referralSource" defaultValue="">
+                <option value="">Belirtmek istemiyorum</option>
+                {REFERRAL_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+              </Select>
+            </Field>
 
             {state.error ? (
               <p

@@ -3,12 +3,7 @@ import Link from "next/link";
 import { EmptyState, PageHeading } from "@/components/page-shell";
 import { requireRole } from "@/lib/auth/session";
 import { searchAdmin } from "@/lib/data/admin-search";
-
-const ROLE_LABEL: Record<string, string> = {
-  FREELANCER: "Freelancer",
-  CLIENT: "Müşteri",
-  ADMIN: "Yönetici",
-};
+import { ROLE_LABEL } from "@/lib/labels";
 
 const REQUEST_STATUS_LABEL: Record<string, string> = {
   OPEN: "Yanıt bekliyor",
@@ -90,7 +85,7 @@ export default async function AdminSearchPage({
                   </span>
                   <span className="ml-2 text-xs text-zinc-500 dark:text-zinc-400">{r.email}</span>
                   <span className="ml-2 rounded-full bg-zinc-100 px-2 py-0.5 text-[0.65rem] font-semibold text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
-                    {ROLE_LABEL[r.role] ?? r.role}
+                    {ROLE_LABEL[r.role as keyof typeof ROLE_LABEL] ?? r.role}
                   </span>
                 </Link>
               </li>

@@ -44,25 +44,39 @@ import {
 } from "@/lib/data/deliveries";
 import { listMessages } from "@/lib/data/messages";
 import { deliveryStatusLabel } from "@/lib/qa/delivery-state-machine";
+import { assertTransition } from "@/lib/escrow/state-machine";
 import type { Enums } from "@/lib/supabase/database.types";
 
 type EscrowStatus = Enums<"escrow_status">;
 type Side = "freelancer" | "client";
 
+/**
+ * A role-aware subset of what src/lib/escrow/state-machine.ts's TRANSITIONS
+ * allows -- e.g. only a client may move SUBMITTED -> COMPLETED, which the raw
+ * state machine has no notion of "who." assertTransition() below doesn't
+ * replace this table, but it does mean an edge added here that TRANSITIONS
+ * doesn't recognise throws immediately (a wrong button, not a silent one),
+ * instead of state-machine.ts's SQL/TS mirror going unexercised at runtime
+ * until someone remembers to run schema-mirror.test.ts.
+ */
 function actionsFor(status: EscrowStatus, side: Side) {
   const moves: Array<{ to: EscrowStatus; label: string; tone?: "danger" }> = [];
+  const move = (to: EscrowStatus, label: string, tone?: "danger") => {
+    assertTransition(status, to);
+    moves.push({ to, label, tone });
+  };
 
   if (side === "freelancer" && status === "DRAFT") {
-    moves.push({ to: "AWAITING_PAYMENT", label: "Fonlamaya aç" });
+    move("AWAITING_PAYMENT", "Fonlamaya aç");
   }
 
   if (side === "client" && status === "SUBMITTED") {
-    moves.push({ to: "COMPLETED", label: "Teslimatı onayla" });
-    moves.push({ to: "IN_PROGRESS", label: "Revizyona gönder" });
+    move("COMPLETED", "Teslimatı onayla");
+    move("IN_PROGRESS", "Revizyona gönder");
   }
 
   if (status === "DRAFT" || status === "AWAITING_PAYMENT") {
-    moves.push({ to: "CANCELLED", label: "İptal et", tone: "danger" });
+    move("CANCELLED", "İptal et", "danger");
   }
 
   return moves;

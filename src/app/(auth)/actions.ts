@@ -39,13 +39,14 @@ export async function register(
     password: formData.get("password"),
     fullName: formData.get("fullName"),
     role: formData.get("role"),
+    referralSource: formData.get("referralSource"),
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Invalid details." };
   }
 
   const next = safeNextPath(formData.get("next")?.toString());
-  const { email, password, fullName, role } = parsed.data;
+  const { email, password, fullName, role, referralSource } = parsed.data;
   const supabase = await createClient();
   const callbackUrl = new URL(`${appUrl()}/auth/callback`);
   if (next) callbackUrl.searchParams.set("next", next);
@@ -56,7 +57,7 @@ export async function register(
     options: {
       emailRedirectTo: callbackUrl.toString(),
       // Consumed by the handle_new_user trigger to seed the profile row.
-      data: { full_name: fullName, role },
+      data: { full_name: fullName, role, referral_source: referralSource },
     },
   });
   if (error) return { error: error.message };

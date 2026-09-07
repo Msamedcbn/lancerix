@@ -6,6 +6,13 @@ import { ProjectRequestCard } from "@/components/project-request-card";
 import { requireRole } from "@/lib/auth/session";
 import { getProfileDetail } from "@/lib/data/admin-users";
 import type { ProjectRequestRow } from "@/lib/data/project-requests";
+import {
+  LEVEL_LABEL,
+  REFERRAL_SOURCE_LABEL,
+  ROLE_LABEL,
+  type ReferralSource,
+  type ReviewerLevel,
+} from "@/lib/labels";
 
 import { UserNotes } from "./user-notes";
 import {
@@ -14,17 +21,6 @@ import {
   RoleChangeForm,
   SuspensionControl,
 } from "./user-management";
-
-const ROLE_LABEL: Record<string, string> = {
-  FREELANCER: "Freelancer",
-  CLIENT: "Müşteri",
-  ADMIN: "Yönetici",
-};
-
-const LEVEL_LABEL: Record<string, string> = {
-  PRINCIPAL: "Principal / Lead",
-  SENIOR: "Senior",
-};
 
 function ContractList({
   title,
@@ -100,6 +96,14 @@ export default async function AdminUserDetailPage({
             </span>
             <span>{profile.email}</span>
             <span className="font-mono text-xs text-zinc-400">{profile.public_id}</span>
+            <span className="text-xs text-zinc-400">
+              {new Date(profile.created_at).toLocaleDateString("tr-TR")} tarihinde katıldı
+            </span>
+            {profile.referral_source ? (
+              <span className="rounded-full bg-sky-50 px-2.5 py-0.5 text-xs font-semibold text-sky-700 dark:bg-sky-950/40 dark:text-sky-300">
+                {REFERRAL_SOURCE_LABEL[profile.referral_source as ReferralSource] ?? profile.referral_source}
+              </span>
+            ) : null}
             {profile.suspended_at ? (
               <span className="rounded-full bg-rose-100 px-2.5 py-0.5 text-xs font-semibold text-rose-700 dark:bg-rose-950/50 dark:text-rose-300">
                 Askıda
@@ -113,7 +117,7 @@ export default async function AdminUserDetailPage({
         <Panel title="QA Tester Profili">
           <div className="flex flex-wrap items-center gap-3 text-sm">
             <span className="rounded-full bg-zinc-100 px-2.5 py-1 text-xs font-semibold text-zinc-800 dark:bg-zinc-800 dark:text-zinc-200">
-              {LEVEL_LABEL[profile.reviewer.level] ?? profile.reviewer.level}
+              {LEVEL_LABEL[profile.reviewer.level as ReviewerLevel] ?? profile.reviewer.level}
             </span>
             <span className="tnum text-zinc-600 dark:text-zinc-300">
               {profile.reviewer.years_experience}+ yıl deneyim

@@ -2,7 +2,7 @@
 
 import { useFormStatus } from "react-dom";
 
-import type { FormState } from "@/app/(dashboard)/actions";
+import type { FormState } from "@/lib/forms";
 
 /**
  * Both outcomes of a server action, in one place. An action that succeeded says

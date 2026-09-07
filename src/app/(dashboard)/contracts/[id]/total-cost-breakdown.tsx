@@ -1,5 +1,5 @@
 import { Money } from "@/components/money";
-import { applyBps } from "@/lib/escrow/money";
+import { computeEscrowSplit } from "@/lib/escrow/money";
 import { QA_TIER_INFO, type QaTier } from "@/lib/validations/delivery";
 import type { ContractRow } from "@/lib/data/contracts";
 
@@ -19,15 +19,34 @@ export function TotalCostBreakdown({
 }: Readonly<{
   contract: Pick<
     ContractRow,
-    "project_amount_kurus" | "platform_fee_bps" | "qa_tier" | "qa_fee_kurus"
+    "project_amount_kurus" | "platform_fee_bps" | "stopaj_bps" | "qa_tier" | "qa_fee_kurus"
   >;
 }>) {
   const projectKurus = contract.project_amount_kurus;
   const feePct = contract.platform_fee_bps / 100;
-  const commissionKurus = applyBps(projectKurus, contract.platform_fee_bps);
+  // Routed through the same computeEscrowSplit() every other ClientCharge =
+  // Gross + PlatformFee figure uses (CLAUDE.md: "never a second percentage"),
+  // rather than a second, independent applyBps() call -- stopajBps is
+  // required by the function's signature but unused here, this component
+  // only ever displays the client-facing side of the split.
+  //
+  // Guarded at zero: project_amount_kurus defaults to 0 at the database
+  // level (`contracts.project_amount_kurus ... default 0`), even though the
+  // create-contract form's own Zod schema never submits less than
+  // MIN_MILESTONE_GROSS_KURUS -- computeEscrowSplit() rejects a zero gross
+  // outright, and a contract somehow still at its DB default shouldn't 500
+  // this page over it.
+  const { platformFeeKurus: commissionKurus, clientChargeKurus } =
+    projectKurus > 0
+      ? computeEscrowSplit({
+          grossKurus: projectKurus,
+          platformFeeBps: contract.platform_fee_bps,
+          stopajBps: contract.stopaj_bps,
+        })
+      : { platformFeeKurus: 0, clientChargeKurus: 0 };
   const qaFeeKurus = contract.qa_fee_kurus;
   const qaLabel = contract.qa_tier ? QA_TIER_INFO[contract.qa_tier as QaTier].label : null;
-  const totalKurus = projectKurus + commissionKurus + (qaFeeKurus ?? 0);
+  const totalKurus = clientChargeKurus + (qaFeeKurus ?? 0);
 
   return (
     <div className="mt-5">

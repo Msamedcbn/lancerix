@@ -4,24 +4,13 @@ import { Money } from "@/components/money";
 import { EmptyState, PageHeading, Row, Rows } from "@/components/page-shell";
 import { requireRole } from "@/lib/auth/session";
 import { kurus, listMilestones, listClientPlatformInvoices } from "@/lib/data/contracts";
-
-const INVOICE_TYPE_LABEL: Record<string, string> = {
-  WORK_START: "İş başlangıcı",
-  QA_SERVICE: "QA hizmeti",
-  CUSTOM: "Özel",
-};
-
-const INVOICE_STATUS_LABEL: Record<string, string> = {
-  PENDING: "Bekliyor",
-  PAID: "Ödendi",
-  CANCELLED: "İptal",
-};
-
-const INVOICE_STATUS_TONE: Record<string, string> = {
-  PENDING: "bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300",
-  PAID: "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300",
-  CANCELLED: "bg-zinc-100 text-zinc-500 dark:bg-zinc-900 dark:text-zinc-400",
-};
+import {
+  INVOICE_STATUS_LABEL,
+  INVOICE_STATUS_TONE,
+  INVOICE_TYPE_LABEL,
+  type PlatformInvoiceStatus,
+  type PlatformInvoiceType,
+} from "@/lib/labels";
 
 export default async function ClientInvoicesPage() {
   const session = await requireRole("CLIENT");
@@ -122,14 +111,14 @@ export default async function ClientInvoicesPage() {
                   <div className="min-w-0 flex flex-col gap-1.5">
                     <div className="flex items-center gap-2">
                       <p className="truncate text-sm font-bold text-zinc-950 dark:text-zinc-50">
-                        {INVOICE_TYPE_LABEL[inv.invoice_type] ?? inv.invoice_type}
+                        {INVOICE_TYPE_LABEL[inv.invoice_type as PlatformInvoiceType] ?? inv.invoice_type}
                       </p>
                       <span
                         className={`inline-flex items-center rounded-full px-2 py-0.5 text-[0.65rem] font-bold uppercase tracking-wider ${
-                          INVOICE_STATUS_TONE[inv.status] ?? ""
+                          INVOICE_STATUS_TONE[inv.status as PlatformInvoiceStatus] ?? ""
                         }`}
                       >
-                        {INVOICE_STATUS_LABEL[inv.status] ?? inv.status}
+                        {INVOICE_STATUS_LABEL[inv.status as PlatformInvoiceStatus] ?? inv.status}
                       </span>
                     </div>
                     {inv.contract ? (

@@ -1,13 +1,9 @@
 import { EmptyState, PageHeading, Panel, Row, Rows } from "@/components/page-shell";
 import { requireRole } from "@/lib/auth/session";
 import { listReviewersWithProfile } from "@/lib/data/admin-users";
+import { LEVEL_LABEL, type ReviewerLevel } from "@/lib/labels";
 
 import { AddReviewerForm, ReviewerActiveToggle, ReviewerRateForm } from "./reviewer-form";
-
-const LEVEL_LABEL: Record<string, string> = {
-  PRINCIPAL: "Principal / Lead",
-  SENIOR: "Senior",
-};
 
 export default async function AdminReviewersPage() {
   await requireRole("ADMIN");
@@ -48,7 +44,7 @@ export default async function AdminReviewersPage() {
                       )}
                     </p>
                     <p className="tnum mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-                      {LEVEL_LABEL[r.level] ?? r.level} · {r.years_experience}+ yıl deneyim
+                      {LEVEL_LABEL[r.level as ReviewerLevel] ?? r.level} · {r.years_experience}+ yıl deneyim
                     </p>
                   </div>
 

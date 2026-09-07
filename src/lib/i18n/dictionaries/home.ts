@@ -1,14 +1,20 @@
 import type { Locale } from "@/lib/i18n/config";
-import type { QaTier } from "@/lib/validations/delivery";
+import { QA_TIER_INFO, type QaTier } from "@/lib/validations/delivery";
 
 /**
  * Landing page copy.
  *
- * The tier block carries only the words -- `available` and `needsReviewer`
- * still come from QA_TIER_INFO in src/lib/validations/delivery.ts, which
- * CLAUDE.md names as the source of truth for pricing and availability. A
- * second copy of those booleans is exactly how an unorderable tier ends up
- * looking orderable in one language.
+ * `available` and `needsReviewer` always come from QA_TIER_INFO in
+ * src/lib/validations/delivery.ts, which CLAUDE.md names as the source of
+ * truth for pricing and availability -- a second copy of those booleans is
+ * exactly how an unorderable tier ends up looking orderable in one language.
+ *
+ * The Turkish tiers below build their label/price/hint/details straight from
+ * QA_TIER_INFO too, since it is already written in Turkish -- there is no
+ * reason for a second, independent copy of the same sentences to exist and
+ * drift out of sync the next time a tier's price or wording changes.
+ * English keeps its own hand-translated copy below: QA_TIER_INFO has no
+ * English text to derive from.
  */
 export type TierCopy = {
   label: string;
@@ -16,6 +22,12 @@ export type TierCopy = {
   hint: string;
   details: readonly string[];
 };
+
+/** The Turkish tier copy, word for word, straight from QA_TIER_INFO. */
+function tierCopyFromInfo(tier: QaTier): TierCopy {
+  const info = QA_TIER_INFO[tier];
+  return { label: info.label, price: info.price, hint: info.hint, details: info.details };
+}
 
 export type Step = { title: string; body: string };
 
@@ -146,46 +158,10 @@ export const HOME_COPY: Record<Locale, HomeCopy> = {
     pricingTitle: "Projenize en uygun yöntemi seçin.",
     comingSoon: "Yakında",
     tiers: {
-      TIER1: {
-        label: "Temel Kontrol",
-        price: "99 ₺",
-        hint: "Kriter listesi müşteriye sunulur, müşteri kendi kontrolünü yapar. Ücret, doğrulama kaydının kendisi içindir.",
-        details: [
-          "Müşteri doğrudan kendi inceler",
-          "Otomatik ajan maliyeti yok",
-          "Zaman damgalı, değiştirilemez kayıt",
-        ],
-      },
-      TIER2: {
-        label: "Agentic QA",
-        price: "250 ₺ + Harcanan API",
-        hint: "Otonom test ajanı UI/UX ve kriterleri tarar. API bütçesi korunur.",
-        details: [
-          "UI/UX & İşlevsellik taraması",
-          "Kıstaslı API kullanım limiti",
-          "Çalışma sonrası API maliyeti yansıtılır",
-        ],
-      },
-      TIER3: {
-        label: "Agentic + Manuel Tester",
-        price: "250 ₺ + API + Tester Ücreti",
-        hint: "Otonom agentic testler koşulur, kıdemli QA mühendisi denetiminde doğrulanır.",
-        details: [
-          "Otonom test + İnsan gözü denetimi",
-          "Mühendis onaylı rapor",
-          "Tester proje ücreti eklenir",
-        ],
-      },
-      TIER4: {
-        label: "Sadece Manuel Tester",
-        price: "Tester Özel Ücreti",
-        hint: "Doğrudan QA test uzmanı projeyi elden inceler, hataları raporlar.",
-        details: [
-          "Ajan koşulmaz, doğrudan uzman incelemesi",
-          "Tester'ın proje için belirleyeceği sabit ücret",
-          "Birebir detaylı rapor",
-        ],
-      },
+      TIER1: tierCopyFromInfo("TIER1"),
+      TIER2: tierCopyFromInfo("TIER2"),
+      TIER3: tierCopyFromInfo("TIER3"),
+      TIER4: tierCopyFromInfo("TIER4"),
     },
     closingTitle: "İşinizi güvence altına alın.",
     closingPrimary: "Ücretsiz Başla",

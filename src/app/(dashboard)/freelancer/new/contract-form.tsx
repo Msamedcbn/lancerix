@@ -8,12 +8,12 @@ import {
   findCounterparty,
   previewContract,
   type CounterpartyResult,
-  type FormState,
   type PreviewResult,
-} from "@/app/(dashboard)/actions";
+} from "@/app/(dashboard)/contract-actions";
 import { Field, TextArea, TextInput } from "@/components/field";
 import { FormFeedback, SubmitButton } from "@/components/form-feedback";
 import type { PreviousClient } from "@/lib/data/contracts";
+import type { FormState } from "@/lib/forms";
 import {
   PROJECT_CATEGORIES,
   PROJECT_CATEGORY_INFO,

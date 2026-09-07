@@ -15,6 +15,7 @@ import {
   listProfilesByRole,
   listReviewersWithProfile,
 } from "@/lib/data/admin-users";
+import { LEVEL_LABEL, type ReviewerLevel } from "@/lib/labels";
 
 const TABS = [
   { key: "freelancer", label: "Freelancer'lar" },
@@ -32,11 +33,6 @@ const QUICK_ACTIONS: readonly QuickAction[] = [
   { label: "İtirazlar", icon: AlertTriangle, href: "/admin/disputes", tint: "rose" },
   { label: "Kayıt defteri", icon: ScrollText, href: "/admin/audit", tint: "indigo" },
 ];
-
-const LEVEL_LABEL: Record<string, string> = {
-  PRINCIPAL: "Principal / Lead",
-  SENIOR: "Senior",
-};
 
 export default async function AdminUsersPage({
   searchParams,
@@ -75,6 +71,9 @@ export default async function AdminUsersPage({
   );
 }
 
+/** Joined within the last 7 days -- worth an admin's eye without digging into each profile. */
+const NEW_MEMBER_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
+
 async function PeopleTab({ role }: Readonly<{ role: "FREELANCER" | "CLIENT" }>) {
   const people = await listProfilesByRole(role);
 
@@ -89,30 +88,38 @@ async function PeopleTab({ role }: Readonly<{ role: "FREELANCER" | "CLIENT" }>) 
 
   return (
     <Rows>
-      {people.map((p) => (
-        <Link key={p.id} href={`/admin/users/${p.id}`}>
-          <Row>
-            <div className="flex items-center justify-between gap-4">
-              <div className="min-w-0">
-                <p className="truncate text-sm font-medium text-zinc-950 dark:text-zinc-50">
-                  {p.full_name}
-                </p>
-                <p className="mt-0.5 truncate text-xs text-zinc-500 dark:text-zinc-400">
-                  {p.email}
-                </p>
+      {people.map((p) => {
+        const isNew = Date.now() - Date.parse(p.created_at) < NEW_MEMBER_WINDOW_MS;
+        return (
+          <Link key={p.id} href={`/admin/users/${p.id}`}>
+            <Row>
+              <div className="flex items-center justify-between gap-4">
+                <div className="min-w-0">
+                  <p className="flex items-center gap-1.5 truncate text-sm font-medium text-zinc-950 dark:text-zinc-50">
+                    {p.full_name}
+                    {isNew ? (
+                      <span className="rounded-full bg-brand-muted text-brand px-1.5 py-0.5 text-[0.65rem] font-semibold">
+                        Yeni
+                      </span>
+                    ) : null}
+                  </p>
+                  <p className="mt-0.5 truncate text-xs text-zinc-500 dark:text-zinc-400">
+                    {p.email} · {p.created_at.slice(0, 10)} tarihinde katıldı
+                  </p>
+                </div>
+                <div className="flex shrink-0 items-center gap-3">
+                  <span className="tnum rounded-full bg-zinc-100 px-2.5 py-1 text-xs font-semibold text-zinc-800 dark:bg-zinc-800 dark:text-zinc-200">
+                    {p.contractCount} sözleşme
+                  </span>
+                  <span className="tnum font-mono text-xs text-zinc-400 dark:text-zinc-500">
+                    {p.public_id}
+                  </span>
+                </div>
               </div>
-              <div className="flex shrink-0 items-center gap-3">
-                <span className="tnum rounded-full bg-zinc-100 px-2.5 py-1 text-xs font-semibold text-zinc-800 dark:bg-zinc-800 dark:text-zinc-200">
-                  {p.contractCount} sözleşme
-                </span>
-                <span className="tnum font-mono text-xs text-zinc-400 dark:text-zinc-500">
-                  {p.public_id}
-                </span>
-              </div>
-            </div>
-          </Row>
-        </Link>
-      ))}
+            </Row>
+          </Link>
+        );
+      })}
     </Rows>
   );
 }
@@ -163,7 +170,7 @@ async function QaTestersTab() {
                   {r.active ? "Aktif" : "Pasif"}
                 </span>
                 <span className="tnum text-xs text-zinc-500 dark:text-zinc-400">
-                  {LEVEL_LABEL[r.level] ?? r.level} · {r.years_experience}+ yıl
+                  {LEVEL_LABEL[r.level as ReviewerLevel] ?? r.level} · {r.years_experience}+ yıl
                 </span>
               </div>
             </div>

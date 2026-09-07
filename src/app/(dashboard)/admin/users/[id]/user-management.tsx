@@ -11,14 +11,9 @@ import {
   type FormState,
 } from "@/app/(dashboard)/admin/actions";
 import { FormFeedback, SubmitButton } from "@/components/form-feedback";
+import { ROLE_LABEL } from "@/lib/labels";
 
 const INITIAL: FormState = { error: null };
-
-const ROLE_LABEL: Record<string, string> = {
-  FREELANCER: "Freelancer",
-  CLIENT: "Müşteri",
-  ADMIN: "Yönetici",
-};
 
 /** Edit the display name only -- email/TCKN/IBAN stay user-editable, see actions.ts. */
 export function ProfileEditForm({

@@ -7,14 +7,10 @@ import { FormFeedback, SubmitButton } from "@/components/form-feedback";
 import { Money } from "@/components/money";
 import { Panel } from "@/components/page-shell";
 import type { QaReviewer } from "@/lib/data/deliveries";
+import { LEVEL_LABEL, type ReviewerLevel } from "@/lib/labels";
 import { QA_TIERS, QA_TIER_INFO, type QaTier } from "@/lib/validations/delivery";
 
 const INITIAL: FormState = { error: null };
-
-const LEVEL_LABEL: Record<string, string> = {
-  PRINCIPAL: "Principal / Lead",
-  SENIOR: "Senior",
-};
 
 /**
  * The client picks how rigorously the work gets checked, before either
@@ -88,7 +84,7 @@ export function QaSelectionPanel({
             ) : null}
             {qaReviewer ? (
               <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                İnceleyecek: {LEVEL_LABEL[qaReviewer.level] ?? qaReviewer.level} ·{" "}
+                İnceleyecek: {LEVEL_LABEL[qaReviewer.level as ReviewerLevel] ?? qaReviewer.level} ·{" "}
                 {qaReviewer.years_experience}+ yıl
               </p>
             ) : null}
@@ -210,7 +206,7 @@ export function QaSelectionPanel({
                         />
                         <span className="min-w-0">
                           <span className="block text-sm font-medium text-zinc-950 dark:text-zinc-50">
-                            {LEVEL_LABEL[r.level] ?? r.level}
+                            {LEVEL_LABEL[r.level as ReviewerLevel] ?? r.level}
                           </span>
                           <span className="tnum block text-xs text-zinc-500 dark:text-zinc-400">
                             {r.years_experience}+ yıl

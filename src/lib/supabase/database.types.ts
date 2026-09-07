@@ -970,6 +970,7 @@ export type Database = {
           id: string
           location: string | null
           public_id: string
+          referral_source: string | null
           role: Database["public"]["Enums"]["user_role"]
           services: string[]
           skills: string[]
@@ -990,6 +991,7 @@ export type Database = {
           id: string
           location?: string | null
           public_id: string
+          referral_source?: string | null
           role?: Database["public"]["Enums"]["user_role"]
           services?: string[]
           skills?: string[]
@@ -1010,6 +1012,7 @@ export type Database = {
           id?: string
           location?: string | null
           public_id?: string
+          referral_source?: string | null
           role?: Database["public"]["Enums"]["user_role"]
           services?: string[]
           skills?: string[]

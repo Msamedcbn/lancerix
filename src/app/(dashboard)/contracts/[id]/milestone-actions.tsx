@@ -6,10 +6,10 @@ import {
   raiseDispute,
   submitDelivery,
   transitionMilestone,
-  type FormState,
-} from "@/app/(dashboard)/actions";
+} from "@/app/(dashboard)/milestone-transition-actions";
 import { TextInput } from "@/components/field";
 import { FormFeedback, SubmitButton } from "@/components/form-feedback";
+import type { FormState } from "@/lib/forms";
 import type { Enums } from "@/lib/supabase/database.types";
 
 type EscrowStatus = Enums<"escrow_status">;
