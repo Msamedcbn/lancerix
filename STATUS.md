@@ -375,6 +375,43 @@ uçtan uca doğrulama hâlâ yapılmadı; SQL-seviyesi grant fix'i doğrulandı 
 tam akışı (Playwright scrape + gerçek LLM çağrısı + gerçek `submit_qa_report`) canlıda
 hiç koşmadı.
 
+## 2026-09-07 (devam): Kriter-kriter detaylı rapor + müşteri paneline yayın
+
+Kullanıcının kararı: QA/agentic test ikinci planda değil, çekirdek değer --
+rakiplerle (SmartestQA gibi genel test otomasyon platformları) aynı geniş
+pazarda yarışmak yerine, agentic QA'yı derinleştirip mükemmelleştirmek daha
+doğru wedge. Somut istek: agent'ın raporu detaylı olmalı ve müşteri panelinde
+gerçekten görünmeli.
+
+İnceleme sırasında bulunan gerçek boşluk: `report.results` (agent'ın/admin'in
+yazdığı bulgular) `qa-report-summary.tsx`'te **hiç render edilmiyordu** --
+müşteri sadece PASS/FAIL etiketi, tarih ve bir SHA256 hash görüyordu, altındaki
+gerçek bulgu metni tamamen görünmezdi.
+
+1. **`_record_qa_report()` / `submit_qa_report()`** -- opsiyonel `p_criteria
+   jsonb` parametresi eklendi (`20260907020000_qa_report_per_criterion_detail.sql`,
+   hosted DB'ye push edildi, tek overload kaldığı doğrulandı). Geriye uyumlu:
+   admin ve reviewer-token yolu bu parametreyi hiç geçmiyor, davranışları
+   değişmedi.
+2. **`src/lib/qa/agent.ts`** -- LLM artık her kabul kriterini AYRI AYRI
+   değerlendiriyor (`criteria: [{description, met: PASS|FAIL|UNKNOWN, note}]`),
+   sadece tek bir genel özet değil. `documentSha256` artık özet + kriter
+   detayının tamamını kapsıyor (önceden sadece özet cümlesini hash'liyordu --
+   müşteriye gösterilen detay hash'in kapsamı dışındaydı).
+3. **`qa-report-summary.tsx`** -- `report.results` artık zod ile güvenli
+   parse edilip render ediliyor: özet paragrafı + her kriter için renkli
+   (yeşil/kırmızı/amber) rozet + kanıt notu. Admin/reviewer raporlarında
+   `criteria` olmadığından sadece özet görünür -- geriye dönük kırılma yok.
+
+`agent.test.ts` 14 teste çıktı (yeni: kriter dizisi boşsa/eksikse şema
+reddediyor). `npm run test` (147/147), typecheck, lint temiz. Gerçek görsel
+doğrulama yapılamadı -- bu oturumda test hesabı oturumu yok; renk şeması
+sayfadaki mevcut REJECTED bandından birebir kopyalandı.
+
+**Hâlâ eksik:** `OPENAI_API_KEY` yok, gerçek bir teslimle uçtan uca hiç
+koşmadı -- yukarıdaki "2026-09-07: Tier2 hazırlığı" bölümündeki blocker aynen
+geçerli.
+
 ## Bilinen boşluklar / sıradaki
 
 CEO review'da (2026-09-02) kararlaştırılan 4 fazlık sıra:

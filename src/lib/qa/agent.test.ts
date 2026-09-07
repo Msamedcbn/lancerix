@@ -158,11 +158,23 @@ vi.mock("@sparticuz/chromium", () => ({
   default: { args: [], executablePath: vi.fn(async () => "/fake/chromium") },
 }));
 
-function passVerdict(overrides: Partial<{ status: string; findings: string; confidenceScore: number }> = {}) {
+const DEFAULT_CRITERIA_VERDICT = [
+  { description: "Ana sayfa 200 dönmeli", met: "PASS" as const, note: "GET / -> 200 OK gözlendi." },
+];
+
+function passVerdict(
+  overrides: Partial<{
+    status: string;
+    findings: string;
+    confidenceScore: number;
+    criteria: unknown[];
+  }> = {},
+) {
   return JSON.stringify({
     status: "PASS",
     findings: "Tüm kriterler karşılandı.",
     confidenceScore: 95,
+    criteria: DEFAULT_CRITERIA_VERDICT,
     ...overrides,
   });
 }
@@ -275,6 +287,17 @@ describe("processTier2Order", () => {
     });
   });
 
+  it("escalates when the LLM omits the per-criterion breakdown -- an overall verdict alone is not a detailed report", async () => {
+    generateTextImpl = async () => ({ text: passVerdict({ criteria: [] }) });
+    const { processTier2Order } = await import("./agent");
+    await processTier2Order(ORDER_ID);
+
+    expect(admin.rpc).toHaveBeenCalledWith("auto_escalate_qa_tier", {
+      p_order_id: ORDER_ID,
+      p_reason: "LLM did not return a parseable verdict",
+    });
+  });
+
   it("escalates when OPENAI_API_KEY is not configured", async () => {
     delete process.env.OPENAI_API_KEY;
     const { processTier2Order } = await import("./agent");
@@ -314,13 +337,16 @@ describe("processTier2Order", () => {
     const { processTier2Order } = await import("./agent");
     await processTier2Order(ORDER_ID);
 
-    const expectedSha = createHash("sha256").update("Tüm testler geçti.").digest("hex");
+    const expectedSha = createHash("sha256")
+      .update(JSON.stringify({ findings: "Tüm testler geçti.", criteria: DEFAULT_CRITERIA_VERDICT }))
+      .digest("hex");
     expect(admin.rpc).toHaveBeenCalledWith("submit_qa_report", {
       p_delivery_id: DELIVERY_ID,
       p_contract_id: CONTRACT_ID,
       p_status: "PASS",
       p_findings: "Tüm testler geçti.",
       p_document_sha256: expectedSha,
+      p_criteria: DEFAULT_CRITERIA_VERDICT,
     });
     expect(
       admin.calls.some(
