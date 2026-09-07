@@ -1,6 +1,6 @@
 # Lancerix — Durum Özeti
 
-_Son güncelleme: 2026-09-04_
+_Son güncelleme: 2026-09-07_
 
 Bu dosya "şu an ne çalışıyor, ne eksik, sırada ne var" sorusuna tek bakışta
 cevap vermek için var. Ürün/mimari kararların gerekçesi `CLAUDE.md`'de;
@@ -328,6 +328,53 @@ yakalandı, aksiyonun kendi dönüş değerine güvenilerek değil. Eksik
 `profiles_update_admin` policy'si eklenerek düzeltildi ve doğru şekilde
 yeniden test edildi.
 
+## 2026-09-07: Tier2 Agentic QA -- `available: true` öncesi hazırlık
+
+Kullanıcının "agentic QA testine devam edelim" isteğine karşılık `src/lib/qa/agent.ts`
+(`processTier2Order`) ve etrafındaki RPC'ler baştan sona incelendi. Bulunan gerçek
+buglar, önem sırasına göre:
+
+1. **`submit_qa_report()` agent'tan hiç çağrılamıyordu** (`20260907010000_agent_can_submit_qa_report.sql`,
+   hosted DB'ye push edildi) -- fonksiyon sadece `is_admin()` kontrol ediyordu, bu da
+   `auth.uid()`'a bakıyor; agent worker'ın service-role bağlantısında bu her zaman null,
+   yani her zaman false. Sonuç: her gerçek Tier2 PASS/FAIL sonucu, raporu göndermeye
+   çalışırken sessizce `insufficient_privilege` ile patlayıp Tier3'e escalate olacaktı --
+   agent bir siparişi asla gerçekten tamamlayamazdı. `auto_escalate_qa_tier()`'da
+   (20260902060000) daha önce bulunup düzeltilmiş, aynı bug sınıfının bu fonksiyona hiç
+   uygulanmamış hali. Fix `transition_delivery()`'nin zaten kullandığı `v_is_system`
+   (`auth.role() = 'service_role'`) desenini mirror'lıyor. Hosted DB'de grant'ler
+   doğrulandı (`has_function_privilege` ile service_role artık true dönüyor).
+2. **`notifyDeliverySubmitted`'a sabit `windowDays: 5` geçiriliyordu** -- Tier1 yolu
+   sözleşmenin gerçek `objection_window_days`'ini kullanırken Tier2 hardcode edilmişti.
+   Şu an `DEFAULT_OBJECTION_WINDOW_DAYS` de 5 olduğu için sessiz kalan bir bug, ama
+   default değişirse müşteriye söylenen süre ile DB'nin gerçekte uyguladığı deadline
+   sessizce ayrışacaktı. `qa_tier_orders` select'ine `objection_window_days` eklenip
+   sözleşmeden okunacak şekilde düzeltildi.
+3. **LLM'in JSON cevabı zod ile doğrulanmıyordu** -- `as Verdict` type assertion,
+   CLAUDE.md'nin "Zod for every form and API boundary" kuralına aykırıydı. `verdictSchema`
+   eklendi, `judge()` artık `safeParse` kullanıyor.
+4. **Claim'deki `RUNNING` reclaim mantığı** -- atomik claim UPDATE'i her zaman
+   `agent_status = RUNNING` olan bir siparişi de yeniden claim edebiliyordu; bunun
+   güvenli olduğu varsayım (cron sweep'in kendi 10 dakikalık staleness filtresi) sadece
+   cron çağrısı için doğruydu, `processTier2Order`'ın kendi atomik claim'i bunu
+   zorunlu kılmıyordu. `allowReclaimStale` parametresi eklendi (varsayılan `false`);
+   sadece `process-tier2-qa` cron route'u `true` geçiyor.
+5. **Hata mesajı yutuluyordu** -- `throw submitError` bir PostgREST hata objesi fırlatıyor
+   (`{message, code}`), `Error` instance'ı değil; `err instanceof Error` bunu kaçırıp
+   escalation reason'ını anlamsız `"[object Object]"`e düşürüyordu. `errorMessage()`
+   helper'ı eklendi.
+
+`src/lib/qa/agent.test.ts` yazıldı (13 test, Supabase/OpenAI/Playwright mock'lanmış) --
+claim/escalate/complete dallanmasının tamamını, yukarıdaki 5 bug'ın hepsini regresyon
+olarak kilitliyor. `npm run test` (146/146), `npm run typecheck`, `npm run lint` temiz.
+
+**Hâlâ eksik, `available: true` öncesi:** `OPENAI_API_KEY` ne bu makinede
+(`.env.local`) ne de Vercel'de tanımlı -- bu bir secret, kullanıcı kendi eklemeli.
+Eklendikten sonra gerçek bir TIER2 sözleşmesiyle (gerçek staging URL, gerçek teslim)
+uçtan uca doğrulama hâlâ yapılmadı; SQL-seviyesi grant fix'i doğrulandı ama agent'ın
+tam akışı (Playwright scrape + gerçek LLM çağrısı + gerçek `submit_qa_report`) canlıda
+hiç koşmadı.
+
 ## Bilinen boşluklar / sıradaki
 
 CEO review'da (2026-09-02) kararlaştırılan 4 fazlık sıra:
@@ -335,7 +382,7 @@ CEO review'da (2026-09-02) kararlaştırılan 4 fazlık sıra:
 | Faz | İş | Durum |
 |---|---|---|
 | 1 — Güven | Kayıt-rolü bug'ı + bildirim güvenilirliği | ✅ Tamamlandı |
-| 2 — Ürün | Tier2 Agentic QA | Kod hazır ve Vercel'e entegre (ayrı hosting gerekmiyor) — Vercel'e `OPENAI_API_KEY` eklenip gerçek bir teslimatla uçtan uca test edilmeden `available: true` yapılmamalı |
+| 2 — Ürün | Tier2 Agentic QA | Kod hazır, kritik bir RPC-izin bug'ı düzeltildi (bkz. "2026-09-07"). Vercel'e `OPENAI_API_KEY` eklenip gerçek bir teslimatla uçtan uca test edilmeden `available: true` yapılmamalı |
 | 3 — Sağlamlık | Son eklenen UI akışları için test kapsamı (`addAcceptanceCriteria`, `payQaOrder`, `ServicesPicker`, `PayoutInfoForm`) | Başlamadı |
 | 4 — Gelir | PayTR/iyzico escrow (şirket kuruluşu şart) | Şirket kuruluşuna bağlı |
 

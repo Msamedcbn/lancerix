@@ -51,7 +51,9 @@ export async function GET(request: NextRequest) {
 
   const processed: string[] = [];
   for (const order of stuck ?? []) {
-    await processTier2Order(order.id);
+    // true: this query already pre-filtered to orders 10+ minutes old, so a
+    // RUNNING one here can only be a prior invocation that died mid-run.
+    await processTier2Order(order.id, true);
     processed.push(order.id);
   }
 

@@ -6,6 +6,7 @@ import { createOpenAI } from "@ai-sdk/openai";
 import { generateText } from "ai";
 import chromium from "@sparticuz/chromium";
 import { chromium as playwrightChromium } from "playwright-core";
+import { z } from "zod";
 
 import { notifyDeliverySubmitted } from "@/lib/notify/email";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -27,8 +28,20 @@ import { createAdminClient } from "@/lib/supabase/admin";
  * Never throws past its own logging: a stuck agent run should not crash the
  * request that triggered it (the immediate path runs after the response is
  * already sent) or take down a cron sweep processing other orders.
+ *
+ * @param allowReclaimStale Only the cron sweep should pass `true`: its own
+ * query already pre-filters to orders stuck 10+ minutes, so a RUNNING order
+ * it picks up can only mean a prior invocation died mid-run. The immediate
+ * after() trigger has no such pre-filter -- if it ever ran twice for the
+ * same order (a retried invocation, a duplicate call site), reclaiming a
+ * RUNNING order there would mean two invocations genuinely racing each
+ * other, each thinking it alone owns the run. Defaults to false so that
+ * risk only exists where the caller has actually ruled it out.
  */
-export async function processTier2Order(orderId: string): Promise<void> {
+export async function processTier2Order(
+  orderId: string,
+  allowReclaimStale = false,
+): Promise<void> {
   const admin = createAdminClient();
   let runId: string | null = null;
 
@@ -36,7 +49,7 @@ export async function processTier2Order(orderId: string): Promise<void> {
     const { data: order, error: orderError } = await admin
       .from("qa_tier_orders")
       .select(
-        "id, tier, delivery:deliveries(id, staging_url, contract_id, contracts(id, title, client_id, client_email))",
+        "id, tier, delivery:deliveries(id, staging_url, contract_id, contracts(id, title, client_id, client_email, objection_window_days))",
       )
       .eq("id", orderId)
       .single();
@@ -56,16 +69,18 @@ export async function processTier2Order(orderId: string): Promise<void> {
     // Atomic claim: the immediate after() trigger and the daily cron sweep
     // can both reach for the same order. Whichever UPDATE actually matches
     // wins; the other gets an empty result back and backs off instead of
-    // double-running. RUNNING is claimable too -- the cron route only ever
-    // looks at orders stuck for 10+ minutes, which by then can only mean a
-    // prior invocation died mid-run, not one still legitimately in flight.
+    // double-running. RUNNING is only claimable when the caller has already
+    // established the run is stale (see allowReclaimStale above).
+    // .in() never matches NULL under SQL IN semantics, so this needs an
+    // explicit .or() rather than .in([null, "QUEUED", "RUNNING"]).
+    const claimableStatuses = allowReclaimStale
+      ? "agent_status.is.null,agent_status.eq.QUEUED,agent_status.eq.RUNNING"
+      : "agent_status.is.null,agent_status.eq.QUEUED";
     const { data: claimed } = await admin
       .from("qa_tier_orders")
       .update({ agent_status: "RUNNING" })
       .eq("id", orderId)
-      // .in() never matches NULL under SQL IN semantics, so this needs an
-      // explicit .or() rather than .in([null, "QUEUED", "RUNNING"]).
-      .or("agent_status.is.null,agent_status.eq.QUEUED,agent_status.eq.RUNNING")
+      .or(claimableStatuses)
       .select("id");
     if (!claimed || claimed.length === 0) {
       console.log(`[qa-agent] order ${orderId} already claimed, skipping`);
@@ -136,19 +151,28 @@ export async function processTier2Order(orderId: string): Promise<void> {
       fallbackEmail: contract.client_email,
       contractId: contract.id,
       contractTitle: contract.title,
-      windowDays: 5,
+      windowDays: contract.objection_window_days,
     });
   } catch (err) {
     console.error(`[qa-agent] order ${orderId} failed`, err);
     if (runId) {
-      await escalate(
-        admin,
-        orderId,
-        runId,
-        `unhandled error: ${err instanceof Error ? err.message : String(err)}`,
-      );
+      await escalate(admin, orderId, runId, `unhandled error: ${errorMessage(err)}`);
     }
   }
+}
+
+/**
+ * `throw submitError` above throws a PostgREST error object (`{message,
+ * code, ...}`), not an `Error` instance -- `instanceof Error` misses it and
+ * falls through to `String(err)`, which stringifies a plain object as
+ * "[object Object]" and buries the actual reason an escalated order needs.
+ */
+function errorMessage(err: unknown): string {
+  if (err instanceof Error) return err.message;
+  if (typeof err === "object" && err !== null && "message" in err) {
+    return String((err as { message: unknown }).message);
+  }
+  return String(err);
 }
 
 /**
@@ -192,7 +216,12 @@ async function scrapePage(url: string): Promise<string | null> {
   }
 }
 
-type Verdict = { status: "PASS" | "FAIL" | "UNCERTAIN"; findings: string; confidenceScore: number };
+const verdictSchema = z.object({
+  status: z.enum(["PASS", "FAIL", "UNCERTAIN"]),
+  findings: z.string().min(1),
+  confidenceScore: z.number().min(0).max(100),
+});
+type Verdict = z.infer<typeof verdictSchema>;
 
 /**
  * domContent is scraped from a page the freelancer being graded controls --
@@ -234,9 +263,12 @@ ${domContent}
 
   try {
     const { text } = await generateText({ model: openai("gpt-4o-mini"), prompt });
-    const parsed = JSON.parse(text) as Verdict;
-    if (!["PASS", "FAIL", "UNCERTAIN"].includes(parsed.status)) return null;
-    return parsed;
+    const parsed = verdictSchema.safeParse(JSON.parse(text));
+    if (!parsed.success) {
+      console.error("[qa-agent] LLM returned an unparseable verdict shape", parsed.error);
+      return null;
+    }
+    return parsed.data;
   } catch (err) {
     console.error("[qa-agent] LLM call or parse failed", err);
     return null;
