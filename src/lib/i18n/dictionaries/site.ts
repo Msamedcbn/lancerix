@@ -23,6 +23,7 @@ export type SiteCopy = {
     guideClientNonPayment: string;
     trustArchitecture: string;
     roadmap: string;
+    about: string;
     login: string;
     terms: string;
     rights: string;
@@ -55,6 +56,7 @@ export const SITE_COPY: Record<Locale, SiteCopy> = {
       guideClientNonPayment: "Müşteri Ödemezse Ne Yapılır",
       trustArchitecture: "Güven Mimarisi",
       roadmap: "Yol Haritası (Neredeyiz?)",
+      about: "Kurucu",
       login: "Giriş Yap",
       terms: "Şartlar ve Koşullar",
       rights: "Tüm hakları saklıdır.",
@@ -84,6 +86,7 @@ export const SITE_COPY: Record<Locale, SiteCopy> = {
       guideClientNonPayment: "What If A Client Doesn't Pay",
       trustArchitecture: "Trust Architecture",
       roadmap: "Roadmap",
+      about: "Founder",
       login: "Log in",
       terms: "Terms of service",
       rights: "All rights reserved.",

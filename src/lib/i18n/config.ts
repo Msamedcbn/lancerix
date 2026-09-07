@@ -48,6 +48,7 @@ export const PUBLIC_ROUTES = {
     tr: "/rehber/musteri-odeme-yapmazsa-ne-yapilir",
     en: "/en/guide/what-to-do-if-a-client-doesnt-pay",
   },
+  about: { tr: "/hakkinda", en: "/en/about" },
 } as const satisfies Record<string, Record<Locale, string>>;
 
 export type PublicRouteId = keyof typeof PUBLIC_ROUTES;

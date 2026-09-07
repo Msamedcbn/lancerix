@@ -97,6 +97,11 @@ export function organizationJsonLd(origin: string, description: string) {
         url: origin,
         logo: `${origin}/icon`,
         description,
+        // Named on /hakkinda (/en/about) too -- this is not a bare claim,
+        // there's a page a crawler or reader can check it against. No
+        // sameAs: same reasoning as the footer's placeholder social links
+        // above, nothing real to point at yet.
+        founder: { "@type": "Person", name: "Samed Çoban" },
       },
       {
         "@type": "WebSite",

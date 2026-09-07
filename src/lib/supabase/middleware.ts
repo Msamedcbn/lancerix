@@ -20,6 +20,11 @@ import type { Database } from "@/lib/supabase/database.types";
 // where forgetting this listing would be worse than a marketing-page bounce:
 // a reviewer has no Lancerix account at all, so redirecting them to /login
 // would be a dead end, not just a wrong page.
+//
+// /hakkinda (founder/about page, linked from the footer) had the same bug on
+// first add: any new PUBLIC_ROUTES entry in src/lib/i18n/config.ts needs a
+// matching entry here too -- that registry drives the sitemap and hreflang,
+// this one drives the auth redirect, and they don't share a source.
 const PUBLIC_ROUTES = [
   "/",
   "/login",
@@ -33,6 +38,7 @@ const PUBLIC_ROUTES = [
   "/report",
   "/reviewer-report",
   "/guven-mimarisi",
+  "/hakkinda",
 ];
 
 /**

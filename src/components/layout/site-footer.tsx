@@ -69,6 +69,9 @@ export function SiteFooter({
                 <Link href={PUBLIC_ROUTES.roadmap[locale]} className="hover:text-foreground transition-colors">{t.roadmap}</Link>
               </li>
               <li>
+                <Link href={PUBLIC_ROUTES.about[locale]} className="hover:text-foreground transition-colors">{t.about}</Link>
+              </li>
+              <li>
                 <Link href="/login" className="hover:text-foreground transition-colors">{t.login}</Link>
               </li>
             </ul>
