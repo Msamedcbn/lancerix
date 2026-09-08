@@ -111,6 +111,55 @@ export async function createStandaloneOrder(
 }
 
 /**
+ * Lets an admin run any package against any URL for free, straight from
+ * /site-kontrol -- no Polar checkout, no daily cap. Exists so testing the
+ * scan engine, or showing someone what a report looks like, does not require
+ * spending real money or burning STANDALONE_DAILY_LIMIT (which bounds
+ * customer abuse, not admin use).
+ *
+ * Writes the order already PAID (fee 0, provider_reference
+ * "ADMIN_FREE_TRIAL") through the admin client, not the caller's session
+ * client: standalone_qa_orders_insert's RLS check (20260908060000) requires
+ * fee_kurus to match one of the three real package prices exactly, which a
+ * free trial cannot satisfy, and an ordinary signed-in user must never be
+ * able to set payment_status themselves. requireRole("ADMIN") in the caller
+ * is the actual gate here -- this function does not re-check who is calling.
+ *
+ * Does not run the scan itself: the caller fires that via after(), same
+ * shape runScanForPaidOrder's real webhook caller uses, so the admin sees
+ * the exact customer-facing "tarama sürüyor" state and report, not a
+ * special-cased preview.
+ */
+export async function createAdminFreeTrial(
+  adminUserId: string,
+  input: StandaloneCheckInput,
+): Promise<StandaloneOrderResult> {
+  const admin = createAdminClient();
+
+  const { data: order, error: insertError } = await admin
+    .from("standalone_qa_orders")
+    .insert({
+      requested_by_user_id: adminUserId,
+      target_url: input.targetUrl,
+      package_id: input.packageId,
+      fee_kurus: 0,
+      payment_status: "PAID",
+      paid_at: new Date().toISOString(),
+      provider_reference: "ADMIN_FREE_TRIAL",
+    })
+    .select("id")
+    .single();
+  if (insertError || !order) {
+    return {
+      ok: false,
+      error: toUserMessage(insertError ?? { message: "insert failed" }, "Deneme siparişi oluşturulamadı."),
+    };
+  }
+
+  return { ok: true, orderId: order.id };
+}
+
+/**
  * Runs the purchased package for an order that has been paid, and writes one
  * report row per module.
  *

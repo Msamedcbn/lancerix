@@ -60,6 +60,7 @@ const NAV: Record<UserRole, readonly NavItem[]> = {
     { href: "/admin/reviewers", label: "Mühendisler", icon: "users" },
     { href: "/admin/invoices", label: "Faturalar", icon: "file-text" },
     { href: "/admin/audit", label: "Kayıt defteri", icon: "scroll" },
+    { href: "/site-kontrol", label: "Site Kontrolü (ücretsiz)", icon: "shield-check" },
   ],
 };
 

@@ -361,6 +361,67 @@ export function HomeClient({
         <StandalonePurchaseForm copy={t.standalone} />
       </section>
 
+      {/* --- continuous monitoring subscription: same engine, run weekly ------
+           Links straight to /izleme rather than duplicating a signup+checkout
+           form here -- middleware already bounces an anonymous click to
+           /login?next=/izleme, so the visitor lands on the plan picker right
+           after signing in, same as any other dashboard-only purchase. ------ */}
+      <section id="izleme" className="px-6 pb-24 md:pb-32">
+        <div className="mx-auto max-w-4xl text-center">
+          <p className="text-brand mono text-xs font-semibold tracking-[0.15em]">
+            {t.monitoring.eyebrow}
+          </p>
+          <h2
+            className="font-display mt-3 font-medium tracking-[-0.01em] text-foreground"
+            style={{ fontSize: "clamp(1.6rem, 3.4vw, 2.4rem)", lineHeight: 1.2 }}
+          >
+            {t.monitoring.title}
+          </h2>
+          <p className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-muted-foreground">
+            {t.monitoring.body}
+          </p>
+        </div>
+
+        <div className="mx-auto mt-10 grid max-w-3xl gap-4 sm:grid-cols-2">
+          {(["MONITORING", "AGENCY"] as const).map((planId) => {
+            const plan = t.monitoring.plans[planId];
+            return (
+              <div
+                key={planId}
+                className="flex flex-col rounded-xl border border-border bg-background p-6 shadow-sm"
+              >
+                <div className="flex items-baseline justify-between gap-2">
+                  <span className="text-sm font-semibold text-foreground">{plan.label}</span>
+                  <span className="tnum text-lg font-bold text-foreground">{plan.price}</span>
+                </div>
+                <p className="mt-1 text-xs text-muted-foreground">{plan.hint}</p>
+                <ul className="mt-4 flex flex-col gap-2 text-sm text-muted-foreground">
+                  {plan.features.map((feature) => (
+                    <li key={feature} className="flex items-start gap-2">
+                      <CheckCircle2 className="text-brand mt-0.5 size-4 shrink-0" aria-hidden />
+                      {feature}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="mx-auto mt-8 flex max-w-3xl flex-col items-center gap-2 text-center">
+          <Magnetic>
+            <Link
+              href="/izleme"
+              className="mac-spring bg-brand text-brand-foreground inline-flex items-center gap-2 rounded-xl px-7 py-3.5 text-base font-medium shadow-md transition-all hover:opacity-90 active:scale-[0.98]"
+            >
+              {t.monitoring.cta}
+              <ArrowRight className="size-4" aria-hidden />
+            </Link>
+          </Magnetic>
+          <p className="text-xs text-muted-foreground">{t.monitoring.note}</p>
+        </div>
+      </section>
+
       {/* --- close ------------------------------------------------------------ */}
       <section className="relative overflow-hidden px-6 py-24 text-center md:py-32">
         <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">

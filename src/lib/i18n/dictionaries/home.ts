@@ -103,6 +103,17 @@ export type HomeCopy = {
     loginPrompt: string;
     loginLink: string;
   };
+  monitoring: {
+    eyebrow: string;
+    title: string;
+    body: string;
+    plans: Record<
+      "MONITORING" | "AGENCY",
+      { label: string; price: string; hint: string; features: string[] }
+    >;
+    cta: string;
+    note: string;
+  };
   closingTitle: string;
   closingPrimary: string;
   closingSecondary: string;
@@ -233,6 +244,35 @@ export const HOME_COPY: Record<Locale, HomeCopy> = {
       footer: "Kayıt formu yok — ödeme onayıyla hesabın anında açılır.",
       loginPrompt: "Zaten hesabın var mı?",
       loginLink: "Giriş yap",
+    },
+    monitoring: {
+      eyebrow: "SÜREKLİ KORUMA",
+      title: "Bir kere değil, her hafta.",
+      body: "Siteni haftalık olarak otomatik tarar, bir şey değiştiğinde e-posta ile haber veririz. Değişmeyen kontroller için posta gelmez.",
+      plans: {
+        MONITORING: {
+          label: "İzleme",
+          price: "₺799/ay",
+          hint: "Tek bir site sahibi için.",
+          features: [
+            "3 siteye kadar",
+            "Haftalık tam tarama (7 modül)",
+            "Sadece bir şey değiştiğinde e-posta",
+          ],
+        },
+        AGENCY: {
+          label: "Ajans",
+          price: "₺3.500/ay",
+          hint: "Birden çok müşteri yöneten ajanslar için.",
+          features: [
+            "5 siteye kadar",
+            "Haftalık tam tarama (7 modül)",
+            "Beyaz etiketli rapor + API erişimi",
+          ],
+        },
+      },
+      cta: "Panelden başlat",
+      note: "Hesabın yoksa önce ücretsiz kayıt olman gerekir.",
     },
     closingTitle: "İşinizi güvence altına alın.",
     closingPrimary: "Ücretsiz Başla",
@@ -389,6 +429,35 @@ export const HOME_COPY: Record<Locale, HomeCopy> = {
       footer: "No separate signup form — a successful payment opens the account instantly.",
       loginPrompt: "Already have an account?",
       loginLink: "Log in",
+    },
+    monitoring: {
+      eyebrow: "CONTINUOUS COVERAGE",
+      title: "Not once — every week.",
+      body: "We scan your site automatically every week and email you only when something changes. No news, no email.",
+      plans: {
+        MONITORING: {
+          label: "Monitoring",
+          price: "₺799/mo",
+          hint: "For a single site owner.",
+          features: [
+            "Up to 3 sites",
+            "Weekly full scan (7 modules)",
+            "Email only when something changes",
+          ],
+        },
+        AGENCY: {
+          label: "Agency",
+          price: "₺3,500/mo",
+          hint: "For agencies managing multiple clients.",
+          features: [
+            "Up to 5 sites",
+            "Weekly full scan (7 modules)",
+            "White-label reports + API access",
+          ],
+        },
+      },
+      cta: "Start from the dashboard",
+      note: "No account yet? You'll need one first.",
     },
     closingTitle: "Put your work on the record.",
     closingPrimary: "Start free",

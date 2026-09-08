@@ -29,24 +29,30 @@ import { FAIL, type FormState } from "@/lib/forms";
  * schema, not assumed).
  */
 /**
- * Resolves the specific Polar product ID for a given package/tier or falls back
- * to POLAR_QA_PRODUCT_ID.
+ * Resolves the Polar product ID for a given package/tier, and whether it is
+ * that package's own dedicated product or the shared custom-price fallback
+ * (POLAR_QA_PRODUCT_ID).
+ *
+ * The distinction matters at checkout: POLAR_QA_PRODUCT_ID has no price of
+ * its own, so every checkout against it must set `amount` (see
+ * createQaOrderCheckout/createStandaloneOrderCheckout below). A dedicated
+ * product (2026-09-09: BASIC/PRO/FULL each got one, with TRY/USD/EUR fixed
+ * prices, same regional-pricing shape as the monitoring subscription) has
+ * its own price -- sending `amount` alongside it would override the price
+ * Polar picked for the customer's region, the same reason
+ * createMonitoringCheckout never sends one.
  */
-function resolvePolarProductId(key: string): string | undefined {
-  switch (key.toUpperCase()) {
-    case "BASIC":
-      return process.env.POLAR_PRODUCT_BASIC || process.env.POLAR_QA_PRODUCT_ID;
-    case "PRO":
-      return process.env.POLAR_PRODUCT_PRO || process.env.POLAR_QA_PRODUCT_ID;
-    case "FULL":
-      return process.env.POLAR_PRODUCT_FULL || process.env.POLAR_QA_PRODUCT_ID;
-    case "TIER2":
-      return process.env.POLAR_PRODUCT_TIER2 || process.env.POLAR_QA_PRODUCT_ID;
-    case "TIER3":
-      return process.env.POLAR_PRODUCT_TIER3 || process.env.POLAR_QA_PRODUCT_ID;
-    default:
-      return process.env.POLAR_QA_PRODUCT_ID;
-  }
+function resolvePolarProductId(key: string): { productId: string | undefined; dedicated: boolean } {
+  const dedicated: Record<string, string | undefined> = {
+    BASIC: process.env.POLAR_PRODUCT_BASIC,
+    PRO: process.env.POLAR_PRODUCT_PRO,
+    FULL: process.env.POLAR_PRODUCT_FULL,
+    TIER2: process.env.POLAR_PRODUCT_TIER2,
+    TIER3: process.env.POLAR_PRODUCT_TIER3,
+  };
+  const productId = dedicated[key.toUpperCase()];
+  if (productId) return { productId, dedicated: true };
+  return { productId: process.env.POLAR_QA_PRODUCT_ID, dedicated: false };
 }
 
 export async function createQaOrderCheckout(
@@ -56,7 +62,7 @@ export async function createQaOrderCheckout(
   customerIpAddress?: string,
 ): Promise<string> {
   const accessToken = process.env.POLAR_ACCESS_TOKEN;
-  const productId = resolvePolarProductId(tierLabel);
+  const { productId, dedicated } = resolvePolarProductId(tierLabel);
   if (!accessToken || !productId) {
     console.warn("Polar credentials missing. Generating mock checkout URL.");
     return `http://localhost:3000/mock-checkout?qaOrderId=${qaOrderId}&amount=${amountKurus}`;
@@ -67,8 +73,7 @@ export async function createQaOrderCheckout(
   try {
     const checkout = await polar.checkouts.create({
       products: [productId],
-      amount: amountKurus,
-      currency: "try",
+      ...(dedicated ? {} : { amount: amountKurus, currency: "try" }),
       metadata: { qa_tier_order_id: qaOrderId, tier_label: tierLabel },
       customerIpAddress,
     });
@@ -113,7 +118,7 @@ export async function createStandaloneOrderCheckout(
   customerIpAddress?: string,
 ): Promise<string> {
   const accessToken = process.env.POLAR_ACCESS_TOKEN;
-  const productId = resolvePolarProductId(packageOrCheckLabel);
+  const { productId, dedicated } = resolvePolarProductId(packageOrCheckLabel);
   if (!accessToken || !productId) {
     console.warn("Polar credentials missing. Generating mock checkout URL.");
     return `http://localhost:3000/mock-checkout?standaloneOrderId=${standaloneOrderId}&amount=${amountKurus}`;
@@ -124,8 +129,7 @@ export async function createStandaloneOrderCheckout(
   try {
     const checkout = await polar.checkouts.create({
       products: [productId],
-      amount: amountKurus,
-      currency: "try",
+      ...(dedicated ? {} : { amount: amountKurus, currency: "try" }),
       metadata: { standalone_order_id: standaloneOrderId, tier_label: packageOrCheckLabel },
       customerIpAddress,
     });

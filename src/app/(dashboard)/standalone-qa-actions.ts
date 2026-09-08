@@ -1,11 +1,18 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 
-import { requireSession } from "@/lib/auth/session";
+import { requireRole, requireSession } from "@/lib/auth/session";
+import { logAdminEvent } from "@/lib/data/admin-activity";
 import { FAIL, firstIssue, OK, type FormState } from "@/lib/forms";
 import { createStandaloneOrderCheckout, payViaPolarCheckout } from "@/lib/polar";
-import { createStandaloneOrder, rescanFailedModules } from "@/lib/qa/standalone-order";
+import {
+  createAdminFreeTrial,
+  createStandaloneOrder,
+  rescanFailedModules,
+  runScanForPaidOrder,
+} from "@/lib/qa/standalone-order";
 import { createClient } from "@/lib/supabase/server";
 import { packageFeeKurus, standaloneCheckSchema } from "@/lib/validations/standalone-qa";
 
@@ -123,4 +130,48 @@ export async function rescanStandaloneCheck(
   revalidatePath("/site-kontrol");
   revalidatePath(`/r/${orderId}`);
   return OK("Çalıştırılamayan modüller yeniden tarandı.");
+}
+
+/**
+ * Admin-only: run any package against any URL with no Polar checkout and no
+ * daily cap (createAdminFreeTrial). Fires the scan through after() and
+ * returns immediately, the same shape the order.paid webhook uses, so
+ * /site-kontrol's existing "tarama sürüyor" state renders unchanged -- an
+ * admin trial is not a special preview, it is a real order that happens to
+ * be free.
+ *
+ * requireRole("ADMIN") is the actual gate; logAdminEvent leaves an audit
+ * trail for the same reason suspendUser (admin/actions.ts) does -- free
+ * compute an admin can trigger at will is worth being able to review later.
+ */
+export async function adminFreeStandaloneCheck(
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const session = await requireRole("ADMIN");
+
+  const parsed = standaloneCheckSchema.safeParse({
+    targetUrl: formData.get("targetUrl"),
+    packageId: formData.get("packageId") ?? "BASIC",
+  });
+  if (!parsed.success) return FAIL(firstIssue(parsed.error));
+
+  const result = await createAdminFreeTrial(session.userId, parsed.data);
+  if (!result.ok) return FAIL(result.error);
+
+  const orderId = result.orderId;
+  after(async () => {
+    const scan = await runScanForPaidOrder(orderId);
+    if (!scan.ok) {
+      console.error(`[FAIL] admin free trial ${orderId} produced no report: ${scan.error}`);
+    }
+  });
+
+  await logAdminEvent(session.userId, "admin_free_trial", "standalone_qa_order", orderId, {
+    packageId: parsed.data.packageId,
+    targetUrl: parsed.data.targetUrl,
+  });
+
+  revalidatePath("/site-kontrol");
+  return OK("Ücretsiz deneme başlatıldı. Tarama sürüyor, sayfayı birazdan yenile.");
 }

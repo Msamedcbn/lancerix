@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { requireSession } from "@/lib/auth/session";
 import { latestReportPerModule, listMyStandaloneOrders } from "@/lib/data/standalone-qa";
 import { STANDALONE_MODULE_MAX_ATTEMPTS } from "@/lib/validations/standalone-qa";
 import type {
@@ -13,6 +14,7 @@ import type {
   VisualOverflowResults,
 } from "@/lib/qa/standalone";
 
+import { AdminFreeTrialForm } from "./admin-free-trial-form";
 import { PayStandaloneButton } from "./pay-standalone-button";
 import { RescanButton } from "./rescan-button";
 import { StandaloneCheckForm } from "./standalone-check-form";
@@ -276,7 +278,7 @@ function ReportDetail({
  * a separate table/RLS/report pair rather than a retrofit of qa_tier_orders.
  */
 export default async function SiteKontrolPage() {
-  const orders = await listMyStandaloneOrders();
+  const [session, orders] = await Promise.all([requireSession(), listMyStandaloneOrders()]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -286,6 +288,8 @@ export default async function SiteKontrolPage() {
           Sözleşme veya proje gerekmeden, herhangi bir linki test et.
         </p>
       </div>
+
+      {session.role === "ADMIN" ? <AdminFreeTrialForm /> : null}
 
       <StandaloneCheckForm />
 
