@@ -136,3 +136,59 @@ export async function createStandaloneOrderCheckout(
   }
 }
 
+
+/**
+ * A Polar checkout for a monitoring subscription.
+ *
+ * Two things are deliberately different from the one-off checkouts above.
+ *
+ * First, no `amount` or `currency` override. The one-off products carry no
+ * price of their own, so every checkout has to set one; a subscription product
+ * does, and per-currency prices are exactly how regional pricing is meant to
+ * work on a Merchant of Record (2026-09-08 decision: TRY, USD and EUR prices
+ * are set on the Polar product, not converted from each other here). Sending an
+ * amount would override the price Polar picked for the customer's region and
+ * defeat the whole point.
+ *
+ * Second, there is no fallback product. POLAR_QA_PRODUCT_ID is a one-time
+ * product: falling back to it would silently sell a monthly plan as a single
+ * charge. A missing subscription product id is a configuration error, and this
+ * fails loudly rather than charging the customer the wrong shape.
+ */
+function resolveMonitoringProductId(planId: string): string | undefined {
+  switch (planId.toUpperCase()) {
+    case "MONITORING":
+      return process.env.POLAR_PRODUCT_MONITORING;
+    case "AGENCY":
+      return process.env.POLAR_PRODUCT_AGENCY;
+    default:
+      return undefined;
+  }
+}
+
+export async function createMonitoringCheckout(
+  subscriptionId: string,
+  planId: string,
+  customerIpAddress?: string,
+): Promise<string> {
+  const accessToken = process.env.POLAR_ACCESS_TOKEN;
+  const productId = resolveMonitoringProductId(planId);
+  if (!accessToken || !productId) {
+    console.warn("Polar subscription product missing. Generating mock checkout URL.");
+    return `http://localhost:3000/mock-checkout?monitoringSubscriptionId=${subscriptionId}&plan=${planId}`;
+  }
+
+  const polar = new Polar({ accessToken });
+
+  try {
+    const checkout = await polar.checkouts.create({
+      products: [productId],
+      metadata: { monitoring_subscription_id: subscriptionId, plan_id: planId },
+      customerIpAddress,
+    });
+    return checkout.url;
+  } catch (err) {
+    console.error("Polar subscription checkout error:", err);
+    throw new Error("Abonelik ödeme linki oluşturulamadı.");
+  }
+}

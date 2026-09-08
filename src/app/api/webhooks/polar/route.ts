@@ -70,13 +70,74 @@ export async function POST(req: Request) {
     return new NextResponse("Invalid payload", { status: 400 });
   }
 
+  const supabaseFor = () =>
+    createClient<Database>(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    );
+
+  // Monitoring subscriptions: Polar owns the lifecycle, this mirrors it. The
+  // status column is the scanner's authorization -- runMonitoringScan and
+  // dueSiteIds both refuse anything that is not ACTIVE -- so a cancellation
+  // landing here is what actually stops us scanning someone's site.
+  if (event.type.startsWith("subscription.")) {
+    const sub = event.data as unknown as {
+      id?: string;
+      status?: string;
+      currentPeriodEnd?: string | Date | null;
+      metadata?: Record<string, unknown> | null;
+    };
+    const subscriptionId = sub.metadata?.monitoring_subscription_id;
+    if (typeof subscriptionId !== "string") {
+      return new NextResponse("Event ignored", { status: 200 });
+    }
+
+    const canceled = event.type === "subscription.canceled" || event.type === "subscription.revoked";
+    const periodEnd = sub.currentPeriodEnd ? new Date(sub.currentPeriodEnd).toISOString() : null;
+
+    const { error: subError } = await supabaseFor()
+      .from("monitoring_subscriptions")
+      .update({
+        // Polar's own status strings are lowercase and richer than ours; map
+        // rather than store, so the scanner keeps checking one known value.
+        status: canceled ? "CANCELED" : sub.status === "past_due" ? "PAST_DUE" : "ACTIVE",
+        provider_reference: sub.id ?? null,
+        current_period_end: periodEnd,
+        canceled_at: canceled ? new Date().toISOString() : null,
+      })
+      .eq("id", subscriptionId);
+
+    if (subError) {
+      console.error("Failed to sync monitoring subscription:", subError);
+      return new NextResponse("Database error", { status: 500 });
+    }
+
+    return new NextResponse("Success", { status: 200 });
+  }
+
   if (event.type !== "order.paid") {
     return new NextResponse("Event ignored", { status: 200 });
   }
 
   const qaOrderId = event.data.metadata?.qa_tier_order_id;
   const standaloneOrderId = event.data.metadata?.standalone_order_id;
+  const monitoringSubscriptionId = event.data.metadata?.monitoring_subscription_id;
   const orderId = event.data.id;
+
+  // A subscription renewal arrives as order.paid carrying the subscription's
+  // metadata. It buys another period, not another scan: the scheduler decides
+  // when to scan, so all this does is extend the period the scanner honours.
+  if (typeof monitoringSubscriptionId === "string") {
+    const { error: renewError } = await supabaseFor()
+      .from("monitoring_subscriptions")
+      .update({ status: "ACTIVE", canceled_at: null })
+      .eq("id", monitoringSubscriptionId);
+    if (renewError) {
+      console.error("Failed to mark monitoring subscription renewed:", renewError);
+      return new NextResponse("Database error", { status: 500 });
+    }
+    return new NextResponse("Success", { status: 200 });
+  }
 
   if (typeof qaOrderId !== "string" && typeof standaloneOrderId !== "string") {
     return new NextResponse("Missing qa_tier_order_id/standalone_order_id in metadata", {
@@ -84,10 +145,7 @@ export async function POST(req: Request) {
     });
   }
 
-  const supabase = createClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  );
+  const supabase = supabaseFor();
 
   const table = typeof qaOrderId === "string" ? "qa_tier_orders" : "standalone_qa_orders";
   const targetId = typeof qaOrderId === "string" ? qaOrderId : (standaloneOrderId as string);

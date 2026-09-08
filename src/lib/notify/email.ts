@@ -584,3 +584,49 @@ export async function notifyStandaloneCheckPaid({
   });
 }
 
+
+/**
+ * The monitoring subscription's only outbound mail, and the reason anyone stays
+ * subscribed: what changed since the last scan.
+ *
+ * Sent only when diffScans() found something (src/lib/qa/diff.ts). A weekly
+ * "nothing changed" mail would be filtered inside a month, and a filtered mail
+ * is a subscription with no observable value -- so silence is the correct
+ * output for a site that did not move.
+ */
+export async function notifyMonitoringChange({
+  toUserId,
+  targetUrl,
+  changes,
+}: Readonly<{
+  toUserId: string;
+  targetUrl: string;
+  changes: readonly { direction: "WORSE" | "BETTER"; summary: string }[];
+}>): Promise<SendResult> {
+  const to = await addressOf(toUserId);
+  if (!to) return { ok: false, reason: "no address on file for that account" };
+
+  const worse = changes.filter((c) => c.direction === "WORSE");
+  const better = changes.filter((c) => c.direction === "BETTER");
+
+  // The subject carries the news: a regression is the thing worth opening the
+  // mail for, so it goes in the line the customer reads in the inbox list.
+  const subject = worse.length
+    ? `${targetUrl} — ${worse.length} kötüleşme tespit edildi`
+    : `${targetUrl} — ${better.length} iyileşme tespit edildi`;
+
+  const lines = [`Son taramanızla bir önceki tarama arasındaki farklar:`, "", `Hedef: ${targetUrl}`, ""];
+  if (worse.length) {
+    lines.push("KÖTÜLEŞENLER");
+    for (const c of worse) lines.push(`  - ${c.summary}`);
+    lines.push("");
+  }
+  if (better.length) {
+    lines.push("İYİLEŞENLER");
+    for (const c of better) lines.push(`  - ${c.summary}`);
+    lines.push("");
+  }
+  lines.push("Değişmeyen kontroller bu listede yer almaz.");
+
+  return sendEmail({ to, subject, body: lines.join("\n") });
+}

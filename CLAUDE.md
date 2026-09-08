@@ -42,6 +42,39 @@ how this codebase is read:
      (`latestReportPerModule`). The public report's headline verdict is the
      worst result across modules that ran, and its SHA-256 seal is derived
      from every module's own seal -- neither is taken from a single row.
+   - **Two lines, split on permission (2026-09-08)**: the dividing line is
+     not "contract vs. no contract" but "does this module need the target
+     owner's permission". Passive, deterministic checks (everything the
+     engine runs today) need none -- they are what any visitor's browser
+     already does -- so they live in the standalone line. Anything that
+     probes (Nuclei, active vulnerability scanning) needs standing, revocable
+     authorization and stays out of it. The contract-bound tiers with a human
+     reviewer moved off the landing page to `/sozlesmeli-dogrulama`
+     (`src/components/public/contract-tiers-view.tsx`) and are billed
+     manually on a Turkish processor, never through Polar -- the separation is
+     now visible on the site rather than only asserted in an application.
+   - **Continuous monitoring subscription** (`src/lib/validations/monitoring.ts`,
+     `src/lib/qa/monitoring-run.ts`, `/izleme`): the same engine on a schedule.
+     Two plans -- `MONITORING` (3 sites, ₺799/mo) and `AGENCY` (5 sites,
+     ₺3.500/mo, white-label + API) -- both weekly, cadence stored per
+     subscription so changing it is data, not a deploy.
+     **The diff is the product, not the repetition** (`src/lib/qa/diff.ts`): a
+     scheduled run emails only when a result changed against the previous
+     scan, with noise thresholds so Lighthouse jitter is not "news", and a
+     module that ERRORed in either run produces no change rather than a fake
+     improvement. `api/cron/run-monitoring-scans` scans a couple of due sites
+     per tick (a package run is ~90s; 300s ceiling). **The subscription's
+     ACTIVE status is the authorization to keep scanning a URL** -- both
+     `dueSiteIds()` and `runMonitoringScan()` refuse anything else, so a
+     cancellation stops the scanning.
+   - **Regional pricing (2026-09-08)**: TRY / USD / EUR prices are set on the
+     Polar product per currency and are NOT converted from each other --
+     regional pricing is a willingness-to-pay decision, and pegging to a
+     volatile TRY would move the foreign prices monthly. The subscription
+     checkout therefore sends no `amount`/`currency` (`createMonitoringCheckout`
+     in `src/lib/polar.ts`), unlike the one-off checkouts whose product carries
+     no price of its own. Subscription products have no fallback id: falling
+     back to `POLAR_QA_PRODUCT_ID` would sell a monthly plan as a single charge.
    - **Continuous Security SaaS & Nuclei Scanner Engine**: Local environment is provisioned with **ProjectDiscovery Nuclei CLI (v3.11.1)** and 2,360+ templates (`nuclei-templates v10.3.5`). The roadmap includes automated recurring vulnerability monitoring (OWASP Top 10, CVEs, misconfigurations, security headers, sensitive file leakage) sold as a MoR-eligible SaaS subscription via Polar.
 
 The freelancer B2B billing/escrow product (Faz 2, below) is the vertical

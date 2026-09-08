@@ -13,6 +13,7 @@ import {
   ListChecks,
   LogOut,
   MoreHorizontal,
+  Radar,
   Receipt,
   ScrollText,
   Search,
@@ -53,7 +54,8 @@ export type NavIcon =
   | "search"
   | "inbox"
   | "user-plus"
-  | "shield-check";
+  | "shield-check"
+  | "radar";
 
 export type NavItem = { href: Route; label: string; icon: NavIcon };
 
@@ -77,6 +79,7 @@ const ICONS: Record<NavIcon, typeof Briefcase> = {
   inbox: Inbox,
   "user-plus": UserPlus,
   "shield-check": ShieldCheck,
+  radar: Radar,
 };
 
 /**

@@ -851,6 +851,156 @@ export type Database = {
           },
         ]
       }
+      monitored_sites: {
+        Row: {
+          created_at: string
+          id: string
+          last_scanned_at: string | null
+          removed_at: string | null
+          subscription_id: string
+          target_url: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          last_scanned_at?: string | null
+          removed_at?: string | null
+          subscription_id: string
+          target_url: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          last_scanned_at?: string | null
+          removed_at?: string | null
+          subscription_id?: string
+          target_url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "monitored_sites_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "monitoring_subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      monitoring_scan_reports: {
+        Row: {
+          check_type: string
+          document_sha256: string
+          generated_at: string
+          id: string
+          results: Json
+          scan_id: string
+          status: string
+        }
+        Insert: {
+          check_type: string
+          document_sha256: string
+          generated_at?: string
+          id?: string
+          results: Json
+          scan_id: string
+          status: string
+        }
+        Update: {
+          check_type?: string
+          document_sha256?: string
+          generated_at?: string
+          id?: string
+          results?: Json
+          scan_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "monitoring_scan_reports_scan_id_fkey"
+            columns: ["scan_id"]
+            isOneToOne: false
+            referencedRelation: "monitoring_scans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      monitoring_scans: {
+        Row: {
+          completed_at: string | null
+          id: string
+          notified_at: string | null
+          site_id: string
+          started_at: string
+        }
+        Insert: {
+          completed_at?: string | null
+          id?: string
+          notified_at?: string | null
+          site_id: string
+          started_at?: string
+        }
+        Update: {
+          completed_at?: string | null
+          id?: string
+          notified_at?: string | null
+          site_id?: string
+          started_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "monitoring_scans_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "monitored_sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      monitoring_subscriptions: {
+        Row: {
+          cadence: string
+          canceled_at: string | null
+          created_at: string
+          currency: string
+          current_period_end: string | null
+          id: string
+          plan_id: string
+          price_minor: number
+          provider_reference: string | null
+          site_limit: number
+          status: string
+          subscriber_id: string
+        }
+        Insert: {
+          cadence: string
+          canceled_at?: string | null
+          created_at?: string
+          currency: string
+          current_period_end?: string | null
+          id?: string
+          plan_id: string
+          price_minor: number
+          provider_reference?: string | null
+          site_limit: number
+          status?: string
+          subscriber_id: string
+        }
+        Update: {
+          cadence?: string
+          canceled_at?: string | null
+          created_at?: string
+          currency?: string
+          current_period_end?: string | null
+          id?: string
+          plan_id?: string
+          price_minor?: number
+          provider_reference?: string | null
+          site_limit?: number
+          status?: string
+          subscriber_id?: string
+        }
+        Relationships: []
+      }
       payouts: {
         Row: {
           amount_kurus: number

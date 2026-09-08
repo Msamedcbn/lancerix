@@ -13,13 +13,11 @@ import {
   Link as LinkIcon,
   ScanSearch,
   ShieldCheck,
-  UserCheck,
 } from "lucide-react";
 
 import { HorizontalAccordion } from "@/components/home/horizontal-accordion";
 import { StandalonePurchaseForm } from "@/components/home/standalone-purchase-form";
 import { gsap, useGSAP } from "@/lib/gsap";
-import { QA_TIER_INFO } from "@/lib/validations/delivery";
 import { SiteHeader } from "@/components/layout/site-header";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/config";
@@ -40,13 +38,6 @@ export const HASH =
  * its steps as a five-tuple, so the two lists cannot fall out of step.
  */
 const STEP_ICONS = [FileSignature, LinkIcon, ScanSearch, FileCheck2, Clock] as const;
-
-const TIERS = ["TIER1", "TIER2", "TIER3"] as const;
-const TIER_ICON = {
-  TIER1: UserCheck,
-  TIER2: ScanSearch,
-  TIER3: ShieldCheck,
-} as const;
 
 function Magnetic({
   children,
@@ -361,57 +352,12 @@ export function HomeClient({
         </div>
       </section>
 
-      {/* --- pricing: the real tiers ---------------------------------------- */}
-      <section id="fiyat" className="px-6 pb-24 md:pb-32 bg-muted/30">
-        <div className="mx-auto max-w-6xl">
-          <div className="mb-10 text-center">
-            <p className="text-brand mono mb-2 text-xs tracking-[0.14em]">{t.pricingEyebrow}</p>
-            <h2 className="font-display text-3xl font-medium tracking-tight text-foreground md:text-4xl">
-              {t.pricingTitle}
-            </h2>
-          </div>
-
-          <div className="grid gap-5 md:grid-cols-3">
-            {TIERS.map((tier) => {
-              // Availability stays with QA_TIER_INFO (CLAUDE.md: source of
-              // truth); only the words come from the dictionary.
-              const info = QA_TIER_INFO[tier];
-              const copy = t.tiers[tier];
-              const Icon = TIER_ICON[tier];
-              const featured = tier === "TIER2" && info.available;
-              return (
-                <GlassCard
-                  key={tier}
-                  className={`relative flex flex-col gap-4 p-6 bg-background ${featured ? "border-brand/40 shadow-xl shadow-brand/10 scale-[1.02]" : ""} ${!info.available ? "opacity-60" : ""}`}
-                >
-                  {!info.available ? (
-                    <span className="absolute top-4 right-4 rounded-full bg-muted/80 px-2 py-0.5 text-[0.65rem] font-medium tracking-wide text-muted-foreground uppercase">
-                      {t.comingSoon}
-                    </span>
-                  ) : null}
-                  <Icon className="text-brand size-6" aria-hidden strokeWidth={1.75} />
-                  <div>
-                    <p className="text-base font-semibold text-foreground">{copy.label}</p>
-                    <p className="mono mt-1 text-sm text-muted-foreground">{copy.price}</p>
-                  </div>
-                  <p className="text-sm leading-relaxed text-muted-foreground">{copy.hint}</p>
-                  <ul className="mt-1 flex flex-col gap-1.5 border-t border-border/50 pt-4">
-                    {copy.details.map((d) => (
-                      <li key={d} className="flex items-start gap-1.5 text-xs text-muted-foreground">
-                        <CheckCircle2 className="text-brand mt-0.5 size-3.5 shrink-0" aria-hidden />
-                        {d}
-                      </li>
-                    ))}
-                  </ul>
-                </GlassCard>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
-      {/* --- standalone self-serve: pay to open an account -------------------- */}
-      <section id="dene" className="px-6 pb-24 md:pb-32">
+      {/* --- standalone self-serve: pay to open an account --------------------
+           Also carries id="fiyat": the contract-bound tiers moved to their own
+           page (2026-09-08), so the automated packages ARE the pricing section
+           the header and footer link to. ------------------------------------- */}
+      <section id="fiyat" className="px-6 pb-24 md:pb-32">
+        <span id="dene" className="sr-only" aria-hidden />
         <StandalonePurchaseForm copy={t.standalone} />
       </section>
 
