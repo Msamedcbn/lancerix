@@ -27,3 +27,22 @@ export async function listMyStandaloneOrders(): Promise<StandaloneOrderRow[]> {
   if (error) throw error;
   return data ?? [];
 }
+
+/**
+ * Public audit report getter by orderId. Uses admin client so any user with
+ * the shareable link can view the report details regardless of RLS session.
+ */
+export async function getStandaloneOrderPublic(orderId: string): Promise<StandaloneOrderRow | null> {
+  const { createAdminClient } = await import("@/lib/supabase/admin");
+  const adminSupabase = createAdminClient();
+
+  const { data, error } = await adminSupabase
+    .from("standalone_qa_orders")
+    .select("*, standalone_qa_reports(*)")
+    .eq("id", orderId)
+    .maybeSingle();
+
+  if (error || !data) return null;
+  return data as StandaloneOrderRow;
+}
+

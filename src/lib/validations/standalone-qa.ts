@@ -23,17 +23,60 @@ export const STANDALONE_CHECK_TYPES = [
 export type StandaloneCheckType = (typeof STANDALONE_CHECK_TYPES)[number];
 
 /**
- * 9900 kurus (99,00 TRY): same figure and reasoning as Tier 1's
- * "doğrulama kaydı ücreti" (20260903000003_tier1_record_fee.sql) -- the top
- * of the pre-approved 49-99₺ range, chosen because Polar's flat-fee-plus-
- * percentage erodes a small charge much more than a larger one. Not a
- * revenue target, a willingness-to-pay test, same as Tier 1's was.
+ * Three curated packages, each a bundle of the check types above.
+ *
+ * BASIC  → the three checks with the highest standalone signal-to-noise:
+ *           Accessibility (WCAG compliance is a legal/contractual concern),
+ *           SEO & Meta (first thing a client notices in Google results), and
+ *           Dead Links (broken links are an objective, embarrassing defect).
+ *
+ * PRO    → BASIC plus the two checks a professional delivery should pass:
+ *           Performance (Core Web Vitals) and Visual Overflow (responsive
+ *           breakpoints).
+ *
+ * FULL   → every check the platform can run -- adds the two interaction-
+ *           level checks (Form Validation + Interaction Scan) that need a
+ *           real headless browser clicking through the page.
+ *
+ * Fee is in kuruş, same minor-unit convention every other money column in
+ * this codebase uses (see qa_tier_orders.fee_kurus, CLAUDE.md).
  *
  * Also hardcoded in standalone_qa_orders_insert's RLS check constraint
- * (20260908020000_standalone_qa_orders_fee_check.sql) -- change both
- * together, or the insert will be rejected by the database.
+ * (20260908060000_standalone_packages.sql) -- change both together, or the
+ * insert will be rejected by the database.
  */
-export const STANDALONE_CHECK_FEE_KURUS = 9900;
+export const STANDALONE_PACKAGE_IDS = ["BASIC", "PRO", "FULL"] as const;
+export type StandalonePackageId = (typeof STANDALONE_PACKAGE_IDS)[number];
+
+export const STANDALONE_PACKAGES: Record<
+  StandalonePackageId,
+  {
+    readonly modules: readonly StandaloneCheckType[];
+    readonly feeKurus: number;
+    readonly label: string;
+  }
+> = {
+  BASIC: {
+    modules: ["ACCESSIBILITY", "SEO_META", "DEAD_LINKS"],
+    feeKurus: 19900,
+    label: "Temel Kontrol",
+  },
+  PRO: {
+    modules: ["ACCESSIBILITY", "SEO_META", "DEAD_LINKS", "PERFORMANCE", "VISUAL_OVERFLOW"],
+    feeKurus: 34900,
+    label: "Profesyonel",
+  },
+  FULL: {
+    modules: [...STANDALONE_CHECK_TYPES],
+    feeKurus: 44900,
+    label: "Tam Tarama",
+  },
+} as const;
+
+/** Resolve the fee for a given package -- single source of truth. */
+export function packageFeeKurus(packageId: StandalonePackageId): number {
+  return STANDALONE_PACKAGES[packageId].feeKurus;
+}
 
 /**
  * A rolling-24h cap per requester, not a calendar-day cap -- avoids the
@@ -50,7 +93,7 @@ export const standaloneCheckSchema = z.object({
     .string()
     .trim()
     .regex(/^https?:\/\/\S+$/, "http:// veya https:// ile başlayan bir adres gir."),
-  checkType: z.enum(STANDALONE_CHECK_TYPES),
+  packageId: z.enum(STANDALONE_PACKAGE_IDS),
 });
 
 export type StandaloneCheckInput = z.infer<typeof standaloneCheckSchema>;

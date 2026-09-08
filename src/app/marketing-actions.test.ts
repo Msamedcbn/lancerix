@@ -80,7 +80,7 @@ const VALID_FORM = {
   email: "new-buyer@example.com",
   password: "correct-horse-battery",
   targetUrl: "https://example.com",
-  checkType: "ACCESSIBILITY",
+  packageId: "BASIC",
 };
 
 beforeEach(() => {
@@ -155,8 +155,9 @@ describe("purchaseStandaloneCheck", () => {
     expect(signInMock).toHaveBeenCalledWith({ email: VALID_FORM.email, password: VALID_FORM.password });
     expect(createOrderAndRunCheckMock).toHaveBeenCalledWith(expect.anything(), "user-1", {
       targetUrl: VALID_FORM.targetUrl,
-      checkType: VALID_FORM.checkType,
+      packageId: VALID_FORM.packageId,
     });
-    expect(createCheckoutMock).toHaveBeenCalledWith("order-1", 9900, VALID_FORM.checkType, undefined);
+    expect(createCheckoutMock).toHaveBeenCalledWith("order-1", 19900, VALID_FORM.packageId, undefined);
   });
 });
+

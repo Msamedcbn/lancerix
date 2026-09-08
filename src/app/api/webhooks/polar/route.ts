@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { validateEvent, WebhookVerificationError } from "@polar-sh/sdk/webhooks";
 
 import type { Database } from "@/lib/supabase/database.types";
+import { notifyStandaloneCheckPaid } from "@/lib/notify/email";
 
 /**
  * Marks a QA tier order (or a standalone_qa_orders row) paid once Polar
@@ -71,7 +72,7 @@ export async function POST(req: Request) {
   const table = typeof qaOrderId === "string" ? "qa_tier_orders" : "standalone_qa_orders";
   const targetId = typeof qaOrderId === "string" ? qaOrderId : (standaloneOrderId as string);
 
-  const { error } = await supabase
+  const { data: updatedData, error } = await supabase
     .from(table)
     .update({
       payment_status: "PAID",
@@ -79,11 +80,34 @@ export async function POST(req: Request) {
       paid_at: new Date().toISOString(),
     })
     .eq("id", targetId)
-    .eq("payment_status", "PENDING");
+    .eq("payment_status", "PENDING")
+    .select()
+    .single();
 
   if (error) {
     console.error(`Failed to mark ${table} row paid:`, error);
     return new NextResponse("Database error", { status: 500 });
+  }
+
+  if (table === "standalone_qa_orders" && updatedData) {
+    const standaloneRow = updatedData as {
+      id: string;
+      requested_by_user_id: string;
+      target_url: string;
+      package_id?: string | null;
+      check_type?: string | null;
+    };
+    const pkgLabel = standaloneRow.package_id ?? standaloneRow.check_type ?? "Tekil QA Tarama";
+    try {
+      await notifyStandaloneCheckPaid({
+        toUserId: standaloneRow.requested_by_user_id,
+        orderId: standaloneRow.id,
+        targetUrl: standaloneRow.target_url,
+        packageName: pkgLabel,
+      });
+    } catch (e) {
+      console.error("Failed to send standalone payment confirmation email:", e);
+    }
   }
 
   return new NextResponse("Success", { status: 200 });

@@ -32,6 +32,10 @@ vi.mock("@/lib/auth/session", () => ({
 let checkImpl: () => Promise<unknown>;
 vi.mock("@/lib/qa/standalone", () => ({
   runStandaloneCheck: vi.fn(async () => checkImpl()),
+  runStandalonePackage: vi.fn(async () => {
+    const outcome = await checkImpl();
+    return outcome ? [{ checkType: "ACCESSIBILITY", outcome }] : [];
+  }),
 }));
 
 // payViaPolarCheckout itself isn't re-tested here (it's a thin, generic
@@ -87,8 +91,12 @@ function adminClient() {
     from: (table: string) => {
       if (table !== "standalone_qa_reports") throw new Error(`unexpected table: ${table}`);
       return {
-        insert: (row: Record<string, unknown>) => {
-          reportInsertCalls.push(row);
+        insert: (row: Record<string, unknown> | Record<string, unknown>[]) => {
+          if (Array.isArray(row)) {
+            reportInsertCalls.push(...row);
+          } else {
+            reportInsertCalls.push(row);
+          }
           return Promise.resolve(reportInsertRoute());
         },
       };
@@ -123,17 +131,17 @@ describe("createStandaloneCheck", () => {
     const { createStandaloneCheck } = await import("./standalone-qa-actions");
     const result = await createStandaloneCheck(
       { error: null },
-      formData({ targetUrl: "not-a-url", checkType: "ACCESSIBILITY" }),
+      formData({ targetUrl: "not-a-url", packageId: "BASIC" }),
     );
     expect(result.error).toBeTruthy();
     expect(reportInsertCalls).toHaveLength(0);
   });
 
-  it("creates an order and a report on a successful scan", async () => {
+  it("creates an order and reports on a successful scan", async () => {
     const { createStandaloneCheck } = await import("./standalone-qa-actions");
     const result = await createStandaloneCheck(
       { error: null },
-      formData({ targetUrl: "https://example.com", checkType: "ACCESSIBILITY" }),
+      formData({ targetUrl: "https://example.com", packageId: "BASIC" }),
     );
     expect(result.error).toBeNull();
     expect(reportInsertCalls).toHaveLength(1);
@@ -145,7 +153,7 @@ describe("createStandaloneCheck", () => {
     const { createStandaloneCheck } = await import("./standalone-qa-actions");
     const result = await createStandaloneCheck(
       { error: null },
-      formData({ targetUrl: "https://example.com", checkType: "ACCESSIBILITY" }),
+      formData({ targetUrl: "https://example.com", packageId: "BASIC" }),
     );
     expect(result.error).toBeTruthy();
     expect(reportInsertCalls).toHaveLength(0);
@@ -156,7 +164,7 @@ describe("createStandaloneCheck", () => {
     const { createStandaloneCheck } = await import("./standalone-qa-actions");
     const result = await createStandaloneCheck(
       { error: null },
-      formData({ targetUrl: "https://example.com", checkType: "ACCESSIBILITY" }),
+      formData({ targetUrl: "https://example.com", packageId: "BASIC" }),
     );
     expect(result.error).toBeTruthy();
     expect(reportInsertCalls).toHaveLength(0);
@@ -168,7 +176,7 @@ describe("createStandaloneCheck", () => {
     const { createStandaloneCheck } = await import("./standalone-qa-actions");
     const result = await createStandaloneCheck(
       { error: null },
-      formData({ targetUrl: "https://example.com", checkType: "ACCESSIBILITY" }),
+      formData({ targetUrl: "https://example.com", packageId: "BASIC" }),
     );
     expect(result.error).toBeTruthy();
   });
@@ -178,7 +186,7 @@ describe("createStandaloneCheck", () => {
     const { createStandaloneCheck } = await import("./standalone-qa-actions");
     const result = await createStandaloneCheck(
       { error: null },
-      formData({ targetUrl: "https://example.com", checkType: "ACCESSIBILITY" }),
+      formData({ targetUrl: "https://example.com", packageId: "BASIC" }),
     );
     expect(result.error).toBeTruthy();
   });
@@ -187,19 +195,19 @@ describe("createStandaloneCheck", () => {
 describe("payStandaloneCheck", () => {
   it("redirects to a Polar checkout for a PENDING order", async () => {
     orderSelectRoute = () => ({
-      data: { id: "order-1", check_type: "ACCESSIBILITY", fee_kurus: 9900, payment_status: "PENDING" },
+      data: { id: "order-1", package_id: "BASIC", fee_kurus: 19900, payment_status: "PENDING" },
       error: null,
     });
     const { payStandaloneCheck } = await import("./standalone-qa-actions");
     await expect(
       payStandaloneCheck({ error: null }, formData({ orderId: "order-1" })),
     ).rejects.toThrow("REDIRECT:https://polar.sh/mock-checkout");
-    expect(createCheckoutMock).toHaveBeenCalledWith("order-1", 9900, "ACCESSIBILITY", undefined);
+    expect(createCheckoutMock).toHaveBeenCalledWith("order-1", 19900, "BASIC", undefined);
   });
 
   it("refuses an already-paid order before calling Polar", async () => {
     orderSelectRoute = () => ({
-      data: { id: "order-1", check_type: "ACCESSIBILITY", fee_kurus: 9900, payment_status: "PAID" },
+      data: { id: "order-1", package_id: "BASIC", fee_kurus: 19900, payment_status: "PAID" },
       error: null,
     });
     const { payStandaloneCheck } = await import("./standalone-qa-actions");
@@ -225,7 +233,7 @@ describe("payStandaloneCheck", () => {
 
   it("surfaces a checkout-creation failure", async () => {
     orderSelectRoute = () => ({
-      data: { id: "order-1", check_type: "ACCESSIBILITY", fee_kurus: 9900, payment_status: "PENDING" },
+      data: { id: "order-1", package_id: "BASIC", fee_kurus: 19900, payment_status: "PENDING" },
       error: null,
     });
     createCheckoutMock.mockRejectedValueOnce(new Error("Ödeme linki oluşturulamadı."));
@@ -234,3 +242,4 @@ describe("payStandaloneCheck", () => {
     expect(result.error).toBe("Ödeme linki oluşturulamadı.");
   });
 });
+

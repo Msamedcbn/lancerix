@@ -37,7 +37,7 @@ export async function createStandaloneCheck(
 
   const parsed = standaloneCheckSchema.safeParse({
     targetUrl: formData.get("targetUrl"),
-    checkType: formData.get("checkType") ?? "ACCESSIBILITY",
+    packageId: formData.get("packageId") ?? "BASIC",
   });
   if (!parsed.success) return FAIL(firstIssue(parsed.error));
 
@@ -52,7 +52,7 @@ export async function createStandaloneCheck(
 /**
  * Paying a standalone check's fee. Same shape as payQaOrder() in
  * qa-actions.ts: the fee is fixed at order-creation time
- * (STANDALONE_CHECK_FEE_KURUS), this just hands it to Polar via the shared
+ * (based on package_id), this just hands it to Polar via the shared
  * payViaPolarCheckout() helper.
  *
  * Unlike every contract-bound tier, the *detail* of a standalone report is
@@ -74,7 +74,7 @@ export async function payStandaloneCheck(
   const supabase = await createClient();
   const { data: order, error } = await supabase
     .from("standalone_qa_orders")
-    .select("id, check_type, fee_kurus, payment_status")
+    .select("id, package_id, check_type, fee_kurus, payment_status")
     .eq("id", orderId)
     .single();
 
@@ -83,7 +83,10 @@ export async function payStandaloneCheck(
     return FAIL("Bu sipariş zaten ödenmiş.");
   }
 
+  const packageLabel = order.package_id ?? order.check_type ?? "BASIC";
+
   return payViaPolarCheckout((customerIp) =>
-    createStandaloneOrderCheckout(order.id, order.fee_kurus, order.check_type, customerIp),
+    createStandaloneOrderCheckout(order.id, order.fee_kurus, packageLabel, customerIp),
   );
 }
+

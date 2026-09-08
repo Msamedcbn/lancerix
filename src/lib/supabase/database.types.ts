@@ -1365,10 +1365,11 @@ export type Database = {
       }
       standalone_qa_orders: {
         Row: {
-          check_type: string
+          check_type: string | null
           created_at: string
           fee_kurus: number
           id: string
+          package_id: string | null
           paid_at: string | null
           payment_status: string
           provider_reference: string | null
@@ -1376,10 +1377,11 @@ export type Database = {
           target_url: string
         }
         Insert: {
-          check_type: string
+          check_type?: string | null
           created_at?: string
           fee_kurus: number
           id?: string
+          package_id?: string | null
           paid_at?: string | null
           payment_status?: string
           provider_reference?: string | null
@@ -1387,10 +1389,11 @@ export type Database = {
           target_url: string
         }
         Update: {
-          check_type?: string
+          check_type?: string | null
           created_at?: string
           fee_kurus?: number
           id?: string
+          package_id?: string | null
           paid_at?: string | null
           payment_status?: string
           provider_reference?: string | null
@@ -1409,6 +1412,7 @@ export type Database = {
       }
       standalone_qa_reports: {
         Row: {
+          check_type: string | null
           document_sha256: string
           generated_at: string
           id: string
@@ -1417,6 +1421,7 @@ export type Database = {
           status: string
         }
         Insert: {
+          check_type?: string | null
           document_sha256: string
           generated_at?: string
           id?: string
@@ -1425,6 +1430,7 @@ export type Database = {
           status: string
         }
         Update: {
+          check_type?: string | null
           document_sha256?: string
           generated_at?: string
           id?: string

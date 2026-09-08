@@ -107,6 +107,7 @@ import {
   runPerformanceCheck,
   runSeoMetaCheck,
   runStandaloneCheck,
+  runStandalonePackage,
   runVisualOverflowCheck,
 } from "./standalone";
 
@@ -608,3 +609,25 @@ describe("runStandaloneCheck", () => {
     expect(result?.status).toBe("PASS");
   });
 });
+
+describe("runStandalonePackage", () => {
+  it("runs all 3 modules for BASIC package", async () => {
+    analyzeResult = { violations: [], passes: [] };
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      text: async () => '<title>t</title><link rel="canonical" href="https://example.com">',
+    });
+    linkCheckResult = { links: [] };
+
+    const results = await runStandalonePackage("BASIC", "https://example.com");
+    expect(results).toHaveLength(3);
+    expect(results.map((r) => r.checkType)).toEqual(["ACCESSIBILITY", "SEO_META", "DEAD_LINKS"]);
+  });
+
+  it("runs all 7 modules for FULL package", async () => {
+    pageEvaluateMock.mockResolvedValue(0);
+    const results = await runStandalonePackage("FULL", "https://example.com");
+    expect(results).toHaveLength(7);
+  });
+});
+

@@ -28,6 +28,27 @@ import { FAIL, type FormState } from "@/lib/forms";
  * conversion is needed (verified against the SDK's own price-creation
  * schema, not assumed).
  */
+/**
+ * Resolves the specific Polar product ID for a given package/tier or falls back
+ * to POLAR_QA_PRODUCT_ID.
+ */
+function resolvePolarProductId(key: string): string | undefined {
+  switch (key.toUpperCase()) {
+    case "BASIC":
+      return process.env.POLAR_PRODUCT_BASIC || process.env.POLAR_QA_PRODUCT_ID;
+    case "PRO":
+      return process.env.POLAR_PRODUCT_PRO || process.env.POLAR_QA_PRODUCT_ID;
+    case "FULL":
+      return process.env.POLAR_PRODUCT_FULL || process.env.POLAR_QA_PRODUCT_ID;
+    case "TIER2":
+      return process.env.POLAR_PRODUCT_TIER2 || process.env.POLAR_QA_PRODUCT_ID;
+    case "TIER3":
+      return process.env.POLAR_PRODUCT_TIER3 || process.env.POLAR_QA_PRODUCT_ID;
+    default:
+      return process.env.POLAR_QA_PRODUCT_ID;
+  }
+}
+
 export async function createQaOrderCheckout(
   qaOrderId: string,
   amountKurus: number,
@@ -35,7 +56,7 @@ export async function createQaOrderCheckout(
   customerIpAddress?: string,
 ): Promise<string> {
   const accessToken = process.env.POLAR_ACCESS_TOKEN;
-  const productId = process.env.POLAR_QA_PRODUCT_ID;
+  const productId = resolvePolarProductId(tierLabel);
   if (!accessToken || !productId) {
     console.warn("Polar credentials missing. Generating mock checkout URL.");
     return `http://localhost:3000/mock-checkout?qaOrderId=${qaOrderId}&amount=${amountKurus}`;
@@ -49,11 +70,6 @@ export async function createQaOrderCheckout(
       amount: amountKurus,
       currency: "try",
       metadata: { qa_tier_order_id: qaOrderId, tier_label: tierLabel },
-      // Checkout sessions are created from this server, not the customer's
-      // browser -- without the real customer IP, Polar would geolocate the
-      // request to wherever this app is hosted (likely a US/EU Vercel
-      // region) and could show the wrong presentment currency. Undefined is
-      // fine: Polar then falls back to the organization's own default (TRY).
       customerIpAddress,
     });
     return checkout.url;
@@ -68,12 +84,7 @@ export async function createQaOrderCheckout(
  * and payStandaloneCheck (standalone-qa-actions.ts): extract the real
  * customer IP the same way both did independently, build a checkout via the
  * caller's own createQaOrderCheckout/createStandaloneOrderCheckout call, and
- * redirect. Only the two callers' checkout-creation calls differ (different
- * tables, different metadata key) -- that stays at the call site rather than
- * becoming a parameter here, so neither caller has to know the other's shape.
- *
- * Returns FormState on failure (createCheckout threw); on success it calls
- * redirect(), which throws internally and never actually returns.
+ * redirect.
  */
 export async function payViaPolarCheckout(
   createCheckout: (customerIp?: string) => Promise<string>,
@@ -88,27 +99,21 @@ export async function payViaPolarCheckout(
     return FAIL(e instanceof Error ? e.message : "Ödeme linki oluşturulamadı.");
   }
 
-  // An external Polar URL, not an app route -- typedRoutes only knows this
-  // app's own routes, so it needs an explicit escape hatch here.
   redirect(checkoutUrl as Route);
 }
 
 /**
- * A Polar checkout for one standalone_qa_orders row's fee -- same product,
- * same one-time-custom-amount mechanism as createQaOrderCheckout above, but
- * metadata carries standalone_order_id instead of qa_tier_order_id so the
- * webhook (src/app/api/webhooks/polar/route.ts) can tell which table to
- * update. Kept as a separate function rather than a shared-key parameter so
- * neither call site has to know the other table's metadata shape exists.
+ * A Polar checkout for one standalone_qa_orders row's fee.
+ * Resolves discrete product ID (BASIC / PRO / FULL) if available in env.
  */
 export async function createStandaloneOrderCheckout(
   standaloneOrderId: string,
   amountKurus: number,
-  checkTypeLabel: string,
+  packageOrCheckLabel: string,
   customerIpAddress?: string,
 ): Promise<string> {
   const accessToken = process.env.POLAR_ACCESS_TOKEN;
-  const productId = process.env.POLAR_QA_PRODUCT_ID;
+  const productId = resolvePolarProductId(packageOrCheckLabel);
   if (!accessToken || !productId) {
     console.warn("Polar credentials missing. Generating mock checkout URL.");
     return `http://localhost:3000/mock-checkout?standaloneOrderId=${standaloneOrderId}&amount=${amountKurus}`;
@@ -121,7 +126,7 @@ export async function createStandaloneOrderCheckout(
       products: [productId],
       amount: amountKurus,
       currency: "try",
-      metadata: { standalone_order_id: standaloneOrderId, tier_label: checkTypeLabel },
+      metadata: { standalone_order_id: standaloneOrderId, tier_label: packageOrCheckLabel },
       customerIpAddress,
     });
     return checkout.url;
@@ -130,3 +135,4 @@ export async function createStandaloneOrderCheckout(
     throw new Error("Ödeme linki oluşturulamadı.");
   }
 }
+

@@ -6,7 +6,7 @@ import { createOrderAndRunCheck } from "@/lib/qa/standalone-order";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import {
-  STANDALONE_CHECK_FEE_KURUS,
+  packageFeeKurus,
   standaloneMarketingPurchaseSchema,
 } from "@/lib/validations/standalone-qa";
 
@@ -40,11 +40,11 @@ export async function purchaseStandaloneCheck(
     email: formData.get("email"),
     password: formData.get("password"),
     targetUrl: formData.get("targetUrl"),
-    checkType: formData.get("checkType") ?? "ACCESSIBILITY",
+    packageId: formData.get("packageId") ?? "BASIC",
   });
   if (!parsed.success) return FAIL(firstIssue(parsed.error));
 
-  const { email, password, targetUrl, checkType } = parsed.data;
+  const { email, password, targetUrl, packageId } = parsed.data;
 
   const admin = createAdminClient();
   const { data: created, error: createError } = await admin.auth.admin.createUser({
@@ -67,10 +67,13 @@ export async function purchaseStandaloneCheck(
     return FAIL("Hesap açıldı ama giriş yapılamadı. /login üzerinden giriş yapıp tekrar dene.");
   }
 
-  const result = await createOrderAndRunCheck(supabase, created.user.id, { targetUrl, checkType });
+  const result = await createOrderAndRunCheck(supabase, created.user.id, { targetUrl, packageId });
   if (!result.ok) return FAIL(result.error);
 
+  const feeKurus = packageFeeKurus(packageId);
+
   return payViaPolarCheckout((customerIp) =>
-    createStandaloneOrderCheckout(result.orderId, STANDALONE_CHECK_FEE_KURUS, checkType, customerIp),
+    createStandaloneOrderCheckout(result.orderId, feeKurus, packageId, customerIp),
   );
 }
+

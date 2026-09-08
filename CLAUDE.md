@@ -12,7 +12,13 @@ how this codebase is read:
 2. **Standalone verification** (`/site-kontrol`, shipped 2026-09-08,
    `src/lib/qa/standalone.ts`) — any signed-in user, with or without a
    project on the platform, pays a fixed fee to run a check against any
-   URL. No contract, no counterparty.
+   URL. No contract, no counterparty. Operates on 3 package tiers:
+   - **Temel Kontrol (`BASIC`, ₺199)**: Accessibility, SEO & Meta, Dead Links (`POLAR_PRODUCT_BASIC`).
+   - **Profesyonel (`PRO`, ₺349)**: Basic + Performance/Core Web Vitals, Visual/Mobile Overflow (`POLAR_PRODUCT_PRO`).
+   - **Tam Tarama (`FULL`, ₺449)**: All 7 modules including Form Validation & Interaction Scan (`POLAR_PRODUCT_FULL`).
+   - **Polar MoR Resolution & Fallback**: `resolvePolarProductId()` in `src/lib/polar.ts` maps package labels to specific Polar product IDs, falling back to `POLAR_QA_PRODUCT_ID`. `customerIpAddress` is passed for automatic geolocation & multi-currency detection.
+   - **Public Audit Reports & Webhook Email**: Shareable public audit route at `/r/[orderId]` with cryptographic SHA-256 seal and `@media print` PDF styling (`src/app/r/[orderId]/page.tsx`). Polar `order.paid` webhook (`src/app/api/webhooks/polar/route.ts`) updates payment status and sends Resend notification emails via `notifyStandaloneCheckPaid()`. (Decision records: `~/.gstack/projects/Msamedcbn-lancerix/ceo-plans/2026-09-08-standalone-qa-polar-packages.md` and `2026-09-08-positioning-verification-first.md`.)
+   - **Continuous Security SaaS & Nuclei Scanner Engine**: Local environment is provisioned with **ProjectDiscovery Nuclei CLI (v3.11.1)** and 2,360+ templates (`nuclei-templates v10.3.5`). The roadmap includes automated recurring vulnerability monitoring (OWASP Top 10, CVEs, misconfigurations, security headers, sensitive file leakage) sold as a MoR-eligible SaaS subscription via Polar.
 
 The freelancer B2B billing/escrow product (Faz 2, below) is the vertical
 application of this verification layer to the Turkish freelance-payment
@@ -34,7 +40,7 @@ outside the MoR-eligible path no matter how it's framed, and stays on manual
 billing regardless. Site Kontrolü works today because it's the cleanest case
 (axe-core, zero LLM judgment) — it hasn't been submitted to Polar yet, so its
 own fit is still an unproven assumption, not a confirmed win. (Decision
-record: `~/.gstack/projects/demearac/ceo-plans/2026-09-08-positioning-verification-first.md`.)
+record: `~/.gstack/projects/Msamedcbn-lancerix/ceo-plans/2026-09-08-positioning-verification-first.md`.)
 
 ## Phasing (current: Faz 1)
 

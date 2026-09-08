@@ -3,11 +3,11 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { toUserMessage } from "@/lib/forms";
-import { runStandaloneCheck } from "@/lib/qa/standalone";
+import { runStandalonePackage } from "@/lib/qa/standalone";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { Database } from "@/lib/supabase/database.types";
 import {
-  STANDALONE_CHECK_FEE_KURUS,
+  packageFeeKurus,
   STANDALONE_DAILY_LIMIT,
   type StandaloneCheckInput,
 } from "@/lib/validations/standalone-qa";
@@ -47,13 +47,15 @@ export async function createOrderAndRunCheck(
     return { ok: false, error: `Günlük ${STANDALONE_DAILY_LIMIT} tarama hakkını doldurdun. Yarın tekrar dene.` };
   }
 
+  const feeKurus = packageFeeKurus(input.packageId);
+
   const { data: order, error: insertError } = await supabase
     .from("standalone_qa_orders")
     .insert({
       requested_by_user_id: userId,
       target_url: input.targetUrl,
-      check_type: input.checkType,
-      fee_kurus: STANDALONE_CHECK_FEE_KURUS,
+      package_id: input.packageId,
+      fee_kurus: feeKurus,
     })
     .select("id")
     .single();
@@ -61,18 +63,22 @@ export async function createOrderAndRunCheck(
     return { ok: false, error: toUserMessage(insertError ?? { message: "insert failed" }, "Sipariş oluşturulamadı.") };
   }
 
-  const outcome = await runStandaloneCheck(input.checkType, input.targetUrl);
-  if (!outcome) {
+  const packageResults = await runStandalonePackage(input.packageId, input.targetUrl);
+  const successfulRuns = packageResults.filter((r) => r.outcome !== null);
+  if (successfulRuns.length === 0) {
     return { ok: false, error: "Site yüklenemedi. Adresi kontrol edip tekrar dene." };
   }
 
   const admin = createAdminClient();
-  const { error: reportError } = await admin.from("standalone_qa_reports").insert({
+  const reportRows = successfulRuns.map((r) => ({
     order_id: order.id,
-    status: outcome.status,
-    results: outcome.results,
-    document_sha256: outcome.documentSha256,
-  });
+    check_type: r.checkType,
+    status: r.outcome!.status,
+    results: r.outcome!.results,
+    document_sha256: r.outcome!.documentSha256,
+  }));
+
+  const { error: reportError } = await admin.from("standalone_qa_reports").insert(reportRows);
   if (reportError) {
     console.error("[FAIL]", reportError.message);
     return { ok: false, error: "Rapor kaydedilemedi." };
@@ -80,3 +86,4 @@ export async function createOrderAndRunCheck(
 
   return { ok: true, orderId: order.id };
 }
+

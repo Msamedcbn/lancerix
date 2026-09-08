@@ -12,7 +12,11 @@ import lighthouse from "lighthouse";
 
 import { openStagingPage } from "@/lib/qa/agent";
 import { isBlockedTarget } from "@/lib/qa/ssrf-guard";
-import type { StandaloneCheckType } from "@/lib/validations/standalone-qa";
+import {
+  STANDALONE_PACKAGES,
+  type StandaloneCheckType,
+  type StandalonePackageId,
+} from "@/lib/validations/standalone-qa";
 
 function hashResults(results: unknown): string {
   return crypto.createHash("sha256").update(JSON.stringify(results)).digest("hex");
@@ -628,3 +632,27 @@ export async function runStandaloneCheck(
       return runInteractionScanCheck(url);
   }
 }
+
+export type PackageCheckOutcome = {
+  checkType: StandaloneCheckType;
+  outcome: StandaloneCheckOutcome | null;
+};
+
+/**
+ * Runs all module checks included in the given package.
+ */
+export async function runStandalonePackage(
+  packageId: StandalonePackageId,
+  url: string,
+): Promise<PackageCheckOutcome[]> {
+  const pkg = STANDALONE_PACKAGES[packageId];
+  if (!pkg) return [];
+
+  const results: PackageCheckOutcome[] = [];
+  for (const checkType of pkg.modules) {
+    const outcome = await runStandaloneCheck(checkType, url);
+    results.push({ checkType, outcome });
+  }
+  return results;
+}
+

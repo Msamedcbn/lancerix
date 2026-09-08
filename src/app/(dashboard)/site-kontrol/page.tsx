@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 
 import { listMyStandaloneOrders } from "@/lib/data/standalone-qa";
 import type {
@@ -52,6 +53,11 @@ const CHECK_TYPE_LABEL: Record<string, string> = {
   DEAD_LINKS: "Ölü/Kırık Link Taraması",
   FORM_VALIDATION: "Form & Validasyon Bütünlüğü",
   INTERACTION_SCAN: "Genel Etkileşim & Hata Taraması",
+};
+const PACKAGE_LABEL: Record<string, string> = {
+  BASIC: "Temel Kontrol Paket",
+  PRO: "Profesyonel Paket",
+  FULL: "Tam Tarama Paket",
 };
 
 /** One line per check type, for the pre-payment summary -- never the full
@@ -267,8 +273,13 @@ export default async function SiteKontrolPage() {
         <div className="flex flex-col gap-3">
           <h2 className="text-sm font-medium text-foreground">Geçmiş taramalar</h2>
           {orders.map((order) => {
-            const report = order.standalone_qa_reports[0];
+            const reports = order.standalone_qa_reports;
             const isPaid = order.payment_status === "PAID";
+            const orderTitle = order.package_id
+              ? (PACKAGE_LABEL[order.package_id] ?? order.package_id)
+              : (CHECK_TYPE_LABEL[order.check_type ?? ""] ?? order.check_type ?? "Tarama");
+            const priceDisplay = (order.fee_kurus / 100).toFixed(0);
+
             return (
               <div
                 key={order.id}
@@ -278,37 +289,62 @@ export default async function SiteKontrolPage() {
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium text-foreground">{order.target_url}</p>
                     <p className="tnum mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
-                      <span>{CHECK_TYPE_LABEL[order.check_type] ?? order.check_type}</span>
+                      <span className="font-semibold text-foreground">{orderTitle}</span>
+                      <span aria-hidden>·</span>
+                      <span>₺{priceDisplay}</span>
                       <span aria-hidden>·</span>
                       <span>{order.created_at.slice(0, 16).replace("T", " ")}</span>
                     </p>
                   </div>
-                  {order.payment_status === "PENDING" ? (
-                    <PayStandaloneButton orderId={order.id} />
-                  ) : (
-                    <span className="text-brand text-xs font-medium">Ödendi</span>
-                  )}
+                  <div className="flex items-center gap-2">
+                    <Link
+                      href={`/r/${order.id}`}
+                      target="_blank"
+                      className="inline-flex items-center gap-1 rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 py-1 text-xs font-semibold text-zinc-700 hover:bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800 transition-colors"
+                    >
+                      Kamuya Açık Rapor ↗
+                    </Link>
+                    {order.payment_status === "PENDING" ? (
+                      <PayStandaloneButton orderId={order.id} />
+                    ) : (
+                      <span className="text-brand text-xs font-semibold px-1">Ödendi</span>
+                    )}
+                  </div>
                 </div>
 
-                {report ? (
-                  <>
-                    <p className={`mt-3 text-sm font-medium ${STATUS_TONE[report.status] ?? ""}`}>
-                      {STATUS_LABEL[report.status] ?? report.status}
-                    </p>
-                    {isPaid ? (
-                      <>
-                        <ReportDetail checkType={order.check_type} results={report.results} />
-                        <p className="mt-3 font-mono text-[0.7rem] break-all text-muted-foreground">
-                          {report.document_sha256}
-                        </p>
-                      </>
-                    ) : (
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        {summaryLine(order.check_type, report.results)} Detaylı sonucu ve
-                        değiştirilemez kaydı görmek için ödeme yap.
-                      </p>
-                    )}
-                  </>
+                {reports.length > 0 ? (
+                  <div className="mt-4 flex flex-col gap-3">
+                    {reports.map((report) => {
+                      const cType = report.check_type ?? order.check_type ?? "ACCESSIBILITY";
+                      return (
+                        <div
+                          key={report.id}
+                          className="rounded-lg border border-zinc-100 bg-zinc-50/50 p-3.5 dark:border-zinc-800/60 dark:bg-zinc-900/40"
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-xs font-semibold text-foreground">
+                              {CHECK_TYPE_LABEL[cType] ?? cType}
+                            </span>
+                            <span className={`text-xs font-medium ${STATUS_TONE[report.status] ?? ""}`}>
+                              {STATUS_LABEL[report.status] ?? report.status}
+                            </span>
+                          </div>
+                          {isPaid ? (
+                            <>
+                              <ReportDetail checkType={cType} results={report.results} />
+                              <p className="mt-2 font-mono text-[0.65rem] break-all text-muted-foreground">
+                                {report.document_sha256}
+                              </p>
+                            </>
+                          ) : (
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              {summaryLine(cType, report.results)} Detaylı sonucu ve değiştirilemez kaydı görmek için ödeme yap.
+                            </p>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
                 ) : (
                   <p className="mt-3 text-xs text-muted-foreground">Rapor hazırlanıyor.</p>
                 )}
@@ -320,3 +356,4 @@ export default async function SiteKontrolPage() {
     </div>
   );
 }
+

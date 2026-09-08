@@ -548,3 +548,39 @@ export async function notifyAdminDigest({
     ].join("\n"),
   });
 }
+
+/**
+ * Notifies the user when their standalone site QA report payment is confirmed
+ * via Polar webhook, including a direct link to their shareable public report.
+ */
+export async function notifyStandaloneCheckPaid({
+  toUserId,
+  orderId,
+  targetUrl,
+  packageName,
+}: Readonly<{
+  toUserId: string;
+  orderId: string;
+  targetUrl: string;
+  packageName: string;
+}>): Promise<SendResult> {
+  const to = await addressOf(toUserId);
+  if (!to) return { ok: false, reason: "no address on file for that account" };
+
+  return sendEmail({
+    to,
+    subject: `QA Doğrulama Raporunuz Hazır: ${targetUrl}`,
+    body: [
+      `Lancerix Bağımsız Otomatik QA taraması tamamlandı ve ödemeniz onaylandı.`,
+      "",
+      `Paket: ${packageName}`,
+      `Hedef URL: ${targetUrl}`,
+      "",
+      `Kamuya açık doğrulanmış raporunuzu inceleyin ve yazdırın:`,
+      appUrlFor(`/r/${orderId}`),
+      "",
+      "Raporunuz SHA-256 kriptografik mührü ile veritabanımızda güvence altındadır.",
+    ].join("\n"),
+  });
+}
+

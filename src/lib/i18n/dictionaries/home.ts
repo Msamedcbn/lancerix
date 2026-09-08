@@ -16,6 +16,8 @@ import { QA_TIER_INFO, type QaTier } from "@/lib/validations/delivery";
  * English keeps its own hand-translated copy below: QA_TIER_INFO has no
  * English text to derive from.
  */
+import type { StandalonePackageId } from "@/lib/validations/standalone-qa";
+
 export type TierCopy = {
   label: string;
   price: string;
@@ -30,6 +32,14 @@ function tierCopyFromInfo(tier: QaTier): TierCopy {
 }
 
 export type Step = { title: string; body: string };
+
+export type StandalonePackageCopy = {
+  label: string;
+  price: string;
+  hint: string;
+  popular?: boolean;
+  features: readonly string[];
+};
 
 export type HomeCopy = {
   metaTitle: string;
@@ -83,10 +93,7 @@ export type HomeCopy = {
     eyebrow: string;
     title: string;
     body: string;
-    packages: Record<
-      "ACCESSIBILITY" | "PERFORMANCE" | "SEO_META" | "VISUAL_OVERFLOW" | "DEAD_LINKS" | "FORM_VALIDATION" | "INTERACTION_SCAN",
-      { label: string; price: string; hint: string }
-    >;
+    packages: Record<StandalonePackageId, StandalonePackageCopy>;
     urlLabel: string;
     urlPlaceholder: string;
     emailLabel: string;
@@ -186,40 +193,36 @@ export const HOME_COPY: Record<Locale, HomeCopy> = {
       title: "Hemen dene — hesabını ödeyerek aç.",
       body: "Projen bu platformda olmasa bile, herhangi bir linki şimdi test edebilirsin. Paketini seç, öde — hesabın aynı anda açılır.",
       packages: {
-        ACCESSIBILITY: {
-          label: "Erişilebilirlik",
-          price: "₺99",
-          hint: "WCAG 2.1 A/AA taraması, axe-core ile.",
+        BASIC: {
+          label: "Temel Kontrol",
+          price: "₺199",
+          hint: "Erişilebilirlik, SEO ve Ölü Link taraması.",
+          features: [
+            "Erişilebilirlik (WCAG 2.1 A/AA)",
+            "SEO & Meta Uyum Analizi",
+            "Ölü/Kırık Link Taraması",
+          ],
         },
-        PERFORMANCE: {
-          label: "Hız & Performans",
-          price: "₺99",
-          hint: "Core Web Vitals — LCP, FCP, CLS, Lighthouse ile.",
+        PRO: {
+          label: "Profesyonel",
+          price: "₺349",
+          popular: true,
+          hint: "Temel Kontrol + Hız & Mobil Taşma kontrolleri.",
+          features: [
+            "Temel Kontrol paketindeki tüm modüller",
+            "Hız & Performans (Core Web Vitals)",
+            "Görsel / Mobil Taşma Taraması",
+          ],
         },
-        SEO_META: {
-          label: "SEO & Meta Uyumluluğu",
-          price: "₺99",
-          hint: "Başlık, açıklama, OG/Twitter kartları, canonical, favicon.",
-        },
-        VISUAL_OVERFLOW: {
-          label: "Görsel/Mobil Taşma",
-          price: "₺99",
-          hint: "320/768/1440px genişliklerde yatay taşma kontrolü.",
-        },
-        DEAD_LINKS: {
-          label: "Ölü/Kırık Link Taraması",
-          price: "₺99",
-          hint: "Sayfadaki her linke istek atıp 404/kırık olanları listeler.",
-        },
-        FORM_VALIDATION: {
-          label: "Form & Validasyon Bütünlüğü",
-          price: "₺99",
-          hint: "Formların gönder butonu, zorunlu alanlar, e-posta tipi kontrolü.",
-        },
-        INTERACTION_SCAN: {
-          label: "Genel Etkileşim & Hata Taraması",
-          price: "₺99",
-          hint: "Formları doldurur, butonlara tıklar, konsol hatalarını yakalar. (Yapay zeka değil, kural tabanlı.)",
+        FULL: {
+          label: "Tam Tarama",
+          price: "₺449",
+          hint: "Sistemdeki tüm 7 modül ve etkileşim taramaları.",
+          features: [
+            "Profesyonel paketindeki tüm modüller",
+            "Form & Validasyon Bütünlüğü",
+            "Genel Etkileşim & Konsol Hata Taraması",
+          ],
         },
       },
       urlLabel: "Test edilecek link",
@@ -346,40 +349,36 @@ export const HOME_COPY: Record<Locale, HomeCopy> = {
       title: "Try it now — pay to open your account.",
       body: "Even if your project isn't on this platform, you can test any link right now. Pick a package, pay — your account opens in the same step.",
       packages: {
-        ACCESSIBILITY: {
-          label: "Accessibility",
-          price: "₺99",
-          hint: "A WCAG 2.1 A/AA scan, powered by axe-core.",
+        BASIC: {
+          label: "Basic Check",
+          price: "₺199",
+          hint: "Accessibility, SEO, and Dead Link scan.",
+          features: [
+            "Accessibility (WCAG 2.1 A/AA)",
+            "SEO & Meta Compliance",
+            "Dead Link Scan",
+          ],
         },
-        PERFORMANCE: {
-          label: "Speed & Performance",
-          price: "₺99",
-          hint: "Core Web Vitals — LCP, FCP, CLS, via Lighthouse.",
+        PRO: {
+          label: "Professional",
+          price: "₺349",
+          popular: true,
+          hint: "Basic Check + Speed & Mobile Overflow checks.",
+          features: [
+            "All modules in Basic Check",
+            "Speed & Performance (Core Web Vitals)",
+            "Visual / Mobile Overflow Scan",
+          ],
         },
-        SEO_META: {
-          label: "SEO & Meta Compliance",
-          price: "₺99",
-          hint: "Title, description, OG/Twitter cards, canonical, favicon.",
-        },
-        VISUAL_OVERFLOW: {
-          label: "Visual/Mobile Overflow",
-          price: "₺99",
-          hint: "Checks for horizontal overflow at 320/768/1440px widths.",
-        },
-        DEAD_LINKS: {
-          label: "Dead Link Check",
-          price: "₺99",
-          hint: "Requests every link on the page, lists broken (404) ones.",
-        },
-        FORM_VALIDATION: {
-          label: "Form & Validation Integrity",
-          price: "₺99",
-          hint: "Checks forms have a working submit control, required fields, correct email type.",
-        },
-        INTERACTION_SCAN: {
-          label: "General Interaction & Error Scan",
-          price: "₺99",
-          hint: "Fills forms, clicks buttons, watches for console errors. (Rule-based, not AI.)",
+        FULL: {
+          label: "Full Scan",
+          price: "₺449",
+          hint: "All 7 modules including browser interactions.",
+          features: [
+            "All modules in Professional",
+            "Form & Validation Integrity",
+            "General Interaction & Error Scan",
+          ],
         },
       },
       urlLabel: "Link to test",
@@ -396,3 +395,4 @@ export const HOME_COPY: Record<Locale, HomeCopy> = {
     closingSecondary: "Log in",
   },
 };
+
