@@ -1,16 +1,15 @@
 import "server-only";
 
 import crypto from "crypto";
-import { existsSync } from "fs";
 
 import AxeBuilder from "@axe-core/playwright";
-import chromium from "@sparticuz/chromium";
 import * as cheerio from "cheerio";
 import * as chromeLauncher from "chrome-launcher";
 import { LinkChecker } from "linkinator";
 import lighthouse from "lighthouse";
 
 import { openStagingPage } from "@/lib/qa/agent";
+import { resolveChromium } from "@/lib/qa/chromium";
 import { isBlockedTarget } from "@/lib/qa/ssrf-guard";
 import {
   STANDALONE_PACKAGES,
@@ -18,7 +17,10 @@ import {
   type StandalonePackageId,
 } from "@/lib/validations/standalone-qa";
 
-function hashResults(results: unknown): string {
+/** The seal every report row carries. Exported because a module that never
+ * ran is recorded too (status ERROR, see createOrderAndRunCheck) and has to
+ * be sealed the same way as one that produced findings. */
+export function hashResults(results: unknown): string {
   return crypto.createHash("sha256").update(JSON.stringify(results)).digest("hex");
 }
 
@@ -75,7 +77,7 @@ export type AccessibilityCheckOutcome = {
  * would need to be hidden from the request.
  *
  * Null on any failure to load the page (same contract as openStagingPage,
- * which this reuses instead of relaunching @sparticuz/chromium itself).
+ * which this reuses instead of resolving and relaunching chromium itself).
  */
 export async function runAccessibilityCheck(url: string): Promise<AccessibilityCheckOutcome | null> {
   const opened = await openStagingPage(url);
@@ -150,26 +152,22 @@ export async function runPerformanceCheck(url: string): Promise<PerformanceCheck
     return null;
   }
 
+  // resolveChromium() picks the binary for this runtime (sparticuz on
+  // Vercel, a real local Chrome otherwise) and verifies it exists, so the
+  // "no file at all" case is already ruled out by the time we get here.
+  //
+  // The uncaughtException guard below covers what that check cannot: a
+  // file that IS present but is not a runnable binary for this OS/arch.
   // Unlike Playwright's chromium.launch() (which rejects its promise on a
   // bad executable path -- see openStagingPage's own try/catch), chrome-
   // launcher spawns the process directly and can fail via an unhandled
   // 'error' event on the child process instead of a promise rejection --
-  // an uncaught exception that crashes the whole server (verified: a
-  // missing/non-executable binary takes down every in-flight request, not
-  // just this one). existsSync() only rules out the "no file at all" case;
-  // it does NOT catch "a file is there but isn't a runnable binary for this
-  // OS/arch" (the actual failure mode hit locally: @sparticuz/chromium
-  // extracts its Linux binary to a fixed temp path unconditionally, so the
-  // file exists on this Windows dev machine but can't be spawned). The
-  // uncaughtException listener below is the only way to turn that into a
-  // caught, graceful failure instead of a process crash; it's removed the
-  // moment the launch settles either way, so it can't swallow an unrelated
-  // error from a concurrent request.
-  const chromePath = await chromium.executablePath();
-  if (!existsSync(chromePath)) {
-    console.error(`[standalone-qa] chromium executable not found at ${chromePath}`);
-    return null;
-  }
+  // an uncaught exception that crashes the whole server (verified: it
+  // takes down every in-flight request, not just this one). The listener
+  // is removed the moment the launch settles either way, so it can't
+  // swallow an unrelated error from a concurrent request.
+  const runtime = await resolveChromium();
+  if (!runtime) return null;
 
   let chrome: chromeLauncher.LaunchedChrome;
   try {
@@ -177,7 +175,10 @@ export async function runPerformanceCheck(url: string): Promise<PerformanceCheck
       const onCrash = (err: unknown) => reject(err instanceof Error ? err : new Error(String(err)));
       process.once("uncaughtException", onCrash);
       chromeLauncher
-        .launch({ chromePath, chromeFlags: [...chromium.args, "--headless=new"] })
+        .launch({
+          chromePath: runtime.executablePath,
+          chromeFlags: [...runtime.args, "--headless=new"],
+        })
         .then((launched) => {
           process.removeListener("uncaughtException", onCrash);
           resolve(launched);

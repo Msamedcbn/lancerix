@@ -4,11 +4,11 @@ import crypto from "crypto";
 
 import { createOpenAI } from "@ai-sdk/openai";
 import { generateText, hasToolCall, stepCountIs, tool } from "ai";
-import chromium from "@sparticuz/chromium";
 import { chromium as playwrightChromium, type Browser, type Page } from "playwright-core";
 import { z } from "zod";
 
 import { notifyDeliverySubmitted } from "@/lib/notify/email";
+import { resolveChromium } from "@/lib/qa/chromium";
 import { isBlockedTarget } from "@/lib/qa/ssrf-guard";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -222,21 +222,34 @@ async function escalate(
 /** Launches a browser and navigates to the staging URL. Null on any failure
  * (launch, navigation, timeout). Caller owns closing the returned browser.
  * Exported for src/lib/qa/standalone.ts, which reuses the same chromium
- * launch instead of duplicating @sparticuz/chromium boilerplate. */
+ * launch instead of duplicating the resolveChromium() boilerplate. */
 export async function openStagingPage(url: string): Promise<{ browser: Browser; page: Page } | null> {
   if (await isBlockedTarget(url)) {
     console.error(`[qa-agent] refusing to load ${url}: resolves to a private/internal address`);
     return null;
   }
 
+  const runtime = await resolveChromium();
+  if (!runtime) {
+    console.error(`[qa-agent] refusing to load ${url}: no usable chromium on this runtime`);
+    return null;
+  }
+
   let browser: Browser | undefined;
   try {
     browser = await playwrightChromium.launch({
-      args: chromium.args,
-      executablePath: await chromium.executablePath(),
+      args: runtime.args,
+      executablePath: runtime.executablePath,
       headless: true,
     });
-    const page = await browser.newPage();
+    // browser.newContext() rather than browser.newPage(): @axe-core/playwright
+    // refuses to analyze a page that belongs to the browser's implicit default
+    // context ("Please use browser.newContext()"), which silently cost us the
+    // entire accessibility module -- the one check CLAUDE.md calls the cleanest,
+    // zero-judgment case. Closing the browser closes the context with it, so
+    // callers' existing browser.close() is still the whole cleanup story.
+    const context = await browser.newContext();
+    const page = await context.newPage();
     await page.goto(url, { waitUntil: "networkidle", timeout: 15_000 });
     return { browser, page };
   } catch (err) {

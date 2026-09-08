@@ -8,6 +8,8 @@
  * insert policy on standalone_qa_reports), and payStandaloneCheck refuses a
  * non-PENDING order before calling Polar.
  */
+import { createHash } from "crypto";
+
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
@@ -30,12 +32,18 @@ vi.mock("@/lib/auth/session", () => ({
 }));
 
 let checkImpl: () => Promise<unknown>;
+/** Set by tests that need a multi-module package result (mixed success and
+ * failure); otherwise the single-module shape derived from checkImpl. */
+let packageImpl: (() => Promise<{ checkType: string; outcome: unknown }[]>) | null;
 vi.mock("@/lib/qa/standalone", () => ({
   runStandaloneCheck: vi.fn(async () => checkImpl()),
   runStandalonePackage: vi.fn(async () => {
+    if (packageImpl) return packageImpl();
     const outcome = await checkImpl();
     return outcome ? [{ checkType: "ACCESSIBILITY", outcome }] : [];
   }),
+  hashResults: (results: unknown) =>
+    createHash("sha256").update(JSON.stringify(results)).digest("hex"),
 }));
 
 // payViaPolarCheckout itself isn't re-tested here (it's a thin, generic
@@ -78,6 +86,7 @@ function userClient() {
         select: (_cols: string, _opts?: unknown) => ({
           eq: (_col: string, _val: string) => ({
             single: async () => orderSelectRoute(),
+            maybeSingle: async () => orderSelectRoute(),
             gte: async (_col2: string, _val2: string) => orderCountRoute(),
           }),
         }),
@@ -115,6 +124,7 @@ function formData(entries: Record<string, string>): FormData {
 
 beforeEach(() => {
   reportInsertCalls = [];
+  packageImpl = null;
   orderInsertRoute = () => ({ data: { id: "order-1" }, error: null });
   orderCountRoute = () => ({ count: 0, error: null });
   reportInsertRoute = () => ({ error: null });
@@ -155,6 +165,53 @@ describe("createStandaloneCheck", () => {
       { error: null },
       formData({ targetUrl: "https://example.com", packageId: "BASIC" }),
     );
+    expect(result.error).toBeTruthy();
+    expect(reportInsertCalls).toHaveLength(0);
+  });
+
+  it("records every module in the package, failed ones as ERROR", async () => {
+    // A module that could not run must still leave a row: without it a paid
+    // 3-module package silently ships as a 1-module report that looks whole.
+    packageImpl = async () => [
+      {
+        checkType: "ACCESSIBILITY",
+        outcome: { status: "PASS", results: { violationCount: 0 }, documentSha256: "a".repeat(64) },
+      },
+      { checkType: "SEO_META", outcome: null },
+      { checkType: "DEAD_LINKS", outcome: null },
+    ];
+    const { createStandaloneCheck } = await import("./standalone-qa-actions");
+    const result = await createStandaloneCheck(
+      { error: null },
+      formData({ targetUrl: "https://example.com", packageId: "BASIC" }),
+    );
+
+    expect(result.error).toBeNull();
+    expect(reportInsertCalls).toHaveLength(3);
+    expect(reportInsertCalls.map((r) => [r.check_type, r.status])).toEqual([
+      ["ACCESSIBILITY", "PASS"],
+      ["SEO_META", "ERROR"],
+      ["DEAD_LINKS", "ERROR"],
+    ]);
+    // ERROR rows are sealed like any other -- the column is NOT NULL and
+    // constrained to 64 hex chars, so an unsealed row would be rejected.
+    for (const row of reportInsertCalls.filter((r) => r.status === "ERROR")) {
+      expect(row.results).toEqual({ error: "MODULE_FAILED" });
+      expect(row.document_sha256).toMatch(/^[0-9a-f]{64}$/);
+    }
+  });
+
+  it("writes no report at all when every module fails", async () => {
+    packageImpl = async () => [
+      { checkType: "ACCESSIBILITY", outcome: null },
+      { checkType: "SEO_META", outcome: null },
+    ];
+    const { createStandaloneCheck } = await import("./standalone-qa-actions");
+    const result = await createStandaloneCheck(
+      { error: null },
+      formData({ targetUrl: "https://example.com", packageId: "BASIC" }),
+    );
+
     expect(result.error).toBeTruthy();
     expect(reportInsertCalls).toHaveLength(0);
   });
@@ -243,3 +300,126 @@ describe("payStandaloneCheck", () => {
   });
 });
 
+
+describe("rescanStandaloneCheck", () => {
+  /** An order whose SEO module failed, with `attempts` rows on file for it. */
+  function orderWithFailedSeo(attempts: number) {
+    const seoRows = Array.from({ length: attempts }, (_, i) => ({
+      id: `seo-${i}`,
+      check_type: "SEO_META",
+      status: "ERROR",
+      generated_at: `2026-09-08T10:0${i}:00Z`,
+    }));
+    return () => ({
+      data: {
+        id: "order-1",
+        target_url: "https://example.com",
+        check_type: null,
+        standalone_qa_reports: [
+          {
+            id: "a11y-0",
+            check_type: "ACCESSIBILITY",
+            status: "PASS",
+            generated_at: "2026-09-08T10:00:00Z",
+          },
+          ...seoRows,
+        ],
+      },
+      error: null,
+    });
+  }
+
+  it("re-runs only the failed module and appends its new row", async () => {
+    orderSelectRoute = orderWithFailedSeo(1);
+    checkImpl = async () => ({
+      status: "PASS",
+      results: { missingCritical: [] },
+      documentSha256: "b".repeat(64),
+    });
+
+    const { rescanStandaloneCheck } = await import("./standalone-qa-actions");
+    const result = await rescanStandaloneCheck({ error: null }, formData({ orderId: "order-1" }));
+
+    expect(result.error).toBeNull();
+    // The passing ACCESSIBILITY module is not re-run: the customer is owed
+    // the module that didn't happen, not a whole second scan.
+    expect(reportInsertCalls).toHaveLength(1);
+    expect(reportInsertCalls[0]).toMatchObject({
+      order_id: "order-1",
+      check_type: "SEO_META",
+      status: "PASS",
+    });
+  });
+
+  it("records another ERROR row when the retry fails too", async () => {
+    orderSelectRoute = orderWithFailedSeo(1);
+    checkImpl = async () => null;
+
+    const { rescanStandaloneCheck } = await import("./standalone-qa-actions");
+    const result = await rescanStandaloneCheck({ error: null }, formData({ orderId: "order-1" }));
+
+    expect(result.error).toBeNull();
+    expect(reportInsertCalls).toHaveLength(1);
+    expect(reportInsertCalls[0]).toMatchObject({ check_type: "SEO_META", status: "ERROR" });
+    expect(reportInsertCalls[0].document_sha256).toMatch(/^[0-9a-f]{64}$/);
+  });
+
+  it("refuses once a module has burned through its attempts", async () => {
+    const { STANDALONE_MODULE_MAX_ATTEMPTS } = await import("@/lib/validations/standalone-qa");
+    orderSelectRoute = orderWithFailedSeo(STANDALONE_MODULE_MAX_ATTEMPTS);
+
+    const { rescanStandaloneCheck } = await import("./standalone-qa-actions");
+    const result = await rescanStandaloneCheck({ error: null }, formData({ orderId: "order-1" }));
+
+    expect(result.error).toBeTruthy();
+    expect(reportInsertCalls).toHaveLength(0);
+  });
+
+  it("refuses when nothing failed, without re-running a passing scan", async () => {
+    orderSelectRoute = () => ({
+      data: {
+        id: "order-1",
+        target_url: "https://example.com",
+        check_type: null,
+        standalone_qa_reports: [
+          {
+            id: "a11y-0",
+            check_type: "ACCESSIBILITY",
+            status: "PASS",
+            generated_at: "2026-09-08T10:00:00Z",
+          },
+        ],
+      },
+      error: null,
+    });
+
+    const { rescanStandaloneCheck } = await import("./standalone-qa-actions");
+    const result = await rescanStandaloneCheck({ error: null }, formData({ orderId: "order-1" }));
+
+    expect(result.error).toBeTruthy();
+    expect(reportInsertCalls).toHaveLength(0);
+  });
+
+  it("does not re-run a module whose latest attempt already succeeded", async () => {
+    // ERROR first, PASS on the retry: latestReportPerModule must win over
+    // "any ERROR row exists", or every fixed module would be re-run forever.
+    orderSelectRoute = () => ({
+      data: {
+        id: "order-1",
+        target_url: "https://example.com",
+        check_type: null,
+        standalone_qa_reports: [
+          { id: "seo-0", check_type: "SEO_META", status: "ERROR", generated_at: "2026-09-08T10:00:00Z" },
+          { id: "seo-1", check_type: "SEO_META", status: "PASS", generated_at: "2026-09-08T10:05:00Z" },
+        ],
+      },
+      error: null,
+    });
+
+    const { rescanStandaloneCheck } = await import("./standalone-qa-actions");
+    const result = await rescanStandaloneCheck({ error: null }, formData({ orderId: "order-1" }));
+
+    expect(result.error).toBeTruthy();
+    expect(reportInsertCalls).toHaveLength(0);
+  });
+});

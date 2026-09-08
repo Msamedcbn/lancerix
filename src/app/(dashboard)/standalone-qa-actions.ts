@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { requireSession } from "@/lib/auth/session";
 import { FAIL, firstIssue, OK, type FormState } from "@/lib/forms";
 import { createStandaloneOrderCheckout, payViaPolarCheckout } from "@/lib/polar";
-import { createOrderAndRunCheck } from "@/lib/qa/standalone-order";
+import { createOrderAndRunCheck, rescanFailedModules } from "@/lib/qa/standalone-order";
 import { createClient } from "@/lib/supabase/server";
 import { standaloneCheckSchema } from "@/lib/validations/standalone-qa";
 
@@ -90,3 +90,32 @@ export async function payStandaloneCheck(
   );
 }
 
+
+/**
+ * The free re-scan a customer is owed when a module they bought could not
+ * be run (its row is ERROR, see rescanFailedModules). No fee, no new order,
+ * and no daily-cap charge -- the failure was ours.
+ *
+ * Only the owner can trigger it: requireSession() gates the action and the
+ * order lookup inside rescanFailedModules runs on the user-scoped client,
+ * so RLS -- not this function -- decides whose order this is. That also
+ * keeps the shareable /r/[orderId] link read-only: anyone can open a
+ * report, nobody but the owner can spend our compute re-running it.
+ */
+export async function rescanStandaloneCheck(
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  await requireSession();
+
+  const orderId = String(formData.get("orderId") ?? "");
+  if (!orderId) return FAIL("Sipariş eksik.");
+
+  const supabase = await createClient();
+  const result = await rescanFailedModules(supabase, orderId);
+  if (!result.ok) return FAIL(result.error);
+
+  revalidatePath("/site-kontrol");
+  revalidatePath(`/r/${orderId}`);
+  return OK("Çalıştırılamayan modüller yeniden tarandı.");
+}

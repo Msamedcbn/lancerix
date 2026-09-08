@@ -11,6 +11,33 @@ export type StandaloneOrderRow = StandaloneQaOrder & {
 };
 
 /**
+ * The newest attempt per module, for the surfaces a customer reads.
+ *
+ * standalone_qa_reports is append-only (no update/delete policy, by
+ * design: a verification report is evidence, not a draft), so a module
+ * that failed and was re-scanned has BOTH attempts on file -- the ERROR
+ * row stays as the record that a first run did not happen. Showing both
+ * would read as two contradictory verdicts for one check, so the customer
+ * surfaces collapse to the latest attempt while the ledger keeps the rest.
+ *
+ * `fallbackCheckType` covers legacy single-module orders written before
+ * 20260908050000, whose rows carry check_type = null and whose module type
+ * lives on the order instead.
+ */
+export function latestReportPerModule(
+  reports: StandaloneQaReport[],
+  fallbackCheckType: string,
+): StandaloneQaReport[] {
+  const latest = new Map<string, StandaloneQaReport>();
+  for (const report of reports) {
+    const key = report.check_type ?? fallbackCheckType;
+    const seen = latest.get(key);
+    if (!seen || report.generated_at > seen.generated_at) latest.set(key, report);
+  }
+  return [...latest.values()];
+}
+
+/**
  * The signed-in user's own contract-free checks, newest first. RLS
  * (standalone_qa_orders_select) already scopes this to
  * requested_by_user_id = auth.uid(), same as every other list in

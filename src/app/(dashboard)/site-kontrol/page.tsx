@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { listMyStandaloneOrders } from "@/lib/data/standalone-qa";
+import { latestReportPerModule, listMyStandaloneOrders } from "@/lib/data/standalone-qa";
+import { STANDALONE_MODULE_MAX_ATTEMPTS } from "@/lib/validations/standalone-qa";
 import type {
   AccessibilityResults,
   DeadLinksResults,
@@ -13,6 +14,7 @@ import type {
 } from "@/lib/qa/standalone";
 
 import { PayStandaloneButton } from "./pay-standalone-button";
+import { RescanButton } from "./rescan-button";
 import { StandaloneCheckForm } from "./standalone-check-form";
 
 export const metadata: Metadata = { title: "Site Kontrolü" };
@@ -27,11 +29,15 @@ const STATUS_TONE: Record<string, string> = {
   PASS: "text-brand",
   FAIL: "text-rose-600 dark:text-rose-400",
   PARTIAL: "text-amber-700 dark:text-amber-400",
+  // Deliberately neutral, not red: ERROR is our scanner failing, not a
+  // finding against the customer's site.
+  ERROR: "text-muted-foreground",
 };
 const STATUS_LABEL: Record<string, string> = {
   PASS: "Sorun bulunmadı",
   FAIL: "Ciddi sorun bulundu",
   PARTIAL: "Küçük sorunlar var",
+  ERROR: "Çalıştırılamadı",
 };
 const IMPACT_BADGE: Record<string, string> = {
   critical: "bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300",
@@ -62,6 +68,9 @@ const PACKAGE_LABEL: Record<string, string> = {
 
 /** One line per check type, for the pre-payment summary -- never the full
  * detail (that's what paying unlocks). */
+const MODULE_ERROR_NOTE =
+  "Bu kontrol çalıştırılamadı; sonuç üretilmedi. Sitende sorun olduğu anlamına gelmez.";
+
 function summaryLine(checkType: string, results: unknown): string {
   switch (checkType) {
     case "PERFORMANCE":
@@ -229,7 +238,18 @@ function InteractionScanDetail({ results }: { results: InteractionScanResults })
   );
 }
 
-function ReportDetail({ checkType, results }: { checkType: string; results: unknown }) {
+function ReportDetail({
+  checkType,
+  status,
+  results,
+}: {
+  checkType: string;
+  status: string;
+  results: unknown;
+}) {
+  if (status === "ERROR") {
+    return <p className="mt-1 text-xs text-muted-foreground">{MODULE_ERROR_NOTE}</p>;
+  }
   switch (checkType) {
     case "PERFORMANCE":
       return <PerformanceDetail results={results as PerformanceResults} />;
@@ -273,7 +293,25 @@ export default async function SiteKontrolPage() {
         <div className="flex flex-col gap-3">
           <h2 className="text-sm font-medium text-foreground">Geçmiş taramalar</h2>
           {orders.map((order) => {
-            const reports = order.standalone_qa_reports;
+            const fallbackCheckType = order.check_type ?? "ACCESSIBILITY";
+            // Latest attempt per module: a re-scanned module has its ERROR
+            // row on file too, and showing both would read as two verdicts
+            // for one check.
+            const reports = latestReportPerModule(order.standalone_qa_reports, fallbackCheckType);
+            // The free re-scan is offered only while a retry could still
+            // change something -- a module that burned through its attempts
+            // needs support, not another identical run.
+            const attemptsByModule = new Map<string, number>();
+            for (const r of order.standalone_qa_reports) {
+              const key = r.check_type ?? fallbackCheckType;
+              attemptsByModule.set(key, (attemptsByModule.get(key) ?? 0) + 1);
+            }
+            const rescanableCount = reports.filter(
+              (r) =>
+                r.status === "ERROR" &&
+                (attemptsByModule.get(r.check_type ?? fallbackCheckType) ?? 0) <
+                  STANDALONE_MODULE_MAX_ATTEMPTS,
+            ).length;
             const isPaid = order.payment_status === "PAID";
             const orderTitle = order.package_id
               ? (PACKAGE_LABEL[order.package_id] ?? order.package_id)
@@ -312,6 +350,19 @@ export default async function SiteKontrolPage() {
                   </div>
                 </div>
 
+                {rescanableCount > 0 && (
+                  <div className="mt-4 rounded-lg border border-border bg-muted/40 p-3.5">
+                    <p className="text-xs font-semibold text-foreground">
+                      {rescanableCount} modül çalıştırılamadı
+                    </p>
+                    <p className="mt-1 mb-2.5 text-xs text-muted-foreground">
+                      Ödediğin pakette bu kontroller yapılamadı. Ücretsiz olarak tekrar
+                      çalıştırabilirsin — yeni ücret alınmaz, günlük tarama hakkından düşmez.
+                    </p>
+                    <RescanButton orderId={order.id} />
+                  </div>
+                )}
+
                 {reports.length > 0 ? (
                   <div className="mt-4 flex flex-col gap-3">
                     {reports.map((report) => {
@@ -331,14 +382,15 @@ export default async function SiteKontrolPage() {
                           </div>
                           {isPaid ? (
                             <>
-                              <ReportDetail checkType={cType} results={report.results} />
+                              <ReportDetail checkType={cType} status={report.status} results={report.results} />
                               <p className="mt-2 font-mono text-[0.65rem] break-all text-muted-foreground">
                                 {report.document_sha256}
                               </p>
                             </>
                           ) : (
                             <p className="mt-1 text-xs text-muted-foreground">
-                              {summaryLine(cType, report.results)} Detaylı sonucu ve değiştirilemez kaydı görmek için ödeme yap.
+                              {report.status === "ERROR" ? MODULE_ERROR_NOTE : summaryLine(cType, report.results)}{" "}
+                              Detaylı sonucu ve değiştirilemez kaydı görmek için ödeme yap.
                             </p>
                           )}
                         </div>

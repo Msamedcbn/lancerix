@@ -4,7 +4,7 @@
  * through a mock in standalone-qa-actions.test.ts. This tests the real
  * function, mocking only its two external boundaries (openStagingPage's
  * browser launch, AxeBuilder's scan) the same way agent.test.ts mocks
- * playwright-core/@sparticuz/chromium rather than mocking agent.ts's own
+ * playwright-core/the chromium resolver rather than mocking agent.ts's own
  * functions.
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -68,15 +68,15 @@ vi.mock("@/lib/qa/ssrf-guard", () => ({
   isBlockedTarget: vi.fn(async () => blockedTarget),
 }));
 
-vi.mock("@sparticuz/chromium", () => ({
-  default: { executablePath: vi.fn(async () => "/fake/chromium"), args: [] },
+// Picking (and existence-checking) the binary belongs to resolveChromium();
+// runPerformanceCheck's contract is just "no browser -> null, and don't
+// spawn anything".
+let chromiumAvailable = true;
+vi.mock("@/lib/qa/chromium", () => ({
+  resolveChromium: vi.fn(async () =>
+    chromiumAvailable ? { executablePath: "/fake/chromium", args: [] } : null,
+  ),
 }));
-
-let chromiumExists = true;
-vi.mock("fs", () => ({
-  existsSync: (...args: unknown[]) => existsSyncMock(...args),
-}));
-const existsSyncMock = vi.fn((..._args: unknown[]) => chromiumExists);
 
 // Direct references to these two consts inside a vi.mock factory (unlike
 // wrapping them in a brand-new inline vi.fn(), the pattern the axe-core mock
@@ -139,8 +139,7 @@ beforeEach(() => {
   withTagsMock.mockClear();
   analyzeResult = { violations: [], passes: [] };
   blockedTarget = false;
-  chromiumExists = true;
-  existsSyncMock.mockClear();
+  chromiumAvailable = true;
   chromeKillMock.mockClear();
   chromeLaunchMock.mockClear();
   lighthouseMock.mockClear();
@@ -227,13 +226,13 @@ describe("runPerformanceCheck", () => {
     expect(lighthouseMock).not.toHaveBeenCalled();
   });
 
-  it("returns null without launching chrome when the binary doesn't exist", async () => {
+  it("returns null without launching chrome when no browser is available", async () => {
     // chrome-launcher's launch() spawns the process directly and can crash
     // the process with an unhandled 'error' event on a bad path (unlike
     // Playwright's chromium.launch(), which rejects cleanly) -- this is the
-    // real failure mode hit on Windows dev machines, and the reason for the
-    // existsSync() pre-check this test locks in.
-    chromiumExists = false;
+    // real failure mode hit on Windows dev machines, and the reason
+    // resolveChromium() is consulted before anything is spawned.
+    chromiumAvailable = false;
     const result = await runPerformanceCheck("https://example.com");
     expect(result).toBeNull();
     expect(chromeLaunchMock).not.toHaveBeenCalled();

@@ -18,6 +18,19 @@ how this codebase is read:
    - **Tam Tarama (`FULL`, ₺449)**: All 7 modules including Form Validation & Interaction Scan (`POLAR_PRODUCT_FULL`).
    - **Polar MoR Resolution & Fallback**: `resolvePolarProductId()` in `src/lib/polar.ts` maps package labels to specific Polar product IDs, falling back to `POLAR_QA_PRODUCT_ID`. `customerIpAddress` is passed for automatic geolocation & multi-currency detection.
    - **Public Audit Reports & Webhook Email**: Shareable public audit route at `/r/[orderId]` with cryptographic SHA-256 seal and `@media print` PDF styling (`src/app/r/[orderId]/page.tsx`). Polar `order.paid` webhook (`src/app/api/webhooks/polar/route.ts`) updates payment status and sends Resend notification emails via `notifyStandaloneCheckPaid()`. (Decision records: `~/.gstack/projects/Msamedcbn-lancerix/ceo-plans/2026-09-08-standalone-qa-polar-packages.md` and `2026-09-08-positioning-verification-first.md`.)
+   - **Delivery guarantee (2026-09-08)**: every module in the purchased
+     package writes a `standalone_qa_reports` row, including one that could
+     not run -- status `ERROR`, distinct from `FAIL` (the site failed the
+     check) because it means the check never happened. Failed modules used
+     to be filtered out of the insert entirely, shipping a short report that
+     looked complete. An ERROR module entitles the customer to a free
+     re-scan of just that module (`rescanFailedModules`): no fee, no new
+     order, no daily-cap charge, capped at `STANDALONE_MODULE_MAX_ATTEMPTS`
+     attempts. Report rows stay append-only, so a retry inserts a new row
+     and the customer surfaces read the latest attempt per module
+     (`latestReportPerModule`). The public report's headline verdict is the
+     worst result across modules that ran, and its SHA-256 seal is derived
+     from every module's own seal -- neither is taken from a single row.
    - **Continuous Security SaaS & Nuclei Scanner Engine**: Local environment is provisioned with **ProjectDiscovery Nuclei CLI (v3.11.1)** and 2,360+ templates (`nuclei-templates v10.3.5`). The roadmap includes automated recurring vulnerability monitoring (OWASP Top 10, CVEs, misconfigurations, security headers, sensitive file leakage) sold as a MoR-eligible SaaS subscription via Polar.
 
 The freelancer B2B billing/escrow product (Faz 2, below) is the vertical

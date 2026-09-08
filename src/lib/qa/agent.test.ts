@@ -1,8 +1,8 @@
 /**
  * processTier2Order: the TS orchestration around one Tier2 (Agentic QA)
  * order -- claim, criteria lookup, the interactive click/type/finish loop,
- * escalate-or-complete. The "ai" SDK, "playwright-core", and
- * "@sparticuz/chromium" are all mocked at the module boundary; this proves
+ * escalate-or-complete. The "ai" SDK, "playwright-core", and the chromium
+ * resolver are all mocked at the module boundary; this proves
  * our own orchestration and tool-execute logic (element-ref clicking, the
  * off-origin guard, budget exhaustion, confidence gating, hashing), not
  * what the real OpenAI model or a real browser would actually do -- same
@@ -199,18 +199,27 @@ function makeMockPage(state: MockPageState) {
 }
 
 let pageState: MockPageState;
-let launchImpl: () => Promise<{ newPage: () => Promise<unknown>; close: () => Promise<void> }>;
+type MockBrowser = {
+  newContext: () => Promise<{ newPage: () => Promise<unknown> }>;
+  close: () => Promise<void>;
+};
+let launchImpl: () => Promise<MockBrowser>;
 
 vi.mock("playwright-core", () => ({
   chromium: { launch: vi.fn(() => launchImpl()) },
 }));
-vi.mock("@sparticuz/chromium", () => ({
-  default: { args: [], executablePath: vi.fn(async () => "/fake/chromium") },
+// Which binary to launch is resolveChromium()'s problem (and its own unit's
+// to test); openStagingPage only cares that it got one.
+vi.mock("@/lib/qa/chromium", () => ({
+  resolveChromium: vi.fn(async () => ({ executablePath: "/fake/chromium", args: [] })),
 }));
 
+/** Mirrors the real launch path: a browser hands out contexts, and pages come
+ * from a context -- never browser.newPage(), which @axe-core/playwright
+ * rejects downstream. */
 function workingBrowser() {
   return async () => ({
-    newPage: async () => makeMockPage(pageState),
+    newContext: async () => ({ newPage: async () => makeMockPage(pageState) }),
     close: async () => {},
   });
 }

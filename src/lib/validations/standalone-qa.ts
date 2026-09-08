@@ -88,6 +88,18 @@ export function packageFeeKurus(packageId: StandalonePackageId): number {
  */
 export const STANDALONE_DAILY_LIMIT = 5;
 
+/**
+ * How many times one module may be run for a single order, first attempt
+ * included. A module whose latest row is ERROR earns the customer a free
+ * re-scan (2026-09-08 pricing decision: a scan that could not run is not
+ * billed as delivered, and the remedy is re-running it, not a refund) --
+ * but the retry launches a real headless Chromium against the same URL at
+ * our cost, with no new revenue, so it cannot be unbounded. Three attempts
+ * separates a transient failure (a timeout, a slow origin) from a target
+ * this engine simply cannot scan, which no amount of retrying fixes.
+ */
+export const STANDALONE_MODULE_MAX_ATTEMPTS = 3;
+
 export const standaloneCheckSchema = z.object({
   targetUrl: z
     .string()

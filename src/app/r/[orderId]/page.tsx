@@ -1,9 +1,11 @@
+import { createHash } from "crypto";
+
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ShieldCheck, Lock, ExternalLink, Calendar, CheckCircle2, AlertTriangle, XCircle, ArrowLeft } from "lucide-react";
 
-import { getStandaloneOrderPublic } from "@/lib/data/standalone-qa";
+import { getStandaloneOrderPublic, latestReportPerModule } from "@/lib/data/standalone-qa";
 import type {
   AccessibilityResults,
   DeadLinksResults,
@@ -61,6 +63,13 @@ const IMPACT_LABEL: Record<string, string> = {
 };
 
 function StatusBadge({ status }: { status: string }) {
+  if (status === "ERROR") {
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-zinc-100 px-3 py-1 text-xs font-semibold text-zinc-600 border border-zinc-300 dark:bg-zinc-800/60 dark:text-zinc-300 dark:border-zinc-700">
+        <AlertTriangle className="h-3.5 w-3.5" /> Çalıştırılamadı
+      </span>
+    );
+  }
   if (status === "PASS") {
     return (
       <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800/60">
@@ -243,9 +252,44 @@ export default async function PublicReportPage({ params }: Props) {
     notFound();
   }
 
-  const reports = order.standalone_qa_reports || [];
-  const firstReport = reports[0];
+  // Latest attempt per module: a module that failed and was re-scanned keeps
+  // its ERROR row (append-only ledger), but the audit document states one
+  // verdict per check.
+  const reports = latestReportPerModule(
+    order.standalone_qa_reports || [],
+    order.check_type ?? "ACCESSIBILITY",
+  );
   const isPaid = order.payment_status === "PAID";
+  // The document's headline verdict is the worst finding across every module
+  // that actually ran -- not reports[0].status, which used to let whichever
+  // module happened to come back first speak for the entire audit. ERROR rows
+  // are excluded here on purpose: a scanner that failed says nothing about
+  // the site, so it belongs in the coverage line below, not in the verdict.
+  const ranReports = reports.filter((r) => r.status !== "ERROR");
+  const failedModuleCount = reports.length - ranReports.length;
+  // One seal for the whole document, derived from the per-module seals rather
+  // than borrowing reports[0]'s hash and captioning it as the report's own --
+  // which is what this block used to show. Sorted, because PostgREST does not
+  // promise row order and a seal that changes between two renders of the same
+  // data is not a seal.
+  const documentSeal =
+    reports.length > 0
+      ? createHash("sha256")
+          .update(
+            reports
+              .map((r) => `${r.check_type ?? ""}:${r.status}:${r.document_sha256}`)
+              .sort()
+              .join("|"),
+          )
+          .digest("hex")
+      : null;
+  const overallStatus = ranReports.some((r) => r.status === "FAIL")
+    ? "FAIL"
+    : ranReports.some((r) => r.status === "PARTIAL")
+      ? "PARTIAL"
+      : ranReports.length > 0
+        ? "PASS"
+        : "ERROR";
   const packageName = order.package_id ? PACKAGE_LABEL[order.package_id] ?? order.package_id : "Tekil Tarama";
 
   return (
@@ -288,8 +332,8 @@ export default async function PublicReportPage({ params }: Props) {
               <span className="text-[0.65rem] font-bold text-muted-foreground uppercase tracking-wider">Paket</span>
               <p className="text-sm font-semibold text-foreground">{packageName}</p>
               <div className="mt-2">
-                {firstReport ? (
-                  <StatusBadge status={firstReport.status} />
+                {reports.length > 0 ? (
+                  <StatusBadge status={overallStatus} />
                 ) : (
                   <span className="text-xs text-amber-600 font-medium">Hazırlanıyor</span>
                 )}
@@ -319,7 +363,7 @@ export default async function PublicReportPage({ params }: Props) {
         </div>
 
         {/* SHA-256 Cryptographic Seal Block */}
-        {firstReport?.document_sha256 && (
+        {documentSeal && (
           <div className="rounded-2xl border border-emerald-200/80 bg-emerald-50/40 p-5 dark:border-emerald-900/60 dark:bg-emerald-950/20">
             <div className="flex items-start gap-3">
               <div className="rounded-xl bg-emerald-100 p-2 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300">
@@ -333,10 +377,13 @@ export default async function PublicReportPage({ params }: Props) {
                   <span className="text-[0.65rem] font-mono text-emerald-700 dark:text-emerald-400">Değiştirilemez Kayıt</span>
                 </div>
                 <p className="mt-1 text-[0.7rem] text-emerald-800/80 dark:text-emerald-300/80">
-                  Bu rapor, headless turlama ve axe-core motoru tarafından üretilmiş olup SHA-256 özeti veritabanına kaydedilmiştir.
+                  Aşağıdaki her modül kendi sonucunun SHA-256 mührünü taşır ve bu mühürler
+                  veritabanına değiştirilemez şekilde kaydedilir. Buradaki birleşik mühür, o
+                  {" "}{reports.length} modül mührünün sıralı özetidir — modül mühürlerinden
+                  yeniden hesaplanabilir, tek bir modül bile değişse tutmaz.
                 </p>
                 <p className="mt-2 font-mono text-[0.68rem] font-semibold text-emerald-950 dark:text-emerald-100 break-all select-all">
-                  {firstReport.document_sha256}
+                  {documentSeal}
                 </p>
               </div>
             </div>
@@ -358,6 +405,20 @@ export default async function PublicReportPage({ params }: Props) {
           <div className="space-y-4">
             <h2 className="text-sm font-bold text-foreground px-1">Tarama Sonuçları & Analiz Detayları</h2>
 
+            {failedModuleCount > 0 && (
+              <div className="rounded-xl border border-zinc-300 bg-zinc-50 p-4 dark:border-zinc-700 dark:bg-zinc-900/60">
+                <p className="text-xs font-semibold text-foreground">
+                  Bu pakette {reports.length} modülün {ranReports.length} tanesi tamamlandı.
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {failedModuleCount} modül teknik bir nedenle çalıştırılamadı ve aşağıda
+                  &quot;Çalıştırılamadı&quot; olarak işaretlendi. Bu, sitende sorun olduğu anlamına
+                  gelmez — o kontrol hiç yapılamadı. Çalıştırılamayan modüller, sipariş sahibi
+                  tarafından panelinden ücretsiz olarak yeniden taratılabilir.
+                </p>
+              </div>
+            )}
+
             {reports.map((report) => {
               const cType = report.check_type ?? order.check_type ?? "ACCESSIBILITY";
               return (
@@ -372,6 +433,13 @@ export default async function PublicReportPage({ params }: Props) {
                     <StatusBadge status={report.status} />
                   </div>
 
+                  {report.status === "ERROR" ? (
+                    <p className="mt-3 text-xs text-muted-foreground">
+                      Bu kontrol taranan sitede çalıştırılamadı; sonuç üretilmedi. Aşağıdaki mühür,
+                      modülün çalıştırılamadığı kaydının kendisini imzalar.
+                    </p>
+                  ) : (
+                    <>
                   {cType === "PERFORMANCE" && <PerformanceDetail results={report.results as PerformanceResults} />}
                   {cType === "SEO_META" && <SeoMetaDetail results={report.results as SeoMetaResults} />}
                   {cType === "VISUAL_OVERFLOW" && <VisualOverflowDetail results={report.results as VisualOverflowResults} />}
@@ -379,6 +447,8 @@ export default async function PublicReportPage({ params }: Props) {
                   {cType === "FORM_VALIDATION" && <FormValidationDetail results={report.results as FormValidationResults} />}
                   {cType === "INTERACTION_SCAN" && <InteractionScanDetail results={report.results as InteractionScanResults} />}
                   {cType === "ACCESSIBILITY" && <AccessibilityDetail results={report.results as AccessibilityResults} />}
+                    </>
+                  )}
                 </div>
               );
             })}
