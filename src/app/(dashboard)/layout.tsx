@@ -38,6 +38,7 @@ const NAV: Record<UserRole, readonly NavItem[]> = {
     { href: "/profil", label: "Profilim", icon: "user" },
     { href: "/freelancer/invoices", label: "Makbuzlar", icon: "receipt" },
     { href: "/freelancer/settings", label: "Ayarlar", icon: "settings" },
+    { href: "/site-kontrol", label: "Site Kontrolü", icon: "shield-check" },
   ],
   CLIENT: [
     { href: "/client", label: "Ödemeler", icon: "credit-card" },
@@ -46,6 +47,7 @@ const NAV: Record<UserRole, readonly NavItem[]> = {
     { href: "/profil", label: "Profilim", icon: "user" },
     { href: "/client/invoices", label: "Faturalar", icon: "file-text" },
     { href: "/client/company", label: "Şirket", icon: "building" },
+    { href: "/site-kontrol", label: "Site Kontrolü", icon: "shield-check" },
   ],
   ADMIN: [
     { href: "/admin", label: "Panel", icon: "layout-dashboard" },

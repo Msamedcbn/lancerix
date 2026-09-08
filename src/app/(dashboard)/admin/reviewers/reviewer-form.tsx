@@ -98,11 +98,12 @@ export function ReviewerActiveToggle({ reviewer }: Readonly<{ reviewer: QaReview
 }
 
 /**
- * The reviewer's own TIER3/TIER4 fee.
+ * The reviewer's own review fee.
  *
- * choose_qa_tier() refuses to order this reviewer for TIER3/4 until
- * rate_kurus is set, so this isn't optional bookkeeping -- it's what makes
- * the reviewer orderable at all.
+ * Dormant since the 2026-09-08 tier restructure: Tier3 no longer selects a
+ * reviewer from this roster (the founder reviews personally, fixed ₺3.500,
+ * no third-party payout) -- kept, not deleted, so re-expanding to a real
+ * roster later doesn't mean rebuilding this from scratch.
  */
 export function ReviewerRateForm({ reviewer }: Readonly<{ reviewer: QaReviewer }>) {
   const [state, action] = useActionState(setReviewerRate, INITIAL);

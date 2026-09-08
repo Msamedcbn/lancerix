@@ -1,17 +1,25 @@
 /**
- * setQaSelection: the client's QA package pick, now a single
- * set_qa_selection() RPC (see 20260902070000_client_selects_qa_tier.sql)
+ * setQaSelection: the client's QA package pick, a single set_qa_selection()
+ * RPC (see 20260902070000_client_selects_qa_tier.sql, redefined by
+ * 20260908040000_tier_restructure.sql to drop the reviewer requirement)
  * called before signing, not the freelancer's choose_qa_tier() after
- * delivery. What's worth proving in TS is what stays in TS: the
- * reviewer-required gate for Tier 3/4, that TIER2 is refused before any RPC
- * call now that it's marked unavailable, and that the right tier/reviewer
- * reach the RPC.
+ * delivery. What's worth proving in TS is what stays in TS: that TIER2 is
+ * refused before any RPC call now that it's marked unavailable, and that
+ * the right tier reaches the RPC with no reviewer argument at all -- no
+ * tier needs one since the 2026-09-08 restructure.
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { failRpc, mockRpcClient, type RpcImpl } from "@/lib/test-utils/mock-rpc-client";
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
+vi.mock("next/headers", () => ({ headers: vi.fn(async () => new Headers()) }));
+// payQaOrder isn't exercised by this file's tests (setQaSelection only), but
+// @polar-sh/sdk is a heavy enough import chain to sometimes blow past
+// vitest's default 5s per-test timeout on a cold run if left unmocked --
+// same reasoning every other external I/O boundary here is mocked, not a
+// timeout tuning workaround.
+vi.mock("@/lib/polar", () => ({ createQaOrderCheckout: vi.fn(async () => "https://polar.sh/mock-checkout") }));
 
 const session = {
   userId: "00000000-0000-0000-0000-000000000001",
@@ -42,7 +50,6 @@ vi.mock("@/lib/supabase/server", () => ({
 }));
 
 const CONTRACT_ID = "11111111-1111-1111-1111-111111111111";
-const REVIEWER_ID = "33333333-3333-3333-3333-333333333333";
 
 function formData(entries: Record<string, string>): FormData {
   const fd = new FormData();
@@ -71,45 +78,29 @@ describe("setQaSelection", () => {
     expect(capturedCall).toBeNull();
   });
 
-  it("requires a reviewer for TIER3 before calling the RPC", async () => {
-    const { setQaSelection } = await import("./qa-actions");
-    const result = await setQaSelection(
-      { error: null },
-      formData({ contractId: CONTRACT_ID, tier: "TIER3" }),
-    );
-    expect(result.error).toBeTruthy();
-    expect(capturedCall).toBeNull();
-  });
-
-  it("calls set_qa_selection for TIER1 with no reviewer", async () => {
+  it("calls set_qa_selection for TIER1 with no reviewer argument", async () => {
     const { setQaSelection } = await import("./qa-actions");
     const result = await setQaSelection(
       { error: null },
       formData({ contractId: CONTRACT_ID, tier: "TIER1" }),
     );
     expect(result.error).toBeNull();
-    // No reviewer means the key is absent, not null: the RPC defaults the
-    // argument, and PostgREST types an optional arg as undefined.
     expect(capturedCall).toEqual({
       name: "set_qa_selection",
       args: { p_contract_id: CONTRACT_ID, p_tier: "TIER1" },
     });
   });
 
-  it("calls set_qa_selection for TIER3 with the chosen reviewer", async () => {
+  it("calls set_qa_selection for TIER3 with no reviewer argument -- the founder reviews personally now", async () => {
     const { setQaSelection } = await import("./qa-actions");
     const result = await setQaSelection(
       { error: null },
-      formData({
-        contractId: CONTRACT_ID,
-        tier: "TIER3",
-        reviewerId: REVIEWER_ID,
-      }),
+      formData({ contractId: CONTRACT_ID, tier: "TIER3" }),
     );
     expect(result.error).toBeNull();
     expect(capturedCall).toEqual({
       name: "set_qa_selection",
-      args: { p_contract_id: CONTRACT_ID, p_tier: "TIER3", p_reviewer_id: REVIEWER_ID },
+      args: { p_contract_id: CONTRACT_ID, p_tier: "TIER3" },
     });
   });
 
@@ -119,11 +110,7 @@ describe("setQaSelection", () => {
     const { setQaSelection } = await import("./qa-actions");
     const result = await setQaSelection(
       { error: null },
-      formData({
-        contractId: CONTRACT_ID,
-        tier: "TIER3",
-        reviewerId: REVIEWER_ID,
-      }),
+      formData({ contractId: CONTRACT_ID, tier: "TIER3" }),
     );
     expect(result.error).toBe("QA paketi kaydedilemedi.");
     expect(consoleError).toHaveBeenCalledWith(

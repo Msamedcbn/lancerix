@@ -1363,6 +1363,85 @@ export type Database = {
           },
         ]
       }
+      standalone_qa_orders: {
+        Row: {
+          check_type: string
+          created_at: string
+          fee_kurus: number
+          id: string
+          paid_at: string | null
+          payment_status: string
+          provider_reference: string | null
+          requested_by_user_id: string
+          target_url: string
+        }
+        Insert: {
+          check_type: string
+          created_at?: string
+          fee_kurus: number
+          id?: string
+          paid_at?: string | null
+          payment_status?: string
+          provider_reference?: string | null
+          requested_by_user_id: string
+          target_url: string
+        }
+        Update: {
+          check_type?: string
+          created_at?: string
+          fee_kurus?: number
+          id?: string
+          paid_at?: string | null
+          payment_status?: string
+          provider_reference?: string | null
+          requested_by_user_id?: string
+          target_url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "standalone_qa_orders_requested_by_user_id_fkey"
+            columns: ["requested_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      standalone_qa_reports: {
+        Row: {
+          document_sha256: string
+          generated_at: string
+          id: string
+          order_id: string
+          results: Json
+          status: string
+        }
+        Insert: {
+          document_sha256: string
+          generated_at?: string
+          id?: string
+          order_id: string
+          results: Json
+          status: string
+        }
+        Update: {
+          document_sha256?: string
+          generated_at?: string
+          id?: string
+          order_id?: string
+          results?: Json
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "standalone_qa_reports_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "standalone_qa_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workflow_phase_items: {
         Row: {
           completed_at: string | null
@@ -1462,6 +1541,7 @@ export type Database = {
       _record_qa_report: {
         Args: {
           p_contract_id: string
+          p_criteria?: Json
           p_delivery_id: string
           p_document_sha256: string
           p_findings: string
@@ -1792,10 +1872,6 @@ export type Database = {
           id: string
           role: Database["public"]["Enums"]["user_role"]
         }[]
-      }
-      freelancer_has_paid_qa_before: {
-        Args: { p_exclude_contract_id?: string; p_freelancer_id: string }
-        Returns: boolean
       }
       generate_public_id: { Args: never; Returns: string }
       is_admin: { Args: never; Returns: boolean }
@@ -2172,6 +2248,7 @@ export type Database = {
       submit_qa_report: {
         Args: {
           p_contract_id: string
+          p_criteria?: Json
           p_delivery_id: string
           p_document_sha256: string
           p_findings: string

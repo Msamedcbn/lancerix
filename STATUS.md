@@ -1,6 +1,6 @@
 # Lancerix — Durum Özeti
 
-_Son güncelleme: 2026-09-07_
+_Son güncelleme: 2026-09-08_
 
 Bu dosya "şu an ne çalışıyor, ne eksik, sırada ne var" sorusuna tek bakışta
 cevap vermek için var. Ürün/mimari kararların gerekçesi `CLAUDE.md`'de;
@@ -411,6 +411,401 @@ sayfadaki mevcut REJECTED bandından birebir kopyalandı.
 **Hâlâ eksik:** `OPENAI_API_KEY` yok, gerçek bir teslimle uçtan uca hiç
 koşmadı -- yukarıdaki "2026-09-07: Tier2 hazırlığı" bölümündeki blocker aynen
 geçerli.
+
+## 2026-09-07 (devam 2): Gerçek etkileşimli test otomasyonu
+
+Kullanıcının talebi: "gerçek bir test otomasyonu sunmalıyız" -- ajan artık
+sadece sayfayı tek seferlik okumuyor, gerçekten tıklıyor, form dolduruyor,
+sonucu gözlemliyor. Kararlaştırılan kapsam (kullanıcı onayladı): CLAUDE.md'nin
+daha önce bırakılmış sabit-kategori (HTTP_STATUS/FORM_SUBMIT/BUTTON_ACTION)
+yaklaşımına dönülmedi -- bunun yerine sınırlı adam-bütçeli, serbest-metin
+kriterine göre LLM'in kendi karar verdiği bir araç çağrısı döngüsü kuruldu.
+
+**Mimari** (`src/lib/qa/agent.ts`, `runAgenticInspection`): Vercel AI SDK
+v7'nin `generateText({tools, stopWhen})` yerel araç-döngüsü kullanılıyor
+(node_modules'ten doğrulandı, tahmin edilmedi). 4 araç:
+
+- `click` / `type_text` -- sayfadaki her görünür etkileşimli elemente
+  `data-qa-ref="N"` etiketi basılıyor (DOM'da her snapshot'ta taze
+  yeniden numaralanıyor), LLM CSS selector uydurmak yerine bu indeksle
+  hedef seçiyor.
+- `wait_and_read` -- asenkron içerik için kısa bekleme + yeniden okuma.
+- `finish` -- nihai kararı bildirir (zaten var olan `verdictSchema`,
+  kriter-kriter PASS/FAIL/UNKNOWN + not).
+
+**Bütçe/güvenlik sınırları**: `stopWhen: [hasToolCall("finish"),
+stepCountIs(8)]` -- tüm çalışma için TOPLAM 8 araç çağrısı (kriter başına
+değil), hem OpenAI maliyetini hem Vercel fonksiyon süresini sınırlı tutuyor.
+Same-origin guard: bir tıklama siteyi terk ederse (`page.url()` origin'i
+değişirse) otomatik geri dönülüyor, model'e "off-origin navigasyon
+engellendi" olarak bildiriliyor -- ajan asıl doğrulanan siteden başka bir
+yere gidip onu değerlendirmeye başlayamaz. Sistem promptunda açık uyarı:
+gerçek ödeme/silme gibi geri alınamaz eylemler asla tetiklenmemeli, böyle
+kriterler UNKNOWN bırakılmalı.
+
+**`maxDuration` düzeltmeleri**: interaktif döngü artık dakikaları bulabilir --
+`process-tier2-qa/route.ts` (cron) 60'tan 300'e çıkarıldı, `contracts/[id]/
+page.tsx`'e de aynı sebeple `maxDuration = 300` eklendi (Server Action'lar
+tetiklendikleri route'un süre sınırını miras alıyor -- eklenmezse anlık
+`after()` tetikleyicisi yarıda kesilme riski taşıyordu). 300, Vercel'in
+Fluid Compute'suz çoğu planda üst sınırı -- gerçek plan bunu desteklemiyorsa
+elle kontrol gerekir (OPENAI_API_KEY gibi, bu da doğrulanmadı).
+
+`agent.test.ts` yeniden yazıldı (16 test) -- artık `generateText`'in kendisi
+değil, "ai" SDK'sının `tool()`/`hasToolCall`/`stepCountIs` sınırında mock'lanıp
+her testin kendi araç-çağrı sırasını sürmesi (`options.tools.click.execute(...)`)
+şeklinde çalışıyor; bu, ajan.ts'in gerçek `execute` mantığını (ref'e göre
+tıklama, off-origin guard, bütçe tükenmesi) mock Playwright'a karşı gerçekten
+koşturuyor. `npm run test` (149/149), typecheck, lint temiz.
+
+**Bilinçli olarak kapsam dışı bırakılanlar**: ekran görüntüsü kanıtı hâlâ yok
+(`qa_agent_runs.screenshots` kolonu hâlâ boş dolduruluyor -- Storage bucket
+kurulumu gerektiriyor, ayrı bir karar), sitenin keyfi bir başka sayfasına
+`navigate` aracı yok (sadece sayfanın kendi linklerine tıklamak zaten
+navigasyona izin veriyor). Cron route birden fazla sıkışmış siparişi
+sırayla işliyor -- her biri artık ~1 dakikayı bulabileceğinden, aynı anda
+birkaç sıkışmış sipariş birikirse 300s'i de aşabilir; bu oturumda
+yeniden tasarlanmadı, bilinen bir sınır olarak not düşülüyor.
+
+## 2026-09-07 (devam 3): LemonSqueezy'den Polar'a geçiş -- ve Polar'ın reddi
+
+LemonSqueezy tamamen kaldırıldı (`src/lib/lemonsqueezy.ts`, webhook route'u
+silindi), yerine Polar (`src/lib/polar.ts`, `src/app/api/webhooks/polar/route.ts`,
+`@polar-sh/sdk`) geçirildi. Tek bir custom-price, one-time ürün ("QA Doğrulama
+Ücreti", her tier bu ürünün üstünde checkout anında farklı `amount` ile çalışıyor
+-- Polar'ın metered pricing'i one-time ürünlerde desteklenmediği için Tier2'nin
+API maliyeti de bu şekilde, ayrı bir metered price değil). Webhook `order.paid`
+event'ini dinliyor, `@polar-sh/sdk/webhooks`'un `validateEvent()`'i (Standard
+Webhooks imza doğrulaması) kullanılıyor -- LemonSqueezy'nin elle HMAC'ından
+farklı olarak SDK'nın kendi doğrulayıcısı. `qa-actions.ts`'in `payQaOrder()`'ı
+artık gerçek müşteri IP'sini (`x-forwarded-for`) checkout'a geçiriyor -- sunucu
+tarafında oluşturulan bir checkout'ta bu olmadan Polar, Vercel'in kendi IP'sine
+göre yanlış para birimini seçebilirdi.
+
+**Polar hesabı reddedildi**: "ürününüz esasen bir teknik QA/inceleme hizmeti,
+uygun bir dijital ürün ya da SaaS aboneliği değil." Dikkatle çerçevelenmiş,
+dürüst bir appeal (sadece Tier1/2'nin tam otomatik doğasını anlatan, Tier3/4'ü
+açıkça hesabın kapsamı dışında bırakan) da reddedildi -- bu, sorunun kelime
+seçimi olmadığını, kategorik olduğunu gösteriyor: bir MoR, Lancerix'in KENDİ
+otomatik ürününü satmak için var, sonuçta bir insanı (reviewer'ı) emeği
+karşılığı ödüllendiren bir parayı toplamak için değil. Tier3/4'ün reviewer
+ücreti tam olarak bu şekle sahip.
+
+**Karar** (`/plan-ceo-review` ile kısa bir premise-challenge sonrası): ürünü
+değiştirmedik (Tier1/2'yi ayrı, "temiz" bir yüze taşımak gibi seçenekler
+reddedildi), ayrı raylı yaklaşım onaylandı -- Tier1/2 bir MoR'dan (Polar'la
+diyalog sürüyor, mesaj gönderildi 1-2 iş günü cevap bekleniyor; Dodo Payments
+paralelde denenecek), Tier3/4 şimdilik elle (`markQaOrderPaid`) kalıyor. Önemli
+çerçeveleme: Tier3/4'ün reviewer ödemesi, Faz 2'nin PayTR/iyzico marketplace
+payout ihtiyacıyla yapısal olarak aynı problem (bkz. TODOS.md) -- ayrı bir
+geçici çözüm inşa etmek yerine, Faz 2'nin marketplace bacağı tasarlanırken
+bunu da kapsayacak şekilde düşünülmeli.
+
+**Hâlâ eksik**: Polar hesabının onaylanıp onaylanmayacağı belirsiz. Dodo
+Payments hiç denenmedi. `npm run test` (149/149), typecheck, lint temiz;
+gerçek bir ödeme hiç uçtan uca test edilmedi (hesap onaylanmadan edilemez).
+
+## 2026-09-08: Sözleşmesiz doğrulama (Site Kontrolü)
+
+**Yeni özellik**: `/site-kontrol` -- herhangi bir signed-in kullanıcı (freelancer
+veya client, rolü fark etmiyor), sözleşme/proje/kabul kriteri olmadan, herhangi
+bir linke karşı erişilebilirlik (WCAG 2.1 A/AA) taraması satın alabiliyor.
+`@axe-core/playwright` ile deterministik, LLM maliyeti yok. Ayrı tablolar
+(`standalone_qa_orders`, `standalone_qa_reports`) -- mevcut `qa_tier_orders`/
+`qa_reports`/`choose_qa_tier`/`submit_qa_report` zincirine hiç dokunulmadı,
+sıfır regresyon riski (gerekçe: 20260908010000_standalone_qa_orders.sql'in
+kendi yorumu). Ödeme mevcut Polar entegrasyonunu (`createStandaloneOrderCheckout`,
+aynı `POLAR_QA_PRODUCT_ID`) yeniden kullanıyor, yeni Polar ürünü gerekmedi;
+webhook artık `qa_tier_order_id`/`standalone_order_id` metadata anahtarına göre
+doğru tabloyu güncelliyor.
+
+Motivasyon: hem "projesi platformda olmayan biri de kullanabilsin" hem de
+Polar'ın "otomatik SaaS" kategorisine daha temiz oturan bir ürün hattı (bkz.
+2026-09-07'deki Polar reddi) -- ama bu henüz doğrulanmış bir varsayım, Polar
+onayı hâlâ bekleniyor.
+
+**Doğrulandı**: migration hosted DB'ye pushlandı, tipler yeniden üretildi,
+`npm run typecheck`/`lint`/`test` temiz (155/155, +6 yeni test). Tarayıcıda
+uçtan uca denendi: kayıt, giriş, form, sipariş oluşturma, hata yolu hepsi
+çalışıyor. Gerçek axe-core taraması bu makinede (Windows, `@sparticuz/chromium`
+Lambda-only binary) çalışmıyor -- Tier2 ile aynı, önceden bilinen kısıt, Vercel'e
+deploy olunca (veya bir Linux ortamında) test edilmeli.
+
+**Hâlâ eksik**: Performance/CWV (B), API contract (C), i18n (D) tier'leri
+henüz yok -- TODOS.md'deki "Verification-tier expansion" kaleminin sadece A'sı
+bitti. Abonelik modeli (freelancer/client, kota) hâlâ karara bağlanmadı, bu
+özellik şimdilik sadece proje-başına-tek-seferlik ücretle çalışıyor.
+
+**`/plan-eng-review` (aynı gece, ikinci geçiş):** yukarıdaki özellik canlıya
+çıkmadan önce gözden geçirildi, 6 gerçek bulgu çıktı ve hepsi aynı gece
+düzeltildi:
+- `standalone_qa_orders_insert` RLS policy `fee_kurus`'u doğrulamıyordu --
+  bir istemci Server Action'ı atlayıp doğrudan sıfır ücretli sipariş
+  açabilirdi. Check constraint eklendi (`20260908020000_standalone_qa_orders_fee_check.sql`).
+- **SSRF** (outside-voice/Claude subagent buldu, kendi geçişimde
+  kaçırdım): `openStagingPage()`'in host allowlist'i yoktu -- herhangi bir
+  ücretsiz hesap, Lancerix'in sunucusunu bulut metadata endpoint'ine
+  (`169.254.169.254`) veya iç ağa yönlendirebilirdi. `src/lib/qa/ssrf-guard.ts`
+  eklendi (private/loopback/link-local IP aralıklarını DNS çözümlemesinden
+  sonra engelliyor), hem standalone-qa hem Tier2'nin paylaştığı
+  `openStagingPage`'e bağlandı. `private-ip` npm paketi bilerek kullanılmadı
+  -- kendi düzeltilmemiş SSRF açığı var (GHSA-9h3q-32c7-r533).
+- Ödeme "dekoratif"ti (outside-voice buldu): rapor tam detayıyla
+  `payment_status`'tan bağımsız gösteriliyordu, ödeme yapmak için hiçbir
+  neden yoktu (Tier1-4'ün aksine, burada gerçek bir sözleşme ilişkisi ödeme
+  motivasyonu sağlamıyor). Artık ödeme öncesi sadece durum + bulgu sayısı,
+  ödeme sonrası tam detay gösteriliyor.
+- Herhangi bir hesap günde sınırsız gerçek Chromium taraması başlatabiliyordu
+  (gerçek maliyet, garanti gelir yok) -- `STANDALONE_DAILY_LIMIT = 5`
+  (rolling 24 saat) eklendi.
+- `site-kontrol/page.tsx`'e `maxDuration = 300` eksikti (Tier2'nin aynı sınıf
+  işlem için zaten sahip olduğu koruma).
+- `payQaOrder`/`payStandaloneCheck` kod tekrarı `payViaPolarCheckout()`
+  (`polar.ts`) altında birleştirildi.
+
+Test kapsamı: `src/lib/qa/standalone.test.ts` (8 test, motoru gerçek axe-core
+mock'uyla doğrudan test ediyor) ve `src/lib/qa/ssrf-guard.test.ts` (19 test)
+eklendi. `npm run typecheck`/`lint`/`test` temiz (187/187). Tarayıcıda
+SSRF engeli gerçek metadata endpoint'ine karşı canlı doğrulandı.
+
+## 2026-09-08 (devam 2): Konumlandırma kararı — doğrulama motoru asıl tez
+
+Kullanıcının isteği: "doğru kurgulamamız lazım kendimizi doğru anlatmamız
+lazım artık" — bir önceki oturumun sonunda cevapsız kalan "artık lancerixi
+ne olarak anlatıcam" sorusunun devamı. `/plan-ceo-review` (SELECTIVE
+EXPANSION, kod diff'i yok — konumlandırma kararı). Tam gerekçe:
+`~/.gstack/projects/demearac/ceo-plans/2026-09-08-positioning-verification-first.md`.
+
+**Karar:** Lancerix'in çekirdek teklifi artık "B2B freelancer escrow
+platformu" değil, "otomatik + insan-onaylı teknik doğrulama motoru" —
+sözleşmeli QA ve sözleşmesiz Site Kontrolü aynı motorun iki giriş kapısı.
+Escrow (Faz 2) bu güven katmanının üstüne kurulan, Türkiye freelance-ödeme
+problemine özel bir dikey; kimlik değil. Kanıt icat edilmedi: Polar'ın
+Tier1-4 hesabını iki kez (ilk başvuru + Tier3/4'ü açıkça dışarıda bırakan
+dürüst bir appeal) kategorik olarak reddetmesi ("teknik inceleme hizmeti,
+uygun SaaS değil") zaten bu ayrımı üretim verisiyle kanıtlamış durumdaydı —
+bu karar sadece anlatıyı gerçeğe uydurdu.
+
+Yatırımcı/pazar tek-cümle pitch'i: *"Lancerix, serbest çalışan ve ajans
+işlerinin teslim edildiğini objektif olarak doğrulayan bir teknik doğrulama
+katmanı. Aynı otomatik + insan-onaylı QA motoru hem sözleşmeye bağlı B2B iş
+akışlarında hem de tek seferlik, herkese açık site denetimlerinde satılıyor.
+Sözleşme/escrow ürünümüz bu güven katmanının üzerine kurduğumuz, Türkiye
+freelance-ödeme problemine özel bir dikey."*
+
+**Uygulanan somut değişiklikler:** `CLAUDE.md`'nin başlığı ve açılış
+paragrafı yeniden yazıldı (artık iki giriş kapısını ve Polar kanıtını açıkça
+tarif ediyor); Phasing bölümüne Site Kontrolü'nün ayrı bir ürün değil Faz
+1'in ikinci giriş kapısı olduğu netleştirildi. Landing sayfası kopyasına
+bilerek dokunulmadı (ayrı `/plan-design-review` konusu, kapsam dışı
+bırakıldı).
+
+**Test edilmemiş varsayım:** Eğer Site Kontrolü'nün Polar başvurusu da
+reddedilirse, "kategori ayrımı" tezi yanlışlanmış olur — bu anlatı o zaman
+yeniden gözden geçirilmeli (plan dosyasında 0E'de not edildi). Site Kontrolü
+henüz kendi Polar başvurusundan geçmedi; bu karar Tier1-4'ün reddinden
+çıkarılan bir tahmin, kanıtlanmış bir sonuç değil.
+
+**Adversarial review'da bulunan ve düzeltilen 2 gerçek bulgu** (subagent,
+plan dosyasını taze okuyup inceledi):
+1. D1 kesinlik iddia ediyordu ("zaten kanıtlamış durumda") ama aynı
+   STATUS.md'nin kendisi Polar diyaloğunun hâlâ açık olduğunu söylüyordu —
+   dil "güçlü sinyal, kanıtlanmış gerçek değil"e yumuşatıldı (CLAUDE.md +
+   bu bölüm).
+2. Asıl ayrım "sözleşmeli vs sözleşmesiz" değil, "tam otomatik/deterministik
+   kontrol vs bespoke insan-emeği inceleme" olabilir — Tier3/4 (insan onayı)
+   çerçeveleme ne olursa olsun MoR-uygun yoldan hep dışarıda kalacak, zaten
+   elle faturalanıyor. Site Kontrolü bugün işe yarıyor çünkü en temiz vaka
+   (axe-core, sıfır LLM kararı) — bu netleştirme CLAUDE.md'ye eklendi.
+
+## 2026-09-08 (devam 3): Site Kontrolü'ne ikinci test tipi -- Hız & Performans
+
+Kullanıcının isteği: dün konuşulan genişletilmiş test tablosunu (Agentic
+QA/Midscene.js, Siber Güvenlik/Nuclei, Erişilebilirlik, Performans, API,
+Çeviri) uygula. Bu gece Performans (Lighthouse) sırası -- en düşük risk,
+Erişilebilirlik'in ayrı-tablo mimarisini birebir tekrar kullanıyor
+(`STANDALONE_CHECK_TYPES`'a `PERFORMANCE` eklendi, `standalone.ts`'e
+`runPerformanceCheck()` + `runStandaloneCheck()` dispatcher'ı, form artık
+iki radio seçeneği, rapor sayfası tip-farkında render). Siber Güvenlik
+(Nuclei) ayrı bir karar olarak TODOS.md'ye işlendi: standalone'a hiç
+eklenmeyecek, sadece sözleşmeli projelerde -- gerekçe: Nuclei gerçek bir
+zafiyet tarayıcısı, sözleşmenin kendisi (iki kimlik doğrulamalı hesap,
+onaylı staging URL, audit izi) anonim bir URL yapıştırmaktan çok daha güçlü
+bir yetkilendirme sinyali.
+
+Migration: `20260908030000_standalone_qa_orders_add_performance.sql`
+(check_type constraint'ine `PERFORMANCE` eklendi, aynı ücret -- fee_check
+policy'sine dokunulmadı). Hosted DB'ye push edildi, tipler yeniden üretildi.
+
+**İki gerçek bug bulundu ve düzeltildi, ikisi de sevkten önce:**
+1. `lighthouse`'un bağımlılığı `@paulirish/trace_engine` webpack'in
+   statik olarak çözemediği bir export şekli taşıyor -- `/site-kontrol`
+   rotasının tamamını build-time'da kırdı (yeni check'e özel değil, tüm
+   sayfa). `next.config.ts`'e `serverExternalPackages: ["lighthouse",
+   "chrome-launcher", "@paulirish/trace_engine"]` eklenerek düzeltildi.
+2. **Önem: tüm sunucuyu çöktürüyordu, sadece isteği değil.**
+   `chrome-launcher`'ın `launch()`'ı (Playwright'ın `chromium.launch()`'ının
+   aksine) spawn edilen child process'te unhandled `'error'` event'i
+   üzerinden başarısız olabiliyor -- yakalanmayan bir exception, process'teki
+   TÜM aktif istekleri düşürüyor, sadece tetikleyeni değil. Bu makinede
+   canlıda doğrulandı: `@sparticuz/chromium`'ın Windows'ta çalışmayan Linux
+   binary'si (Tier2/erişilebilirlik ile aynı, önceden bilinen kısıt) tüm
+   `next dev` process'ini çökertti. `existsSync()` kontrolü tek başına
+   yetmedi -- `@sparticuz/chromium` binary'sini platform fark etmeksizin
+   sabit bir temp yola çıkarıyor, yani dosya Windows'ta da var, sadece
+   çalıştırılabilir değil (farklı bir hata sınıfı). Düzeltme: `launch()`
+   çağrısının etrafına kapsamlı bir `process.once("uncaughtException", ...)`
+   dinleyicisi (çağrı sonuçlanır sonuçlanmaz kaldırılıyor, eşzamanlı başka
+   bir isteğin hatasını yutamaz) -- bkz. `src/lib/qa/standalone.ts`'teki
+   `runPerformanceCheck`. Bu sadece yerel bir geçici çözüm değil: aynı çökme
+   sınıfı, Lambda'da bozuk/eksik bir binary'de de gerçekleşirdi.
+
+Test kapsamı: `standalone.test.ts`'e 11 yeni test (Lighthouse mock'u,
+existsSync mock'u, ve process.emit ile simüle edilmiş uncaughtException
+senaryosu dahil). `npm run typecheck`/`lint`/`test` temiz (200/200).
+Tarayıcıda uçtan uca doğrulandı: form iki test tipini gösteriyor, her ikisi
+de Windows'ta beklenen "Site yüklenemedi" hatasıyla (chromium binary'si
+çalışmadığı için, bilinen kısıt) çöküş OLMADAN başarıyla tamamlanıyor,
+geçmiş listesi tip etiketiyle doğru render ediyor.
+
+**Hâlâ eksik:** Siber Güvenlik (Nuclei) tier'ı henüz kod yazılmadı --
+TODOS.md'de tam kapsamıyla (typed-confirm, template kısıtlaması) not edildi,
+sıradaki gece bu. API/Çeviri (C/D) hâlâ P3.
+
+## 2026-09-08 (devam 4): Ana sayfadan tek adımda "öde ve hesap aç"
+
+Kullanıcının isteği: "tam bir saasa dön" — paketler ana sayfada listelensin,
+sözleşmesiz kullanıcı orada denesin, ödeyerek hesap açsın. `/plan-ceo-review`
+tarzı kısa bir karar (AskUserQuestion, kod diff'i öncesi): iki mühendislik
+yolu arasında (tek-adımlı homepage formu vs. Polar-önce-öder-sonra-webhook-
+hesap-açar) kullanıcı **tek-adımlı homepage formunu** seçti — mevcut, test
+edilmiş auth+sipariş mimarisini birebir koruyor, `standalone_qa_orders`'ın
+zorunlu `requested_by_user_id` FK'sini nullable yapıp F-3'ün (davetli
+sözleşme) daha önce iki kez production'da patlayan RLS karmaşıklığını
+tekrarlamıyor.
+
+**Mimari:**
+- `src/lib/qa/standalone-order.ts` (yeni) — sipariş+tarama+rapor mantığı
+  `standalone-qa-actions.ts`'ten çıkarılıp paylaşılan bir yardımcıya taşındı
+  (`createOrderAndRunCheck`), hem dashboard akışı hem yeni marketing akışı
+  aynı fonksiyonu çağırıyor -- iki yerde ayrı ayrı bakım gerektiren bir
+  kopya yok.
+- `src/app/marketing-actions.ts` (yeni) — `purchaseStandaloneCheck`: form
+  (e-posta+parola+URL+paket) → `admin.auth.admin.createUser({email_confirm:
+  true})` ile hesap → `signInWithPassword()` ile aynı istekte oturum açma →
+  `createOrderAndRunCheck` → `payViaPolarCheckout` ile doğrudan Polar
+  checkout'a yönlendirme. Tek submit, tek redirect zinciri.
+  **Bilinçli politika sapması:** bu akışta e-posta doğrulaması atlanıyor
+  (`email_confirm: true`) — F-3'ün davetli-sözleşme RLS'i gibi başkasının
+  kaynağına erişim vermiyor (hesap sıfırdan, kimsenin hakkı yok), gerçek bir
+  ödeme e-posta tıklamasından daha güçlü bir niyet sinyali. Bedeli: biri
+  sahibi olmadığı bir e-postayı yazabilir, ama bu sadece kendi bildirimlerini
+  kaçırır, bir güvenlik sınırı değil.
+- `src/components/home/standalone-purchase-form.tsx` (yeni) — ana sayfaya
+  eklenen form; `HOME_COPY`'ye (`src/lib/i18n/dictionaries/home.ts`) hem TR
+  hem EN için `standalone` bloğu eklendi (iki paket kartı: Erişilebilirlik,
+  Hız & Performans).
+- `home-client.tsx`'e yeni bölüm: mevcut sözleşme-bağlı "Doğrulama
+  Yöntemleri" (Tier1-4) bölümünden sonra, kapanış CTA'sından önce.
+
+**Uçtan uca canlı doğrulandı** (gerçek Supabase + gerçek Polar credentials,
+mock değil): yeni bir e-posta ile form dolduruldu → sunucu loglarında hesap
+oluşturma + oturum açma + sipariş oluşturma zinciri doğrulandı → veritabanı
+doğrudan sorgulanarak hesabın gerçekten oluşup önceden onaylandığı
+(`email_confirmed_at` dolu) ve siparişin doğru `requested_by_user_id`'ye
+yazıldığı kanıtlandı → `/site-kontrol`'e taze bir navigasyonla (middleware
+`/login`'e yönlendirmedi) oturumun gerçekten kalıcı olduğu doğrulandı, yeni
+sipariş geçmişte görünüyor. Tarama kendisi bu makinede beklenen bilinen
+kısıtla (Windows'ta @sparticuz/chromium) başarısız oldu ama çökme olmadan,
+kullanıcı zaten oturum açmış halde "Site yüklenemedi" hatasını gördü.
+
+Refactor: `createStandaloneCheck` (standalone-qa-actions.ts) artık aynı
+paylaşılan yardımcıyı çağırıyor, davranış değişmedi (mevcut 11 test hâlâ
+geçiyor). Yeni test: `marketing-actions.test.ts` (7 test — geçersiz form,
+tekrar eden e-posta, oturum açma hatası, tarama hatası, mutlu yol dahil).
+`npm run typecheck`/`lint`/`test` temiz (207/207).
+
+**Hâlâ eksik:** Gerçek bir kart ödemesi uçtan uca hiç test edilmedi (Polar
+sandbox/gerçek işlem gerekir). Şifre sıfırlama akışı bu projede hiç yok
+(kontrol edildi, `/forgot-password` gibi bir route yok) -- bu akışla
+kendi seçtiği parolayı unutan bir kullanıcının hesabına geri dönüş yolu
+şu an hiçbir yerde yok, sadece bu akışa özgü bir eksiklik değil.
+
+## 2026-09-08 (devam 5): Tier restructure + standalone tarafta 5 yeni modül
+
+Kullanıcının kararı: Tier4 kaldırıldı, Tier1 kalıcı ücretsiz (%10 komisyona
+dahil, Polar'a hiç girmiyor), Tier2 ₺299 sabit, Tier3 ₺3.500 sabit — reviewer
+roster seçimi tamamen kalktı, Tier3'ü artık founder kendisi inceliyor (ilk
+zamanlarda). Standalone/self-serve taraf da genişledi: Erişilebilirlik ve
+Performans'a ek olarak 5 yeni sıfır-maliyetli modül eklendi (SEO & Meta,
+Görsel/Mobil Taşma, Ölü/Kırık Link, Form & Validasyon Bütünlüğü, Genel
+Etkileşim & Hata Taraması) — toplam 7 standalone check_type.
+
+**Sözleşmeli taraf (migration `20260908040000_tier_restructure.sql`):**
+- `set_qa_selection()` yeniden yazıldı: TIER1→0, TIER2→29900, TIER3→350000
+  kuruş, reviewer parametresi artık yok sayılıyor (kabul ediliyor ama
+  kullanılmıyor, geriye dönük uyumluluk için). `qa_reviewer_id` her zaman
+  null yazılıyor.
+- İlk-sözleşme-ücretsiz promosyonu (`freelancer_has_paid_qa_before()`)
+  kaldırıldı — Tier1 zaten her zaman ücretsiz olduğu için amacı kalmadı;
+  Tier2 için ayrıca istenirse bu ayrı bir yeni karar olur.
+- `contracts.qa_tier` / `qa_tier_orders.tier` check constraint'lerinden
+  TIER4 çıkarıldı (kaldırmadan önce production'da hiç TIER4 satırı
+  olmadığı doğrulandı — backfill gerekmedi).
+- `QaSelectionPanel`'den reviewer-picker UI'ı, ilk-sözleşme-ücretsiz rozeti
+  tamamen kaldırıldı (artık hiçbir tier reviewer seçimi gerektirmiyor).
+  `qa_reviewers` tablosu/admin roster UI'ı dokunulmadan kalıyor (silinmedi
+  — "şimdilik gerekmiyor", ileride roster geri gelirse sıfırdan kurulmaz).
+
+**Standalone taraf** (migration
+`20260908050000_standalone_qa_orders_add_modules.sql`, yeni bağımlılıklar:
+`cheerio`, `linkinator`): `src/lib/qa/standalone.ts`'e 5 yeni fonksiyon.
+İkisi (SEO_META, DEAD_LINKS) tarayıcı bile açmıyor — sadece `fetch()` +
+statik parse, Windows'taki chromium kısıtından tamamen bağımsız, gerçekten
+test edilebilir. Üçü (VISUAL_OVERFLOW, FORM_VALIDATION, INTERACTION_SCAN)
+`openStagingPage()`'i yeniden kullanıyor.
+
+**Bilinçli güvenlik/etik kararı — INTERACTION_SCAN ve FORM_VALIDATION hiç
+form submit etmiyor:** Dün geceki taslak "her butona bas" diyordu ama bu
+Site Kontrolü'nün kimsenin sahibi olmadığı gerçek üçüncü taraf sitelere
+karşı çalıştığı anlamına geliyor — gerçek bir submit, birinin production
+sistemine gerçek bir kayıt/sipariş/e-posta düşürebilir. Bunun yerine:
+FORM_VALIDATION sadece form YAPISINI inceliyor (required var mı, submit
+butonu var/aktif mi, email alanları type="email" mi) hiç doldurup
+göndermeden; INTERACTION_SCAN alanları doldurur ama submit tipi hiçbir şeye
+tıklamaz (bir `<form>` içindeki type'sız `<button>`'ın HTML spesifikasyonu
+gereği submit'e varsayıldığı da hesaba katıldı). "Agentic QA" diye hiç
+adlandırılmadı — LLM yok, projeye özel kriter okumuyor, bu yüzden kopyada
+"Genel Etkileşim & Hata Taraması" + "yapay zeka değil, kural tabanlı" notu.
+
+**İki webpack build hatası bulundu, ikisi de sevkten önce düzeltildi**
+(`next.config.ts`'e `serverExternalPackages` eklendi): `lighthouse`'un
+zincirinden bir tane daha (`@paulirish/trace_engine` zaten vardı), ve
+`linkinator`'ın `import(\`file://${...}\`)` template-literal dinamik
+import'u webpack'in statik çözemediği bir başka desen. İkisi de gerçek
+çalışma zamanında (Node'un kendi require/import'u) sorunsuz.
+
+**Uçtan uca canlı doğrulandı** (gerçek Supabase + gerçek Polar, mock değil):
+ana sayfadan yeni bir e-postayla DEAD_LINKS paketi seçilip form dolduruldu
+→ hesap oluştu (önceden onaylı) → oturum açıldı → sipariş yazıldı → gerçek
+linkinator taraması `https://example.com`'u tarayıp 3 link buldu, 0 kırık,
+PASS → **gerçek Polar checkout sayfasına (polar.sh) yönlendirme
+gerçekleşti** (tarayıcı sekmesinin origin'i doğrulandı). Veritabanı
+doğrudan sorgulanarak sipariş ve raporun doğru yazıldığı teyit edildi.
+
+Test kapsamı: `standalone.test.ts` 50 teste çıktı (5 yeni fonksiyon için
+tam PASS/PARTIAL/FAIL/null dallanması + dispatcher). `qa-actions.test.ts`
+reviewer-gerekli testleri güncellendi. `npm run typecheck`/`lint`/`test`
+temiz (235/235).
+
+**Hâlâ eksik/bilinçli kapsam dışı:** Bu 7 modül şu an hâlâ "seç ve öde"
+düz listesi — kullanıcının "paketleri özel içeriklerle oluştururuz" dediği
+kademeli paket (Temel/Standart/Kapsamlı, birden fazla modülü tek fiyata
+bundleyen) tasarımı henüz uygulanmadı; bu ayrı bir fiyatlandırma/UX kararı
+gerektiriyor (bundle fiyatı, hangi modül hangi kademede), TODOS.md'ye
+düşüldü. Rapor render'ı yeni 5 modül için işlevsel ama sade (FactGrid/
+IssueList genel bileşenleri) — Erişilebilirlik/Performans'ın aldığı özel
+tasarım özenini almadı, istenirse ayrı bir tasarım geçişi gerekir.
 
 ## Bilinen boşluklar / sıradaki
 

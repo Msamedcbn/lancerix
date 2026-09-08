@@ -4,7 +4,13 @@ import { processTier2Order } from "@/lib/qa/agent";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 60;
+// 2026-09-07: raised from 60 -- the agent now runs an interactive tool-call
+// loop (click/type/observe, up to MAX_AGENT_STEPS in agent.ts) instead of a
+// single page read, so one order can legitimately take well past a minute.
+// 300s is Vercel's non-Fluid-Compute ceiling on most plans; if this route
+// starts timing out in production, that plan ceiling -- not this number --
+// is the thing to check first.
+export const maxDuration = 300;
 
 /**
  * Safety net for TIER2 (Agentic QA) orders, one table over from

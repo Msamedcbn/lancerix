@@ -14,10 +14,10 @@ import {
   ScanSearch,
   ShieldCheck,
   UserCheck,
-  UserCog,
 } from "lucide-react";
 
 import { HorizontalAccordion } from "@/components/home/horizontal-accordion";
+import { StandalonePurchaseForm } from "@/components/home/standalone-purchase-form";
 import { gsap, useGSAP } from "@/lib/gsap";
 import { QA_TIER_INFO } from "@/lib/validations/delivery";
 import { SiteHeader } from "@/components/layout/site-header";
@@ -41,12 +41,11 @@ export const HASH =
  */
 const STEP_ICONS = [FileSignature, LinkIcon, ScanSearch, FileCheck2, Clock] as const;
 
-const TIERS = ["TIER1", "TIER2", "TIER3", "TIER4"] as const;
+const TIERS = ["TIER1", "TIER2", "TIER3"] as const;
 const TIER_ICON = {
   TIER1: UserCheck,
   TIER2: ScanSearch,
   TIER3: ShieldCheck,
-  TIER4: UserCog,
 } as const;
 
 function Magnetic({
@@ -372,7 +371,7 @@ export function HomeClient({
             </h2>
           </div>
 
-          <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-5 md:grid-cols-3">
             {TIERS.map((tier) => {
               // Availability stays with QA_TIER_INFO (CLAUDE.md: source of
               // truth); only the words come from the dictionary.
@@ -409,6 +408,11 @@ export function HomeClient({
             })}
           </div>
         </div>
+      </section>
+
+      {/* --- standalone self-serve: pay to open an account -------------------- */}
+      <section id="dene" className="px-6 pb-24 md:pb-32">
+        <StandalonePurchaseForm copy={t.standalone} />
       </section>
 
       {/* --- close ------------------------------------------------------------ */}

@@ -29,14 +29,8 @@ import {
   type ProjectCategory,
 } from "@/lib/validations/project-category";
 import { requireSession } from "@/lib/auth/session";
+import { getContract, kurus, type Milestone } from "@/lib/data/contracts";
 import {
-  getContract,
-  isFreelancersFirstPaidTier,
-  kurus,
-  type Milestone,
-} from "@/lib/data/contracts";
-import {
-  listActiveReviewers,
   listDeliveries,
   listDeliveryEvents,
   type DeliveryEvent,
@@ -376,6 +370,16 @@ function ContractStatusBadge({ status }: Readonly<{ status: string }>) {
   );
 }
 
+// 2026-09-07: submitQaDelivery (qa-actions.ts) is a Server Action invoked
+// from this page, and its after() callback runs processTier2Order() -- an
+// interactive tool-call loop that can take well past a minute (see the same
+// note on process-tier2-qa/route.ts). A Server Action inherits the duration
+// limit of the route it was called from, so this segment needs the same
+// ceiling or a slow Tier2 run risks getting killed mid-flight on the
+// immediate path (the cron sweep would still catch it, just late and at
+// double the OpenAI cost for the retry).
+export const maxDuration = 300;
+
 export default async function ContractPage({
   params,
   searchParams,
@@ -398,20 +402,8 @@ export default async function ContractPage({
 
   const anySigned = contract.signatures.length > 0;
 
-  const qaSelectionEditable = side === "client" && !anySigned;
-
   const deliveries = isQaOnly ? await listDeliveries(contract.id) : [];
-  const [events, reviewers, firstPaidTier] = isQaOnly
-    ? await Promise.all([
-        listDeliveryEvents(deliveries.map((d) => d.id)),
-        // Only the client needs the roster, and only while the QA selection
-        // is still editable -- once signed it's locked in and read-only.
-        qaSelectionEditable ? listActiveReviewers() : Promise.resolve([]),
-        qaSelectionEditable
-          ? isFreelancersFirstPaidTier(contract.freelancer_id, contract.id)
-          : Promise.resolve(false),
-      ])
-    : [[], [], false];
+  const events = isQaOnly ? await listDeliveryEvents(deliveries.map((d) => d.id)) : [];
 
   const messages = await listMessages(contract.id, session.userId);
 
@@ -678,10 +670,8 @@ export default async function ContractPage({
                 qaTier={contract.qa_tier}
                 qaReviewer={contract.qaReviewer}
                 qaFeeKurus={contract.qa_fee_kurus}
-                reviewers={reviewers}
                 side={side}
                 anySigned={anySigned}
-                freelancerFirstPaidTier={firstPaidTier}
               />
               <DeliveryPanel
                 contractId={contract.id}

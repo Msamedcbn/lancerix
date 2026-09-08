@@ -17,6 +17,7 @@ import {
   ScrollText,
   Search,
   Settings,
+  ShieldCheck,
   UserPlus,
   UserRound,
   Users,
@@ -51,7 +52,8 @@ export type NavIcon =
   | "layout-dashboard"
   | "search"
   | "inbox"
-  | "user-plus";
+  | "user-plus"
+  | "shield-check";
 
 export type NavItem = { href: Route; label: string; icon: NavIcon };
 
@@ -74,6 +76,7 @@ const ICONS: Record<NavIcon, typeof Briefcase> = {
   search: Search,
   inbox: Inbox,
   "user-plus": UserPlus,
+  "shield-check": ShieldCheck,
 };
 
 /**

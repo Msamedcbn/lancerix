@@ -7,7 +7,7 @@ import { markQaOrderPaid, type FormState } from "@/app/(dashboard)/admin/actions
 const INITIAL: FormState = { error: null };
 
 /**
- * The manual fallback for a LemonSqueezy webhook that never arrived (see
+ * The manual fallback for a Polar webhook that never arrived (see
  * TODOS.md's webhook reconciliation entry) -- markQaOrderPaid() already
  * existed and was correct, this is the first UI surface that reaches it.
  */

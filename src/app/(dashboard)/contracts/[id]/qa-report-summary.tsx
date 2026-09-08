@@ -37,12 +37,20 @@ const reportResultsSchema = z.object({
   criteria: z.array(criterionResultSchema).optional(),
 });
 
-const CRITERION_TONE: Record<string, string> = {
-  PASS: "border-brand/30 bg-brand/5 text-brand",
-  FAIL: "border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-300",
-  UNKNOWN:
-    "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-300",
+/**
+ * Same badge shape as criteria-panel.tsx's numbered circles (size-6,
+ * rounded-full, tinted background + matching border) -- this list sits one
+ * scroll below that one on the same page, so it should read as the same
+ * kind of list, not a different visual language. A solid glyph inside a
+ * tinted badge stays legible regardless of the card's own background,
+ * unlike a translucent pill sitting on an already-pale tint.
+ */
+const CRITERION_BADGE: Record<string, string> = {
+  PASS: "bg-brand-muted text-brand",
+  FAIL: "bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300",
+  UNKNOWN: "bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300",
 };
+const CRITERION_GLYPH: Record<string, string> = { PASS: "✓", FAIL: "✕", UNKNOWN: "?" };
 const CRITERION_LABEL: Record<string, string> = { PASS: "Karşılandı", FAIL: "Karşılanmadı", UNKNOWN: "Belirsiz" };
 
 /**
@@ -89,19 +97,24 @@ export function QaReportSummary({
       ) : null}
 
       {criteria && criteria.length > 0 ? (
-        <ol className="mt-3 flex flex-col gap-2">
+        <ol className="mt-3 flex list-none flex-col gap-2">
           {criteria.map((c, i) => (
             <li
               key={i}
-              className={`rounded-lg border px-3 py-2 text-xs ${CRITERION_TONE[c.met] ?? CRITERION_TONE.UNKNOWN}`}
+              className="flex items-start gap-3 rounded-xl border border-zinc-100 bg-zinc-50/50 p-3 dark:border-zinc-800/60 dark:bg-zinc-900/40"
             >
-              <div className="flex items-start justify-between gap-3">
-                <span className="font-medium">{c.description}</span>
-                <span className="shrink-0 rounded-full bg-white/60 px-2 py-0.5 text-[0.65rem] font-medium dark:bg-black/20">
-                  {CRITERION_LABEL[c.met] ?? c.met}
-                </span>
+              <span
+                className={`flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-extrabold ${CRITERION_BADGE[c.met] ?? CRITERION_BADGE.UNKNOWN}`}
+                title={CRITERION_LABEL[c.met] ?? c.met}
+              >
+                {CRITERION_GLYPH[c.met] ?? "?"}
+              </span>
+              <div className="min-w-0">
+                <p className="text-sm leading-relaxed text-zinc-700 dark:text-zinc-300">{c.description}</p>
+                {c.note ? (
+                  <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{c.note}</p>
+                ) : null}
               </div>
-              {c.note ? <p className="mt-1 text-foreground/70 dark:text-foreground/60">{c.note}</p> : null}
             </li>
           ))}
         </ol>

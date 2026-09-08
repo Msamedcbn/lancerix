@@ -1,8 +1,40 @@
-# Lancerix — B2B Freelancer Billing & Escrow Platform
+# Lancerix — Technical Verification Platform for Freelance & Agency Work
 
-Freelancers issue B2B corporate invoices, sign 3-way contracts, hold client funds
-in escrow via a marketplace gateway, and receive net payouts after automatic
-tax/withholding calculation. Turkish market.
+Lancerix's core product is an automated + human-reviewed technical
+verification engine: given a URL and either a set of contract acceptance
+criteria or a plain accessibility check, it runs QA and issues a timestamped
+report. Two go-to-market surfaces sell the same engine, and both matter to
+how this codebase is read:
+
+1. **Contract-bound QA** — freelancer & client sign a 3-way B2B contract,
+   agree objective acceptance criteria, and the tiered QA below verifies
+   delivery against them (`src/app/(dashboard)/contracts`).
+2. **Standalone verification** (`/site-kontrol`, shipped 2026-09-08,
+   `src/lib/qa/standalone.ts`) — any signed-in user, with or without a
+   project on the platform, pays a fixed fee to run a check against any
+   URL. No contract, no counterparty.
+
+The freelancer B2B billing/escrow product (Faz 2, below) is the vertical
+application of this verification layer to the Turkish freelance-payment
+problem specifically — it is not Lancerix's whole identity, and new work
+should not be framed as if escrow were the product and verification a
+feature of it. Shipping the verification engine first, and selling it
+standalone, de-risks the parts of Faz 2 that need company formation and
+BDDK/TCMB payment-license clearance: it proves real payment demand today,
+and — this is not incidental — it maps far more cleanly onto a Merchant of
+Record's "eligible SaaS" category than a bespoke escrow product does. Polar
+rejected Lancerix's contract-bound QA account twice (2026-09-07, including
+an appeal that explicitly excluded the human-reviewer tiers): "your product
+is primarily a technical review service, not an eligible digital product or
+SaaS subscription." Treat that as a strong signal for this framing, not
+settled proof — the real dividing line Polar is drawing looks less like
+"contract-bound vs. standalone" and more like "fully automated, deterministic
+check vs. bespoke human-labor review": Tier 3/4 (a person signs off) sits
+outside the MoR-eligible path no matter how it's framed, and stays on manual
+billing regardless. Site Kontrolü works today because it's the cleanest case
+(axe-core, zero LLM judgment) — it hasn't been submitted to Polar yet, so its
+own fit is still an unproven assumption, not a confirmed win. (Decision
+record: `~/.gstack/projects/demearac/ceo-plans/2026-09-08-positioning-verification-first.md`.)
 
 ## Phasing (current: Faz 1)
 
@@ -14,7 +46,9 @@ URL / PR link → the platform runs QA (tiered below) and issues a timestamped
 PDF verification report → payment settles directly between the two parties;
 Lancerix supplies only the technical arbitration report. A green QA result
 does not auto-release anything — it triggers a 5-day final-review notice to
-the client.
+the client. The standalone `/site-kontrol` product (above) is the same QA
+machinery sold without a contract — treat both as Faz 1, not as a separate
+product line to special-case.
 
 QA in Faz 1 verifies only the acceptance criteria written into the contract.
 Criteria are free-text descriptions the freelancer writes and both parties

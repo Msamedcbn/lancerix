@@ -77,6 +77,25 @@ export type HomeCopy = {
   pricingTitle: string;
   comingSoon: string;
   tiers: Record<QaTier, TierCopy>;
+  /** The self-serve /site-kontrol purchase, sold with no contract and no
+   * dashboard visit -- see StandaloneFormCopy in standalone-purchase-form.tsx. */
+  standalone: {
+    eyebrow: string;
+    title: string;
+    body: string;
+    packages: Record<
+      "ACCESSIBILITY" | "PERFORMANCE" | "SEO_META" | "VISUAL_OVERFLOW" | "DEAD_LINKS" | "FORM_VALIDATION" | "INTERACTION_SCAN",
+      { label: string; price: string; hint: string }
+    >;
+    urlLabel: string;
+    urlPlaceholder: string;
+    emailLabel: string;
+    passwordLabel: string;
+    submit: string;
+    footer: string;
+    loginPrompt: string;
+    loginLink: string;
+  };
   closingTitle: string;
   closingPrimary: string;
   closingSecondary: string;
@@ -90,7 +109,7 @@ export const HOME_COPY: Record<Locale, HomeCopy> = {
     badge: "Bağımsız Kod Doğrulama",
     heroTitle: "Projenizin teslimatını şansa bırakmayın.",
     heroBody:
-      "Yazılım projelerindeki anlaşmazlıkları ortadan kaldırıyoruz. Müşteriyseniz tam istediğiniz kodu teslim aldığınızdan emin olun; geliştiriciyseniz bitirdiğiniz işin haklı onayını anında alın.",
+      "Yazılım projelerindeki anlaşmazlıkları ortadan kaldırıyoruz. Müşteriyseniz tam istediğiniz kodu teslim aldığınızdan emin olun; geliştiriciyseniz işinizin hakkını alın.",
     ctaPrimary: "Hemen başla",
     ctaSecondary: "Nasıl çalışır?",
     cities: {
@@ -161,7 +180,56 @@ export const HOME_COPY: Record<Locale, HomeCopy> = {
       TIER1: tierCopyFromInfo("TIER1"),
       TIER2: tierCopyFromInfo("TIER2"),
       TIER3: tierCopyFromInfo("TIER3"),
-      TIER4: tierCopyFromInfo("TIER4"),
+    },
+    standalone: {
+      eyebrow: "SÖZLEŞME GEREKMEZ",
+      title: "Hemen dene — hesabını ödeyerek aç.",
+      body: "Projen bu platformda olmasa bile, herhangi bir linki şimdi test edebilirsin. Paketini seç, öde — hesabın aynı anda açılır.",
+      packages: {
+        ACCESSIBILITY: {
+          label: "Erişilebilirlik",
+          price: "₺99",
+          hint: "WCAG 2.1 A/AA taraması, axe-core ile.",
+        },
+        PERFORMANCE: {
+          label: "Hız & Performans",
+          price: "₺99",
+          hint: "Core Web Vitals — LCP, FCP, CLS, Lighthouse ile.",
+        },
+        SEO_META: {
+          label: "SEO & Meta Uyumluluğu",
+          price: "₺99",
+          hint: "Başlık, açıklama, OG/Twitter kartları, canonical, favicon.",
+        },
+        VISUAL_OVERFLOW: {
+          label: "Görsel/Mobil Taşma",
+          price: "₺99",
+          hint: "320/768/1440px genişliklerde yatay taşma kontrolü.",
+        },
+        DEAD_LINKS: {
+          label: "Ölü/Kırık Link Taraması",
+          price: "₺99",
+          hint: "Sayfadaki her linke istek atıp 404/kırık olanları listeler.",
+        },
+        FORM_VALIDATION: {
+          label: "Form & Validasyon Bütünlüğü",
+          price: "₺99",
+          hint: "Formların gönder butonu, zorunlu alanlar, e-posta tipi kontrolü.",
+        },
+        INTERACTION_SCAN: {
+          label: "Genel Etkileşim & Hata Taraması",
+          price: "₺99",
+          hint: "Formları doldurur, butonlara tıklar, konsol hatalarını yakalar. (Yapay zeka değil, kural tabanlı.)",
+        },
+      },
+      urlLabel: "Test edilecek link",
+      urlPlaceholder: "https://ornek-site.com",
+      emailLabel: "E-posta",
+      passwordLabel: "Parola",
+      submit: "Öde ve hesabımı aç",
+      footer: "Kayıt formu yok — ödeme onayıyla hesabın anında açılır.",
+      loginPrompt: "Zaten hesabın var mı?",
+      loginLink: "Giriş yap",
     },
     closingTitle: "İşinizi güvence altına alın.",
     closingPrimary: "Ücretsiz Başla",
@@ -244,8 +312,8 @@ export const HOME_COPY: Record<Locale, HomeCopy> = {
     tiers: {
       TIER1: {
         label: "Basic check",
-        price: "₺99",
-        hint: "The criteria checklist goes to the client, who reviews the work themselves. The fee covers the verification record itself.",
+        price: "Free",
+        hint: "The criteria checklist goes to the client, who reviews the work themselves. Included in the platform commission, never billed separately.",
         details: [
           "The client reviews it directly",
           "No autonomous agent cost",
@@ -254,34 +322,74 @@ export const HOME_COPY: Record<Locale, HomeCopy> = {
       },
       TIER2: {
         label: "Agentic QA",
-        price: "₺250 + API usage",
-        hint: "An autonomous test agent sweeps the UI/UX and the acceptance criteria, within a capped API budget.",
+        price: "₺299",
+        hint: "An autonomous test agent sweeps the UI/UX and the acceptance criteria. Flat price, no surprise charge after the run.",
         details: [
           "UI/UX and functionality sweep",
-          "Capped API usage limit",
-          "API cost billed after the run",
+          "Flat price, no surprises",
+          "Timestamped, tamper-proof record",
         ],
       },
       TIER3: {
-        label: "Agentic + manual tester",
-        price: "₺250 + API + tester fee",
-        hint: "Autonomous tests run first, then a senior QA engineer verifies the result and signs off.",
+        label: "Agentic + expert review",
+        price: "₺3.500",
+        hint: "Autonomous tests run first, then a senior engineer personally verifies the result and signs off. Flat price.",
         details: [
           "Autonomous tests plus human review",
           "Engineer-signed report",
-          "Tester's project fee added on top",
+          "Flat price, no surprises",
         ],
       },
-      TIER4: {
-        label: "Manual tester only",
-        price: "Tester's own fee",
-        hint: "A QA specialist goes through the project by hand and reports what they find.",
-        details: [
-          "No agent — direct expert review",
-          "Flat fee set by the tester for your project",
-          "Detailed, itemised report",
-        ],
+    },
+    standalone: {
+      eyebrow: "NO CONTRACT NEEDED",
+      title: "Try it now — pay to open your account.",
+      body: "Even if your project isn't on this platform, you can test any link right now. Pick a package, pay — your account opens in the same step.",
+      packages: {
+        ACCESSIBILITY: {
+          label: "Accessibility",
+          price: "₺99",
+          hint: "A WCAG 2.1 A/AA scan, powered by axe-core.",
+        },
+        PERFORMANCE: {
+          label: "Speed & Performance",
+          price: "₺99",
+          hint: "Core Web Vitals — LCP, FCP, CLS, via Lighthouse.",
+        },
+        SEO_META: {
+          label: "SEO & Meta Compliance",
+          price: "₺99",
+          hint: "Title, description, OG/Twitter cards, canonical, favicon.",
+        },
+        VISUAL_OVERFLOW: {
+          label: "Visual/Mobile Overflow",
+          price: "₺99",
+          hint: "Checks for horizontal overflow at 320/768/1440px widths.",
+        },
+        DEAD_LINKS: {
+          label: "Dead Link Check",
+          price: "₺99",
+          hint: "Requests every link on the page, lists broken (404) ones.",
+        },
+        FORM_VALIDATION: {
+          label: "Form & Validation Integrity",
+          price: "₺99",
+          hint: "Checks forms have a working submit control, required fields, correct email type.",
+        },
+        INTERACTION_SCAN: {
+          label: "General Interaction & Error Scan",
+          price: "₺99",
+          hint: "Fills forms, clicks buttons, watches for console errors. (Rule-based, not AI.)",
+        },
       },
+      urlLabel: "Link to test",
+      urlPlaceholder: "https://example.com",
+      emailLabel: "Email",
+      passwordLabel: "Password",
+      submit: "Pay and open my account",
+      footer: "No separate signup form — a successful payment opens the account instantly.",
+      loginPrompt: "Already have an account?",
+      loginLink: "Log in",
     },
     closingTitle: "Put your work on the record.",
     closingPrimary: "Start free",

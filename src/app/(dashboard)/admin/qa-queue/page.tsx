@@ -11,8 +11,7 @@ import { QaReportForm } from "./qa-report-form";
 
 const TIER_LABEL: Record<string, string> = {
   TIER2: "Agentic QA",
-  TIER3: "Agentic + Manuel Tester",
-  TIER4: "Sadece Manuel Tester",
+  TIER3: "Agentic + Uzman İncelemesi",
 };
 
 export default async function AdminQaQueuePage() {
@@ -29,7 +28,7 @@ export default async function AdminQaQueuePage() {
       {pendingOrders.length > 0 ? (
         <Panel title="Bekleyen QA ödemesi">
           <p className="mb-4 text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">
-            Normalde LemonSqueezy webhook&apos;u bu siparişleri otomatik ödendi
+            Normalde Polar webhook&apos;u bu siparişleri otomatik ödendi
             işaretler. Webhook hiç gelmediyse (kaçan bir olay, banka havalesi vb.)
             burada elle işaretleyebilirsin.
           </p>

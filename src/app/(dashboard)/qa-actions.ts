@@ -1,14 +1,12 @@
 "use server";
 
-import type { Route } from "next";
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { after } from "next/server";
 
 import { requireRole, requireSession } from "@/lib/auth/session";
 import { getContract } from "@/lib/data/contracts";
 import { FAIL, firstIssue, OK, toUserMessage, type FormState } from "@/lib/forms";
-import { createQaOrderCheckout } from "@/lib/lemonsqueezy";
+import { createQaOrderCheckout, payViaPolarCheckout } from "@/lib/polar";
 import { notifyDeliverySubmitted, notifyQaOutcome, notifyReviewerAssigned } from "@/lib/notify/email";
 import { processTier2Order } from "@/lib/qa/agent";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -42,21 +40,10 @@ export async function setQaSelection(
   const tier = qaTierSchema.safeParse(formData.get("tier"));
   if (!tier.success) return FAIL(firstIssue(tier.error));
 
-  const info = QA_TIER_INFO[tier.data];
-  const reviewerId = String(formData.get("reviewerId") ?? "").trim() || null;
-
-  if (info.needsReviewer && !reviewerId) {
-    return FAIL("Bir mühendis seç.");
-  }
-
   const supabase = await createClient();
   const { error } = await supabase.rpc("set_qa_selection", {
     p_contract_id: contractId,
     p_tier: tier.data,
-    // The RPC defaults this to null; PostgREST types the optional arg as
-    // undefined, so "no reviewer" is an absent key rather than an explicit
-    // null. Tier 1/2 take this path.
-    ...(reviewerId ? { p_reviewer_id: reviewerId } : {}),
   });
   if (error) return FAIL(toUserMessage(error, "QA paketi kaydedilemedi."));
 
@@ -144,7 +131,12 @@ export async function submitQaDelivery(
   }
 
   const reviewerId = contract.qa_reviewer_id;
-  if ((tier === "TIER3" || tier === "TIER4") && reviewerId && delivery) {
+  if (tier === "TIER3" && reviewerId && delivery) {
+    // Dead for any contract signed after the 2026-09-08 tier restructure
+    // (set_qa_selection() always writes qa_reviewer_id = null now) -- left
+    // in place only so a legacy in-flight Tier3 contract that already has a
+    // reviewer assigned from before that change still gets its email.
+    //
     // The token was issued inside submit_qa_delivery() itself (same
     // transaction as the qa_tier_orders row) -- fetched back and emailed
     // here, after the response, via the service-role client only. The
@@ -198,13 +190,14 @@ export async function submitQaDelivery(
 }
 
 /**
- * Paying a TIER3/TIER4 order's reviewer fee.
+ * Paying a Tier2/Tier3 order's fee.
  *
  * Anyone party to the contract can trigger this -- RLS on qa_tier_orders
  * already limits the select to contract parties/admin, so there is nothing
  * beyond requireSession() to check here. The fee itself is fixed at
- * choose_qa_tier() time from the reviewer's own rate_kurus, so this never
- * invents an amount; it just hands that stored figure to LemonSqueezy.
+ * set_qa_selection() time (QA_TIER_INFO's price, snapshotted onto the
+ * contract), so this never invents an amount; it just hands that stored
+ * figure to Polar.
  */
 export async function payQaOrder(
   _prev: FormState,
@@ -230,20 +223,14 @@ export async function payQaOrder(
     return FAIL("Bu sipariş için henüz bir ücret belirlenmemiş.");
   }
 
-  let checkoutUrl: string;
-  try {
-    checkoutUrl = await createQaOrderCheckout(
-      order.id,
-      order.fee_kurus,
-      QA_TIER_INFO[order.tier as QaTier].label,
-    );
-  } catch (e) {
-    return FAIL(e instanceof Error ? e.message : "Ödeme linki oluşturulamadı.");
-  }
-
-  // An external LemonSqueezy URL, not an app route -- typedRoutes only knows
-  // this app's own routes, so it needs an explicit escape hatch here.
-  redirect(checkoutUrl as Route);
+  // Checkout sessions are created from this server action, not the
+  // customer's own browser -- Polar would otherwise geolocate the request to
+  // wherever this app is hosted and could pick the wrong currency. IP
+  // extraction + redirect lives in payViaPolarCheckout (polar.ts), shared
+  // with payStandaloneCheck.
+  return payViaPolarCheckout((customerIp) =>
+    createQaOrderCheckout(order.id, order.fee_kurus, QA_TIER_INFO[order.tier as QaTier].label, customerIp),
+  );
 }
 
 /**

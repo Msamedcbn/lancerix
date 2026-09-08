@@ -104,7 +104,7 @@ export type PendingQaOrderRow = QaTierOrder & {
 
 /**
  * PENDING qa_tier_orders, oldest first -- the manual reconciliation queue for
- * a LemonSqueezy webhook that never arrived (see TODOS.md's webhook
+ * a Polar webhook that never arrived (see TODOS.md's webhook
  * reconciliation entry). markQaOrderPaid() already existed and handled this
  * correctly; this is the first UI surface that lets an admin reach it
  * without going to SQL.

@@ -34,23 +34,27 @@ export type DeliveryInput = z.infer<typeof deliverySchema>;
 /**
  * The tiers, and what each one costs.
  *
- * Tier 2 is priced but not orderable yet: the Playwright worker that would run
- * it does not exist, and an order that queues forever is worse than a tier
- * that says "not yet". Tier 3's fee is charged manually until the payment
- * integration lands, which is why nothing here touches money in the database.
+ * Restructured 2026-09-08 (user decision, see STATUS.md): Tier4 removed
+ * (zero existing TIER4 rows when dropped, confirmed first). Tier1 is now
+ * permanently free -- folded into the 10% platform commission, never goes
+ * through Polar (superseding the 2026-09-03 "doğrulama kaydı ücreti"
+ * experiment; the fee tested willingness-to-pay, this reverses that test
+ * once the answer stopped mattering more than removing friction). Tier2 and
+ * Tier3 both became fixed prices instead of variable ones -- Tier3 in
+ * particular no longer has a reviewer-roster selection step at all: no
+ * third-party reviewer is paid out of it, the founder reviews every Tier3
+ * order personally for now (admin's existing submitQaReport flow), so
+ * ₺3.500 is Lancerix's own revenue, not a pass-through fee. `qa_reviewers`
+ * the table/roster/admin UI is untouched (not dropped) -- this is a "not
+ * needed yet" pause, not a permanent removal, so re-expanding to a real
+ * roster later doesn't mean rebuilding it.
  *
- * Tier 1's price (D, 2026-09-03 CEO review): a small symbolic "doğrulama kaydı
- * ücreti" through the same LemonSqueezy checkout Tier 3/4 already use, to test
- * P-3 (will anyone actually pay for verification) without needing a company.
- * Set at the top of the pre-approved 49-99₺ range rather than the bottom --
- * LemonSqueezy's $0.50 flat + ~6.5% (international) fee erodes a 49₺ charge
- * to roughly half its value; at 99₺ the flat fee is a much smaller share, netting
- * closer to ~70% instead of ~50-55%. Nothing about report visibility or the
- * delivery flow changes: submit_qa_report() has never checked payment_status
- * for any tier (confirmed while implementing this), so this only adds a fee
- * and a payment step -- it does not newly gate anything that was open before.
+ * Tier 2 stays priced but not orderable: the Playwright worker exists
+ * (src/lib/qa/agent.ts) but has never run end-to-end against a real
+ * OPENAI_API_KEY, and an order that queues forever is worse than a tier
+ * that says "not yet". See STATUS.md.
  */
-export const QA_TIERS = ["TIER1", "TIER2", "TIER3", "TIER4"] as const;
+export const QA_TIERS = ["TIER1", "TIER2", "TIER3"] as const;
 export type QaTier = (typeof QA_TIERS)[number];
 
 export const QA_TIER_INFO: Record<
@@ -58,52 +62,39 @@ export const QA_TIER_INFO: Record<
   {
     label: string;
     price: string;
-    pricingType: "RECORD_FEE" | "AGENTIC" | "HYBRID" | "MANUAL_TESTER";
+    pricingType: "RECORD_FEE" | "AGENTIC" | "HYBRID";
     hint: string;
     details: string[];
     available: boolean;
-    needsReviewer: boolean;
   }
 > = {
   TIER1: {
     label: "Temel Kontrol",
-    price: "99 ₺",
+    price: "Ücretsiz",
     pricingType: "RECORD_FEE",
-    hint: "Kriter listesi müşteriye sunulur, müşteri kendi kontrolünü yapar. Ücret, doğrulama kaydının kendisi içindir.",
+    hint: "Kriter listesi müşteriye sunulur, müşteri kendi kontrolünü yapar. Platform komisyonuna dahildir, ayrıca ücretlendirilmez.",
     details: ["Müşteri doğrudan kendi inceler", "Otomatik ajan maliyeti yok", "Zaman damgalı, değiştirilemez kayıt"],
     available: true,
-    needsReviewer: false,
   },
   TIER2: {
     label: "Agentic QA",
-    price: "250 ₺ + Harcanan API",
+    price: "299 ₺",
     pricingType: "AGENTIC",
-    hint: "Otonom test ajanı UI/UX ve kriterleri tarar. API bütçesi korunur.",
-    details: ["UI/UX & İşlevsellik taraması", "Kıstaslı API kullanım limiti", "Çalışma sonrası API maliyeti yansıtılır"],
+    hint: "Otonom test ajanı UI/UX ve kriterleri tarar. Sabit fiyat, çalışma sonrası ek ücret yansıtılmaz.",
+    details: ["UI/UX & İşlevsellik taraması", "Sabit fiyat, sürpriz yok", "Zaman damgalı, değiştirilemez kayıt"],
     // available: false until the worker (worker/) is actually deployed and
     // running somewhere -- flipping this to true with no live worker means
     // an order sits in QA_QUEUED forever, which is worse than "not yet".
     // See STATUS.md.
     available: false,
-    needsReviewer: false,
   },
   TIER3: {
-    label: "Agentic + Manuel Tester",
-    price: "250 ₺ + API + Tester Ücreti",
+    label: "Agentic + Uzman İncelemesi",
+    price: "3.500 ₺",
     pricingType: "HYBRID",
-    hint: "Otonom agentic testler koşulur, kıdemli QA mühendisi denetiminde doğrulanır.",
-    details: ["Otonom test + İnsan gözü denetimi", "Mühendis onaylı rapor", "Tester proje ücreti eklenir"],
+    hint: "Otonom agentic testler koşulur, sonuç kıdemli bir mühendis tarafından elden denetlenip onaylanır. Sabit fiyat.",
+    details: ["Otonom test + İnsan gözü denetimi", "Mühendis onaylı rapor", "Sabit fiyat, sürpriz yok"],
     available: true,
-    needsReviewer: true,
-  },
-  TIER4: {
-    label: "Sadece Manuel Tester",
-    price: "Tester Özel Ücreti",
-    pricingType: "MANUAL_TESTER",
-    hint: "Doğrudan QA test uzmanı projeyi elden inceler, hataları raporlar.",
-    details: ["Ajan koşulmaz, doğrudan uzman incelemesi", "Tester'ın proje için belirleyeceği sabit ücret", "Birebir detaylı rapor"],
-    available: true,
-    needsReviewer: true,
   },
 };
 

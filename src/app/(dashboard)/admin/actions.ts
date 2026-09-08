@@ -459,7 +459,7 @@ export async function setReviewerRate(
 
 /**
  * Manually marking a QA tier order paid -- the fallback for a fee settled
- * outside LemonSqueezy (bank transfer, etc). Only a PENDING order can be
+ * outside Polar (bank transfer, etc). Only a PENDING order can be
  * marked this way; PAID/WAIVED/FAILED are not admin-editable states here.
  */
 export async function markQaOrderPaid(
