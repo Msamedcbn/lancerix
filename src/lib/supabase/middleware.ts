@@ -25,6 +25,11 @@ import type { Database } from "@/lib/supabase/database.types";
 // first add: any new PUBLIC_ROUTES entry in src/lib/i18n/config.ts needs a
 // matching entry here too -- that registry drives the sitemap and hreflang,
 // this one drives the auth redirect, and they don't share a source.
+//
+// /sozlesmeli-dogrulama (contract-bound tiers, split off the homepage
+// 2026-09-08) had the same bug on first add: /en already covers its English
+// mirror at /en/contract-verification as a prefix match, but the TR path is
+// its own top-level segment and needs its own entry.
 const PUBLIC_ROUTES = [
   "/",
   "/login",
@@ -39,6 +44,7 @@ const PUBLIC_ROUTES = [
   "/reviewer-report",
   "/guven-mimarisi",
   "/hakkinda",
+  "/sozlesmeli-dogrulama",
 ];
 
 /**
