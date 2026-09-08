@@ -297,7 +297,7 @@ export default async function SiteKontrolPage() {
 
       {session.role === "ADMIN" ? <AdminFreeTrialForm /> : null}
 
-      <StandaloneCheckForm defaultCurrency={defaultCurrency} />
+      <StandaloneCheckForm currency={defaultCurrency} />
 
       {orders.length > 0 ? (
         <div className="flex flex-col gap-3">

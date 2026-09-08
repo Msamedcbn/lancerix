@@ -37,9 +37,9 @@ function currencyFromAcceptLanguage(acceptLanguage: string | null): SupportedCur
  * This is a display default, never a charge: Polar decides what the
  * customer actually pays from its own IP lookup at checkout
  * (customerIpAddress, passed separately) and the per-currency prices on the
- * product. A wrong guess here only shows the wrong symbol before checkout,
- * which is why every caller pairs this with a visible way to correct it
- * (CurrencySwitcher) rather than trusting the guess silently.
+ * product. A wrong guess here only shows the wrong symbol before checkout --
+ * deliberately no visible override (2026-09-09): the display is meant to be
+ * fully automatic, not a manual picker with a good default.
  */
 export function resolveVisitorCurrency(headers: Headers): SupportedCurrency {
   const country = headers.get("x-vercel-ip-country");

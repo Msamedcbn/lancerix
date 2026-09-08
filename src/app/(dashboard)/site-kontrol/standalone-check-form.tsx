@@ -4,7 +4,6 @@ import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
 
 import { createStandaloneCheck, type FormState } from "@/app/(dashboard)/standalone-qa-actions";
-import { CurrencySwitcher } from "@/components/currency-switcher";
 import { FormFeedback, SubmitButton } from "@/components/form-feedback";
 import { formatMoney, type SupportedCurrency } from "@/lib/validations/currency";
 import {
@@ -17,14 +16,12 @@ const INITIAL: FormState = { error: null };
 
 function FormFields({
   currency,
-  onCurrencyChange,
   packageId,
   setPackageId,
   currentFee,
   state,
 }: {
   currency: SupportedCurrency;
-  onCurrencyChange: (currency: SupportedCurrency) => void;
   packageId: StandalonePackageId;
   setPackageId: (id: StandalonePackageId) => void;
   currentFee: string;
@@ -50,10 +47,7 @@ function FormFields({
       </div>
 
       <div className="flex flex-col gap-2">
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-sm font-medium text-foreground">Paket seçimi</span>
-          <CurrencySwitcher currency={currency} onChange={onCurrencyChange} />
-        </div>
+        <span className="text-sm font-medium text-foreground">Paket seçimi</span>
         <div className="grid gap-3 md:grid-cols-3">
           {STANDALONE_PACKAGE_IDS.map((id) => {
             const pkg = STANDALONE_PACKAGES[id];
@@ -96,8 +90,7 @@ function FormFields({
 
       <p className="text-xs text-muted-foreground">
         Seçili Paket Ücreti: <strong>{currentFee}</strong> -- sözleşme veya proje gerekmez, herhangi bir link.
-        Ödeme tamamlanınca tarama otomatik başlar. Gösterilen fiyat bilgilendirme amaçlıdır; ödeme sayfasında
-        konumuna göre kesin tutar teyit edilir.
+        Ödeme tamamlanınca tarama otomatik başlar.
       </p>
 
       <SubmitButton pendingLabel="Ödemeye yönlendiriliyor..." className="self-start">
@@ -109,18 +102,20 @@ function FormFields({
 }
 
 export function StandaloneCheckForm({
-  defaultCurrency = "TRY",
-}: Readonly<{ defaultCurrency?: SupportedCurrency }>) {
+  currency = "TRY",
+}: Readonly<{
+  /** The visitor's currency, resolved server-side from their IP
+   * (resolveVisitorCurrency, page.tsx) -- purely automatic, no override. */
+  currency?: SupportedCurrency;
+}>) {
   const [state, action] = useActionState(createStandaloneCheck, INITIAL);
   const [packageId, setPackageId] = useState<StandalonePackageId>("PRO");
-  const [currency, setCurrency] = useState<SupportedCurrency>(defaultCurrency);
   const currentFee = formatMoney(STANDALONE_PACKAGES[packageId].priceMinor[currency], currency);
 
   return (
     <form action={action} className="flex flex-col gap-4 rounded-xl border border-border p-5 dark:border-border/50">
       <FormFields
         currency={currency}
-        onCurrencyChange={setCurrency}
         packageId={packageId}
         setPackageId={setPackageId}
         currentFee={currentFee}
@@ -129,5 +124,3 @@ export function StandaloneCheckForm({
     </form>
   );
 }
-
-

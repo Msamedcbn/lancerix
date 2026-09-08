@@ -14,7 +14,6 @@ import {
   ShieldCheck,
 } from "lucide-react";
 
-import { CurrencySwitcher } from "@/components/currency-switcher";
 import { HorizontalAccordion } from "@/components/home/horizontal-accordion";
 import { StandalonePurchaseForm } from "@/components/home/standalone-purchase-form";
 import { gsap, useGSAP } from "@/lib/gsap";
@@ -90,16 +89,15 @@ function GlassCard({
 
 export function HomeClient({
   locale = DEFAULT_LOCALE,
-  defaultCurrency = "TRY",
+  currency = "TRY",
 }: Readonly<{
   locale?: Locale;
-  /** Best-effort guess from the visitor's IP (resolveVisitorCurrency,
-   * page.tsx) -- the visible CurrencySwitcher next to the pricing section
-   * is the correction when it's wrong, not a decoration. */
-  defaultCurrency?: SupportedCurrency;
+  /** The visitor's currency, resolved server-side from their IP
+   * (resolveVisitorCurrency, page.tsx) -- purely automatic, no visible
+   * override. Every price on the page reads from this one value. */
+  currency?: SupportedCurrency;
 }>) {
   const root = useRef<HTMLElement>(null);
-  const [currency, setCurrency] = useState<SupportedCurrency>(defaultCurrency);
   const [pricingTab, setPricingTab] = useState<"onetime" | "subscription">("onetime");
   const t = HOME_COPY[locale];
   const steps = [
@@ -336,7 +334,7 @@ export function HomeClient({
             {t.pricing.body}
           </p>
 
-          <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+          <div className="mt-6 flex justify-center">
             <div role="tablist" aria-label={t.pricing.title} className="inline-flex rounded-full border border-border bg-muted/40 p-1">
               <button
                 type="button"
@@ -361,7 +359,6 @@ export function HomeClient({
                 {t.pricing.tabSubscription}
               </button>
             </div>
-            <CurrencySwitcher currency={currency} onChange={setCurrency} />
           </div>
         </div>
 

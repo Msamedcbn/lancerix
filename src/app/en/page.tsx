@@ -22,7 +22,7 @@ export default async function EnglishHomePage() {
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
-      <HomeClient locale="en" defaultCurrency={defaultCurrency} />
+      <HomeClient locale="en" currency={defaultCurrency} />
     </>
   );
 }
