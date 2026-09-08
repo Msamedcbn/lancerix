@@ -34,3 +34,6 @@ graphify-out/
 temp_extract.py
 temp_merge.py
 temp_step4.py
+
+.vercel
+.env*
