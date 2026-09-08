@@ -124,11 +124,11 @@ export const HOME_COPY: Record<Locale, HomeCopy> = {
   tr: {
     metaTitle: "Lancerix — Bağımsız Kod Doğrulama",
     metaDescription:
-      "Bağımsız teknik doğrulama: imzalı sözleşme, kabul kriterlerine karşı kontrol edilen teslim ve hiçbir tarafın değiştiremeyeceği zaman damgalı bir rapor. Ödeme taraflar arasında doğrudan çözülür.",
+      "Bağımsız kod doğrulama: sözleşmeli teslimlerde taraflar arası hakemlik, sözleşme gerekmeyen işlerde anında veya haftalık otomatik site kontrolü. Her ikisinde de değiştirilemez, zaman damgalı bir rapor.",
     badge: "Bağımsız Kod Doğrulama",
-    heroTitle: "Projenizin teslimatını şansa bırakmayın.",
+    heroTitle: "Teslimde de, yayında da bağımsızca doğrulanır.",
     heroBody:
-      "Yazılım projelerindeki anlaşmazlıkları ortadan kaldırıyoruz. Müşteriyseniz tam istediğiniz kodu teslim aldığınızdan emin olun; geliştiriciyseniz işinizin hakkını alın.",
+      "Sözleşmeli teslimlerde taraflar arasında bağımsız hakemlik yapıyoruz; sözleşme gerekmeyen işlerde ise herhangi bir siteyi anında ya da her hafta otomatik test ediyoruz.",
     ctaPrimary: "Hemen başla",
     ctaSecondary: "Nasıl çalışır?",
     cities: {
@@ -263,11 +263,11 @@ export const HOME_COPY: Record<Locale, HomeCopy> = {
   en: {
     metaTitle: "Lancerix — Independent Code Verification",
     metaDescription:
-      "Independent technical verification for software handovers. A signed contract, a delivery checked against the acceptance criteria both sides agreed on, and a timestamped report neither party can edit afterwards.",
+      "Independent code verification: an independent referee between two parties for contracted deliveries, or instant and weekly automated site checks for everything else. Both end in a timestamped report neither side can edit afterwards.",
     badge: "Independent code verification",
-    heroTitle: "Stop leaving handover to chance.",
+    heroTitle: "Verified at delivery, and while it's live.",
     heroBody:
-      "We take the argument out of software delivery. If you are the client, know you received exactly the work you specified. If you are the developer, get the sign-off you have earned without chasing anyone for it.",
+      "For contracted work, we're the independent referee between two parties. For everything else, test any site instantly or watch it automatically every week.",
     ctaPrimary: "Get started",
     ctaSecondary: "How it works",
     cities: {
