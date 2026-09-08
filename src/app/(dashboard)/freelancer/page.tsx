@@ -105,9 +105,6 @@ export default async function FreelancerProjectsPage() {
               (sum, m) => sum + m.gross_amount_kurus,
               0,
             );
-            const done = contract.milestones.filter(
-              (m) => m.status === "RELEASED",
-            ).length;
 
             return (
               <div
