@@ -6,7 +6,6 @@ import Link from "next/link";
 import { CheckCircle2 } from "lucide-react";
 
 import { purchaseStandaloneCheck, type FormState } from "@/app/marketing-actions";
-import { CurrencySwitcher } from "@/components/currency-switcher";
 import { FormFeedback, SubmitButton } from "@/components/form-feedback";
 import type { StandalonePackageCopy } from "@/lib/i18n/dictionaries/home";
 import { formatMoney, type SupportedCurrency } from "@/lib/validations/currency";
@@ -19,9 +18,6 @@ import {
 const INITIAL: FormState = { error: null };
 
 export type StandaloneFormCopy = {
-  eyebrow: string;
-  title: string;
-  body: string;
   packages: Record<StandalonePackageId, StandalonePackageCopy>;
   urlLabel: string;
   urlPlaceholder: string;
@@ -174,33 +170,21 @@ function MarketingFormFields({
   );
 }
 
+/** No heading of its own -- the shared pricing section header (home-client.tsx)
+ * covers both this and the monitoring tab, so this is just the package
+ * picker + purchase form. */
 export function StandalonePurchaseForm({
   copy,
   currency,
-  onCurrencyChange,
 }: Readonly<{
   copy: StandaloneFormCopy;
   currency: SupportedCurrency;
-  onCurrencyChange: (currency: SupportedCurrency) => void;
 }>) {
   const [state, action] = useActionState(purchaseStandaloneCheck, INITIAL);
   const [packageId, setPackageId] = useState<StandalonePackageId>("PRO");
 
   return (
     <div className="mx-auto max-w-5xl">
-      <div className="mb-10 text-center">
-        <p className="text-brand mono mb-2 text-xs tracking-[0.14em]">{copy.eyebrow}</p>
-        <h2 className="font-display text-3xl font-medium tracking-tight text-foreground md:text-4xl">
-          {copy.title}
-        </h2>
-        <p className="mx-auto mt-3 max-w-xl text-base leading-relaxed text-muted-foreground">
-          {copy.body}
-        </p>
-        <div className="mt-5 flex justify-center">
-          <CurrencySwitcher currency={currency} onChange={onCurrencyChange} />
-        </div>
-      </div>
-
       <form action={action} className="glass flex flex-col gap-6 rounded-2xl border border-border p-6 md:p-8">
         <MarketingFormFields copy={copy} currency={currency} packageId={packageId} setPackageId={setPackageId} state={state} />
       </form>

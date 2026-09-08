@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 
 import { HomeClient } from "@/app/home-client";
-import { getVerifiedCount } from "@/lib/data/public-stats";
 import { appUrl } from "@/lib/env.server";
 import { resolveVisitorCurrency } from "@/lib/i18n/currency-detect";
 import { HOME_COPY } from "@/lib/i18n/dictionaries/home";
@@ -23,11 +22,7 @@ export default async function EnglishHomePage() {
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
-      <HomeClient
-        verifiedCount={await getVerifiedCount()}
-        locale="en"
-        defaultCurrency={defaultCurrency}
-      />
+      <HomeClient locale="en" defaultCurrency={defaultCurrency} />
     </>
   );
 }

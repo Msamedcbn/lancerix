@@ -73,25 +73,28 @@ export type HomeCopy = {
   /** Mobile only -- the accordion is a plain vertical list there, so there is
    * no gesture to explain. */
   stepsBodyMobile: string;
-  /** Exactly five, in order -- STEP_ICONS in home-client.tsx pairs by index. */
-  steps: readonly [Step, Step, Step, Step, Step];
-  aboutEyebrow: string;
-  aboutTitle: string;
-  aboutBody: string;
-  statVerified: string;
-  statSignature: string;
-  statWindowValue: string;
-  statWindowLabel: string;
+  /** Exactly three, in order -- STEP_ICONS in home-client.tsx pairs by index.
+   * Was five (2026-09-08); merged down to three (2026-09-09 shorten pass) --
+   * "contract" and "delivery" are one beat for a visitor deciding whether to
+   * sign up, not two, and likewise "audit" and "report". */
+  steps: readonly [Step, Step, Step];
   pricingEyebrow: string;
   pricingTitle: string;
   comingSoon: string;
   tiers: Record<QaTier, TierCopy>;
-  /** The self-serve /site-kontrol purchase, sold with no contract and no
-   * dashboard visit -- see StandaloneFormCopy in standalone-purchase-form.tsx. */
-  standalone: {
+  /** One shared header for both pricing modes below (2026-09-09 shorten pass
+   * merged what used to be two near-identical sections, each with its own
+   * eyebrow/title/body, into one with a tab switch). */
+  pricing: {
     eyebrow: string;
     title: string;
     body: string;
+    tabOneTime: string;
+    tabSubscription: string;
+  };
+  /** The self-serve /site-kontrol purchase, sold with no contract and no
+   * dashboard visit -- see StandaloneFormCopy in standalone-purchase-form.tsx. */
+  standalone: {
     packages: Record<StandalonePackageId, StandalonePackageCopy>;
     urlLabel: string;
     urlPlaceholder: string;
@@ -103,9 +106,6 @@ export type HomeCopy = {
     loginLink: string;
   };
   monitoring: {
-    eyebrow: string;
-    title: string;
-    body: string;
     /** "ay" / "mo" -- appended after the price as "/{perMonth}". */
     perMonth: string;
     plans: Record<
@@ -164,34 +164,18 @@ export const HOME_COPY: Record<Locale, HomeCopy> = {
     stepsBodyMobile: "Sürecin baştan sona nasıl ilerlediği aşağıda, sırasıyla.",
     steps: [
       {
-        title: "1. Sözleşme oluşturulur",
-        body: "İhtiyaçlar, teslim tarihi ve şartlar belirlenir. İki tarafın da onayladığı bu sözleşme kriptografik olarak güvence altına alınır.",
+        title: "1. Sözleşme & teslim",
+        body: "İhtiyaçlar ve şartlar belirlenir, iki taraf onaylar; geliştirici işini sisteme yükler.",
       },
       {
-        title: "2. Proje teslim edilir",
-        body: "Geliştirici, hazırladığı uygulamanın kaynak kodunu veya test adresini sisteme yükler ve inceleme süreci başlar.",
+        title: "2. Bağımsız denetim",
+        body: "Seçilen pakete göre otonom test aracı ya da kıdemli mühendis projeyi inceler; sonuç sonradan değiştirilemeyen bir rapora kaydedilir.",
       },
       {
-        title: "3. Bağımsız denetim yapılır",
-        body: "Seçtiğiniz pakete göre; yapay zeka destekli otonom bir test aracı veya kıdemli bir yazılım mühendisi projenizi detaylıca inceler.",
-      },
-      {
-        title: "4. Güvenilir rapor oluşturulur",
-        body: "İnceleme sonucu başarılı ya da başarısız olarak, sonradan asla değiştirilemeyen bir rapora kaydedilip taraflara sunulur.",
-      },
-      {
-        title: "5. Onay süreci tamamlanır",
-        body: "Müşteri belirtilen süre içinde itirazda bulunmazsa, proje başarılı sayılır. Ödeme, aracı olmadan doğrudan hesabınıza ulaşır.",
+        title: "3. Onay tamamlanır",
+        body: "Müşteri belirtilen süre içinde itiraz etmezse proje başarılı sayılır. Ödeme, aracı olmadan doğrudan hesabınıza ulaşır.",
       },
     ],
-    aboutEyebrow: "BİZ KİMİZ",
-    aboutTitle: "Yazılım dünyasındaki güven problemini çözüyoruz.",
-    aboutBody:
-      "Freelance ve ajans projelerinde yaşanan en büyük sorun, işin teslimi ve onayı sırasındaki belirsizliklerdir. Biz, kimsenin hakkının yenmemesi için süreci tamamen şeffaf, test edilebilir ve kayıt altında tutulabilir bir altyapıya dönüştürüyoruz.",
-    statVerified: "Sözleşme Doğrulandı",
-    statSignature: "Kriptografik İmza",
-    statWindowValue: "5 Gün",
-    statWindowLabel: "Otomatik Kabul Süresi",
     pricingEyebrow: "DOĞRULAMA YÖNTEMLERİ",
     pricingTitle: "Projenize en uygun yöntemi seçin.",
     comingSoon: "Yakında",
@@ -200,10 +184,14 @@ export const HOME_COPY: Record<Locale, HomeCopy> = {
       TIER2: tierCopyFromInfo("TIER2"),
       TIER3: tierCopyFromInfo("TIER3"),
     },
-    standalone: {
+    pricing: {
       eyebrow: "SÖZLEŞME GEREKMEZ",
-      title: "Hemen dene — hesabını ödeyerek aç.",
-      body: "Projen bu platformda olmasa bile, herhangi bir linki şimdi test edebilirsin. Paketini seç, öde — hesabın aynı anda açılır.",
+      title: "Hemen dene ya da sürekli izlet.",
+      body: "Herhangi bir linki şimdi tek seferlik test et, ya da siteni her hafta otomatik taratıp bir şey bozulunca haber al.",
+      tabOneTime: "Tek seferlik",
+      tabSubscription: "Sürekli izleme",
+    },
+    standalone: {
       packages: {
         BASIC: {
           label: "Temel Kontrol",
@@ -244,9 +232,6 @@ export const HOME_COPY: Record<Locale, HomeCopy> = {
       loginLink: "Giriş yap",
     },
     monitoring: {
-      eyebrow: "SÜREKLİ KORUMA",
-      title: "Bir kere değil, her hafta.",
-      body: "Siteni haftalık olarak otomatik tarar, bir şey değiştiğinde e-posta ile haber veririz. Değişmeyen kontroller için posta gelmez.",
       perMonth: "ay",
       plans: {
         MONITORING: {
@@ -318,34 +303,18 @@ export const HOME_COPY: Record<Locale, HomeCopy> = {
     stepsBodyMobile: "How the process runs from start to finish, in order.",
     steps: [
       {
-        title: "1. The contract is drawn up",
-        body: "Requirements, delivery date and terms are agreed. Once both sides approve it, the contract is sealed cryptographically.",
+        title: "1. Contract & delivery",
+        body: "Requirements and terms are agreed, both sides approve; the developer uploads the work.",
       },
       {
-        title: "2. The work is delivered",
-        body: "The developer submits the source code or a staging URL for the build, and the review process begins.",
+        title: "2. Independent audit",
+        body: "Depending on the tier, an autonomous test agent or a senior engineer reviews the work; the result is written into a report that can never be edited afterwards.",
       },
       {
-        title: "3. An independent audit runs",
-        body: "Depending on the tier you picked, either an AI-driven autonomous test agent or a senior engineer goes through the work in detail.",
-      },
-      {
-        title: "4. A trustworthy report is issued",
-        body: "The outcome — pass or fail — is written into a report that can never be edited afterwards, and shared with both parties.",
-      },
-      {
-        title: "5. Sign-off completes",
+        title: "3. Sign-off completes",
         body: "If the client raises no objection within the agreed window, the work counts as accepted. Payment reaches you directly, with no intermediary.",
       },
     ],
-    aboutEyebrow: "WHO WE ARE",
-    aboutTitle: "We are fixing the trust problem in software work.",
-    aboutBody:
-      "The hardest part of freelance and agency projects is the grey area around delivery and approval. We turn that stretch into something transparent, testable and on the record, so nobody has to take the other side's word for it.",
-    statVerified: "contracts verified",
-    statSignature: "Cryptographic signature",
-    statWindowValue: "5 days",
-    statWindowLabel: "Automatic acceptance window",
     pricingEyebrow: "VERIFICATION TIERS",
     pricingTitle: "Pick the tier that fits your project.",
     comingSoon: "Coming soon",
@@ -381,10 +350,14 @@ export const HOME_COPY: Record<Locale, HomeCopy> = {
         ],
       },
     },
-    standalone: {
+    pricing: {
       eyebrow: "NO CONTRACT NEEDED",
-      title: "Try it now — pay to open your account.",
-      body: "Even if your project isn't on this platform, you can test any link right now. Pick a package, pay — your account opens in the same step.",
+      title: "Try it now, or keep watch every week.",
+      body: "Test any link right now, one time -- or have your site scanned automatically every week and hear from us only when something breaks.",
+      tabOneTime: "One-time",
+      tabSubscription: "Continuous",
+    },
+    standalone: {
       packages: {
         BASIC: {
           label: "Basic Check",
@@ -425,9 +398,6 @@ export const HOME_COPY: Record<Locale, HomeCopy> = {
       loginLink: "Log in",
     },
     monitoring: {
-      eyebrow: "CONTINUOUS COVERAGE",
-      title: "Not once — every week.",
-      body: "We scan your site automatically every week and email you only when something changes. No news, no email.",
       perMonth: "mo",
       plans: {
         MONITORING: {

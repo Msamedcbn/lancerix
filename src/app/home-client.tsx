@@ -10,7 +10,6 @@ import {
   Clock,
   FileCheck2,
   FileSignature,
-  Link as LinkIcon,
   ScanSearch,
   ShieldCheck,
 } from "lucide-react";
@@ -38,9 +37,9 @@ export const HASH =
 
 /**
  * One icon per step, in step order. The words live in HOME_COPY, which types
- * its steps as a five-tuple, so the two lists cannot fall out of step.
+ * its steps as a three-tuple, so the two lists cannot fall out of step.
  */
-const STEP_ICONS = [FileSignature, LinkIcon, ScanSearch, FileCheck2, Clock] as const;
+const STEP_ICONS = [FileSignature, ScanSearch, Clock] as const;
 
 function Magnetic({
   children,
@@ -89,38 +88,24 @@ function GlassCard({
   );
 }
 
-/**
- * verifiedCount is fetched server-side (page.tsx) via a security-definer RPC
- * -- this component itself has no Supabase access, matching every other
- * "use client" page in the app. Below FIRST_SHOW_THRESHOLD it's rendered as
- * null rather than 0: a landing page advertising "0 verified" or a
- * single-digit count reads as evidence nobody uses the product, which is
- * worse than not claiming a number at all while usage is still this early.
- */
-const FIRST_SHOW_THRESHOLD = 5;
-
 export function HomeClient({
-  verifiedCount,
   locale = DEFAULT_LOCALE,
   defaultCurrency = "TRY",
 }: Readonly<{
-  verifiedCount: number | null;
   locale?: Locale;
   /** Best-effort guess from the visitor's IP (resolveVisitorCurrency,
-   * page.tsx) -- the visible CurrencySwitcher next to each pricing section
+   * page.tsx) -- the visible CurrencySwitcher next to the pricing section
    * is the correction when it's wrong, not a decoration. */
   defaultCurrency?: SupportedCurrency;
 }>) {
   const root = useRef<HTMLElement>(null);
   const [currency, setCurrency] = useState<SupportedCurrency>(defaultCurrency);
-  const showVerifiedCount = verifiedCount !== null && verifiedCount >= FIRST_SHOW_THRESHOLD;
+  const [pricingTab, setPricingTab] = useState<"onetime" | "subscription">("onetime");
   const t = HOME_COPY[locale];
   const steps = [
     { ...t.steps[0], icon: STEP_ICONS[0] },
     { ...t.steps[1], icon: STEP_ICONS[1] },
     { ...t.steps[2], icon: STEP_ICONS[2] },
-    { ...t.steps[3], icon: STEP_ICONS[3] },
-    { ...t.steps[4], icon: STEP_ICONS[4] },
   ];
 
   useGSAP(
@@ -334,111 +319,102 @@ export function HomeClient({
         </div>
       </section>
 
-      {/* --- about us / stats --------------------------------------------- */}
-      <section id="hakkimizda" className="px-6 pb-24 md:pb-32">
-        <div className="mx-auto max-w-6xl text-center">
-          <p className="text-brand mono mb-2 text-xs tracking-[0.14em]">{t.aboutEyebrow}</p>
-          <h2 className="font-display text-3xl font-medium tracking-tight text-foreground md:text-4xl">
-            {t.aboutTitle}
-          </h2>
-          <p className="mx-auto mt-4 max-w-2xl text-lg leading-relaxed text-muted-foreground">
-            {t.aboutBody}
-          </p>
-
-          <div className={`mt-12 grid gap-6 sm:grid-cols-2 ${showVerifiedCount ? "lg:grid-cols-3" : ""}`}>
-            {showVerifiedCount ? (
-              <GlassCard className="flex flex-col items-center justify-center p-8">
-                <span className="text-4xl font-extrabold text-brand">{verifiedCount}</span>
-                <span className="mt-2 text-sm font-medium text-foreground">{t.statVerified}</span>
-              </GlassCard>
-            ) : null}
-            <GlassCard className="flex flex-col items-center justify-center p-8">
-              <span className="text-4xl font-extrabold text-foreground">SHA-256</span>
-              <span className="mt-2 text-sm font-medium text-muted-foreground">{t.statSignature}</span>
-            </GlassCard>
-            <GlassCard className="flex flex-col items-center justify-center p-8">
-              <span className="text-4xl font-extrabold text-brand">{t.statWindowValue}</span>
-              <span className="mt-2 text-sm font-medium text-foreground">{t.statWindowLabel}</span>
-            </GlassCard>
-          </div>
-        </div>
-      </section>
-
-      {/* --- standalone self-serve: pay to open an account --------------------
+      {/* --- pricing: one-time or subscription, one shared header -------------
            Also carries id="fiyat": the contract-bound tiers moved to their own
-           page (2026-09-08), so the automated packages ARE the pricing section
-           the header and footer link to. ------------------------------------- */}
+           page (2026-09-08), so these automated packages ARE the pricing
+           section the header and footer link to. Was two full sections with
+           near-identical headers (2026-09-09 shorten pass merged them into
+           one, tab-switched). ------------------------------------------------ */}
       <section id="fiyat" className="px-6 pb-24 md:pb-32">
         <span id="dene" className="sr-only" aria-hidden />
-        <StandalonePurchaseForm copy={t.standalone} currency={currency} onCurrencyChange={setCurrency} />
-      </section>
-
-      {/* --- continuous monitoring subscription: same engine, run weekly ------
-           Links straight to /izleme rather than duplicating a signup+checkout
-           form here -- middleware already bounces an anonymous click to
-           /login?next=/izleme, so the visitor lands on the plan picker right
-           after signing in, same as any other dashboard-only purchase. ------ */}
-      <section id="izleme" className="px-6 pb-24 md:pb-32">
-        <div className="mx-auto max-w-4xl text-center">
-          <p className="text-brand mono text-xs font-semibold tracking-[0.15em]">
-            {t.monitoring.eyebrow}
-          </p>
-          <h2
-            className="font-display mt-3 font-medium tracking-[-0.01em] text-foreground"
-            style={{ fontSize: "clamp(1.6rem, 3.4vw, 2.4rem)", lineHeight: 1.2 }}
-          >
-            {t.monitoring.title}
+        <div className="mx-auto max-w-3xl text-center">
+          <p className="text-brand mono mb-2 text-xs tracking-[0.14em]">{t.pricing.eyebrow}</p>
+          <h2 className="font-display text-3xl font-medium tracking-tight text-foreground md:text-4xl">
+            {t.pricing.title}
           </h2>
-          <p className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-muted-foreground">
-            {t.monitoring.body}
+          <p className="mx-auto mt-3 max-w-xl text-base leading-relaxed text-muted-foreground">
+            {t.pricing.body}
           </p>
-          <div className="mt-5 flex justify-center">
+
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+            <div role="tablist" aria-label={t.pricing.title} className="inline-flex rounded-full border border-border bg-muted/40 p-1">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={pricingTab === "onetime"}
+                onClick={() => setPricingTab("onetime")}
+                className={`rounded-full px-4 py-1.5 text-sm font-semibold transition-colors ${
+                  pricingTab === "onetime" ? "bg-brand text-brand-foreground" : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {t.pricing.tabOneTime}
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={pricingTab === "subscription"}
+                onClick={() => setPricingTab("subscription")}
+                className={`rounded-full px-4 py-1.5 text-sm font-semibold transition-colors ${
+                  pricingTab === "subscription" ? "bg-brand text-brand-foreground" : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {t.pricing.tabSubscription}
+              </button>
+            </div>
             <CurrencySwitcher currency={currency} onChange={setCurrency} />
           </div>
         </div>
 
-        <div className="mx-auto mt-10 grid max-w-3xl gap-4 sm:grid-cols-2">
-          {MONITORING_PLAN_IDS.map((planId) => {
-            const plan = t.monitoring.plans[planId];
-            const price = formatMoney(MONITORING_PLANS[planId].priceMinor[currency], currency);
-            return (
-              <div
-                key={planId}
-                className="flex flex-col rounded-xl border border-border bg-background p-6 shadow-sm"
-              >
-                <div className="flex items-baseline justify-between gap-2">
-                  <span className="text-sm font-semibold text-foreground">{plan.label}</span>
-                  <span className="tnum text-lg font-bold text-foreground">
-                    {price}
-                    <span className="text-xs font-medium text-muted-foreground">/{t.monitoring.perMonth}</span>
-                  </span>
-                </div>
-                <p className="mt-1 text-xs text-muted-foreground">{plan.hint}</p>
-                <ul className="mt-4 flex flex-col gap-2 text-sm text-muted-foreground">
-                  {plan.features.map((feature) => (
-                    <li key={feature} className="flex items-start gap-2">
-                      <CheckCircle2 className="text-brand mt-0.5 size-4 shrink-0" aria-hidden />
-                      {feature}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            );
-          })}
-        </div>
+        {pricingTab === "onetime" ? (
+          <div className="mt-10">
+            <StandalonePurchaseForm copy={t.standalone} currency={currency} />
+          </div>
+        ) : (
+          <div className="mt-10">
+            <div className="mx-auto grid max-w-3xl gap-4 sm:grid-cols-2">
+              {MONITORING_PLAN_IDS.map((planId) => {
+                const plan = t.monitoring.plans[planId];
+                const price = formatMoney(MONITORING_PLANS[planId].priceMinor[currency], currency);
+                return (
+                  <div
+                    key={planId}
+                    className="flex flex-col rounded-xl border border-border bg-background p-6 shadow-sm"
+                  >
+                    <div className="flex items-baseline justify-between gap-2">
+                      <span className="text-sm font-semibold text-foreground">{plan.label}</span>
+                      <span className="tnum text-lg font-bold text-foreground">
+                        {price}
+                        <span className="text-xs font-medium text-muted-foreground">/{t.monitoring.perMonth}</span>
+                      </span>
+                    </div>
+                    <p className="mt-1 text-xs text-muted-foreground">{plan.hint}</p>
+                    <ul className="mt-4 flex flex-col gap-2 text-sm text-muted-foreground">
+                      {plan.features.map((feature) => (
+                        <li key={feature} className="flex items-start gap-2">
+                          <CheckCircle2 className="text-brand mt-0.5 size-4 shrink-0" aria-hidden />
+                          {feature}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                );
+              })}
+            </div>
 
-        <div className="mx-auto mt-8 flex max-w-3xl flex-col items-center gap-2 text-center">
-          <Magnetic>
-            <Link
-              href="/izleme"
-              className="mac-spring bg-brand text-brand-foreground inline-flex items-center gap-2 rounded-xl px-7 py-3.5 text-base font-medium shadow-md transition-all hover:opacity-90 active:scale-[0.98]"
-            >
-              {t.monitoring.cta}
-              <ArrowRight className="size-4" aria-hidden />
-            </Link>
-          </Magnetic>
-          <p className="text-xs text-muted-foreground">{t.monitoring.note}</p>
-        </div>
+            <div className="mx-auto mt-8 flex max-w-3xl flex-col items-center gap-2 text-center">
+              <Magnetic>
+                <Link
+                  href="/izleme"
+                  className="mac-spring bg-brand text-brand-foreground inline-flex items-center gap-2 rounded-xl px-7 py-3.5 text-base font-medium shadow-md transition-all hover:opacity-90 active:scale-[0.98]"
+                >
+                  {t.monitoring.cta}
+                  <ArrowRight className="size-4" aria-hidden />
+                </Link>
+              </Magnetic>
+              <p className="text-xs text-muted-foreground">{t.monitoring.note}</p>
+            </div>
+          </div>
+        )}
       </section>
 
       {/* --- close ------------------------------------------------------------ */}
