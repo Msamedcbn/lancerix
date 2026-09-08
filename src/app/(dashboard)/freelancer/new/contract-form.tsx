@@ -277,16 +277,10 @@ const BACK_BUTTON =
 
 /* ═══════════════════════ MAIN FORM ═════════════════════════ */
 export function ContractForm({
-  feeBps,
-  stopajBps,
-  payoutBlockers,
   draftKey,
   previousClients,
   fromRequest,
 }: Readonly<{
-  feeBps: number;
-  stopajBps: number;
-  payoutBlockers: string[];
   draftKey: string;
   previousClients: readonly PreviousClient[];
   /**
