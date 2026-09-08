@@ -1,9 +1,11 @@
+import { after } from "next/server";
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { validateEvent, WebhookVerificationError } from "@polar-sh/sdk/webhooks";
 
 import type { Database } from "@/lib/supabase/database.types";
 import { notifyStandaloneCheckPaid } from "@/lib/notify/email";
+import { runScanForPaidOrder } from "@/lib/qa/standalone-order";
 
 /**
  * Marks a QA tier order (or a standalone_qa_orders row) paid once Polar
@@ -19,6 +21,16 @@ import { notifyStandaloneCheckPaid } from "@/lib/notify/email";
  * Webhooks signature check -- not hand-rolled HMAC here, unlike the
  * LemonSqueezy route, because Polar's own SDK already ships a verifier.
  *
+ * For a standalone order this is also what starts the scan: since the
+ * pay-first switch (2026-09-08) nothing is scanned until payment is
+ * confirmed, and a verified order.paid is the only trustworthy confirmation
+ * we get. The scan itself goes through after() rather than being awaited --
+ * a full package takes minutes, and Polar treats a slow endpoint as failed
+ * and redelivers, which would queue a second scan behind the first. The
+ * PENDING -> PAID guard on the update below is what makes that redelivery
+ * harmless: only the first one matches, so only the first one scans
+ * (runScanForPaidOrder re-checks for existing rows anyway).
+ *
  * This never touches contracts.status. A QA tier order's payment has no
  * bearing on contract state -- that state machine is owned by
  * transition_delivery()/transition_milestone(), not by a webhook.
@@ -29,6 +41,14 @@ import { notifyStandaloneCheckPaid } from "@/lib/notify/email";
  * event -- matching by ID against the wrong table would just find nothing,
  * but there's no reason to pay for the extra round trip on every event.
  */
+// after() work still runs inside this function's lifetime on Vercel, and the
+// scan it schedules is a real headless-Chromium package run -- minutes, not
+// milliseconds. Without this the platform default (10s on Hobby) kills the
+// scan after the webhook has already answered 200, leaving a paid order with
+// no report and no error anywhere. Same value site-kontrol/page.tsx uses for
+// the re-scan action.
+export const maxDuration = 300;
+
 export async function POST(req: Request) {
   const secret = process.env.POLAR_WEBHOOK_SECRET;
   if (!secret) {
@@ -98,6 +118,17 @@ export async function POST(req: Request) {
       check_type?: string | null;
     };
     const pkgLabel = standaloneRow.package_id ?? standaloneRow.check_type ?? "Tekil QA Tarama";
+
+    after(async () => {
+      const scan = await runScanForPaidOrder(standaloneRow.id);
+      if (!scan.ok) {
+        // Paid but unscannable is the one failure the customer must never
+        // discover on their own -- runScanForPaidOrder writes ERROR rows for
+        // the modules themselves, so this only fires when the write failed too.
+        console.error(`[FAIL] paid standalone order ${standaloneRow.id} produced no report: ${scan.error}`);
+      }
+    });
+
     try {
       await notifyStandaloneCheckPaid({
         toUserId: standaloneRow.requested_by_user_id,

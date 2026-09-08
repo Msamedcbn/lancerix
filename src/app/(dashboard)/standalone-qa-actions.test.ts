@@ -98,6 +98,15 @@ function userClient() {
 function adminClient() {
   return {
     from: (table: string) => {
+      // runScanForPaidOrder reads the order through the admin client too --
+      // there is no user session on a webhook.
+      if (table === "standalone_qa_orders") {
+        return {
+          select: (_cols: string) => ({
+            eq: (_col: string, _val: string) => ({ maybeSingle: async () => orderSelectRoute() }),
+          }),
+        };
+      }
       if (table !== "standalone_qa_reports") throw new Error(`unexpected table: ${table}`);
       return {
         insert: (row: Record<string, unknown> | Record<string, unknown>[]) => {
@@ -136,7 +145,7 @@ beforeEach(() => {
   createCheckoutMock.mockClear();
 });
 
-describe("createStandaloneCheck", () => {
+describe("createStandaloneCheck (pay-first)", () => {
   it("refuses a non-http(s) URL without touching the database", async () => {
     const { createStandaloneCheck } = await import("./standalone-qa-actions");
     const result = await createStandaloneCheck(
@@ -144,79 +153,22 @@ describe("createStandaloneCheck", () => {
       formData({ targetUrl: "not-a-url", packageId: "BASIC" }),
     );
     expect(result.error).toBeTruthy();
+    expect(createCheckoutMock).not.toHaveBeenCalled();
+  });
+
+  it("creates a PENDING order and sends the customer to checkout without scanning", async () => {
+    const { createStandaloneCheck } = await import("./standalone-qa-actions");
+    await expect(
+      createStandaloneCheck({ error: null }, formData({ targetUrl: "https://example.com", packageId: "PRO" })),
+    ).rejects.toThrow("REDIRECT:https://polar.sh/mock-checkout");
+
+    expect(createCheckoutMock).toHaveBeenCalledWith("order-1", 34900, "PRO", undefined);
+    // The whole point of pay-first: no headless browser, no report rows, no
+    // free answer handed out before the money.
     expect(reportInsertCalls).toHaveLength(0);
   });
 
-  it("creates an order and reports on a successful scan", async () => {
-    const { createStandaloneCheck } = await import("./standalone-qa-actions");
-    const result = await createStandaloneCheck(
-      { error: null },
-      formData({ targetUrl: "https://example.com", packageId: "BASIC" }),
-    );
-    expect(result.error).toBeNull();
-    expect(reportInsertCalls).toHaveLength(1);
-    expect(reportInsertCalls[0]).toMatchObject({ order_id: "order-1", status: "PASS" });
-  });
-
-  it("fails without writing a report when the page can't be loaded", async () => {
-    checkImpl = async () => null;
-    const { createStandaloneCheck } = await import("./standalone-qa-actions");
-    const result = await createStandaloneCheck(
-      { error: null },
-      formData({ targetUrl: "https://example.com", packageId: "BASIC" }),
-    );
-    expect(result.error).toBeTruthy();
-    expect(reportInsertCalls).toHaveLength(0);
-  });
-
-  it("records every module in the package, failed ones as ERROR", async () => {
-    // A module that could not run must still leave a row: without it a paid
-    // 3-module package silently ships as a 1-module report that looks whole.
-    packageImpl = async () => [
-      {
-        checkType: "ACCESSIBILITY",
-        outcome: { status: "PASS", results: { violationCount: 0 }, documentSha256: "a".repeat(64) },
-      },
-      { checkType: "SEO_META", outcome: null },
-      { checkType: "DEAD_LINKS", outcome: null },
-    ];
-    const { createStandaloneCheck } = await import("./standalone-qa-actions");
-    const result = await createStandaloneCheck(
-      { error: null },
-      formData({ targetUrl: "https://example.com", packageId: "BASIC" }),
-    );
-
-    expect(result.error).toBeNull();
-    expect(reportInsertCalls).toHaveLength(3);
-    expect(reportInsertCalls.map((r) => [r.check_type, r.status])).toEqual([
-      ["ACCESSIBILITY", "PASS"],
-      ["SEO_META", "ERROR"],
-      ["DEAD_LINKS", "ERROR"],
-    ]);
-    // ERROR rows are sealed like any other -- the column is NOT NULL and
-    // constrained to 64 hex chars, so an unsealed row would be rejected.
-    for (const row of reportInsertCalls.filter((r) => r.status === "ERROR")) {
-      expect(row.results).toEqual({ error: "MODULE_FAILED" });
-      expect(row.document_sha256).toMatch(/^[0-9a-f]{64}$/);
-    }
-  });
-
-  it("writes no report at all when every module fails", async () => {
-    packageImpl = async () => [
-      { checkType: "ACCESSIBILITY", outcome: null },
-      { checkType: "SEO_META", outcome: null },
-    ];
-    const { createStandaloneCheck } = await import("./standalone-qa-actions");
-    const result = await createStandaloneCheck(
-      { error: null },
-      formData({ targetUrl: "https://example.com", packageId: "BASIC" }),
-    );
-
-    expect(result.error).toBeTruthy();
-    expect(reportInsertCalls).toHaveLength(0);
-  });
-
-  it("surfaces an order-insert failure without running the scan", async () => {
+  it("surfaces an order-insert failure without reaching checkout", async () => {
     orderInsertRoute = () => ({ data: null, error: { message: "insert failed" } });
     const { createStandaloneCheck } = await import("./standalone-qa-actions");
     const result = await createStandaloneCheck(
@@ -224,7 +176,7 @@ describe("createStandaloneCheck", () => {
       formData({ targetUrl: "https://example.com", packageId: "BASIC" }),
     );
     expect(result.error).toBeTruthy();
-    expect(reportInsertCalls).toHaveLength(0);
+    expect(createCheckoutMock).not.toHaveBeenCalled();
   });
 
   it("refuses once the daily cap is reached, without inserting an order", async () => {
@@ -236,16 +188,98 @@ describe("createStandaloneCheck", () => {
       formData({ targetUrl: "https://example.com", packageId: "BASIC" }),
     );
     expect(result.error).toBeTruthy();
+    expect(createCheckoutMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("runScanForPaidOrder", () => {
+  function paidOrder(reports: unknown[] = []) {
+    return () => ({
+      data: {
+        id: "order-1",
+        target_url: "https://example.com",
+        package_id: "BASIC",
+        standalone_qa_reports: reports,
+      },
+      error: null,
+    });
+  }
+
+  it("records every module in the package, failed ones as ERROR", async () => {
+    // A module that could not run must still leave a row: without it a paid
+    // 3-module package silently ships as a 1-module report that looks whole.
+    orderSelectRoute = paidOrder();
+    packageImpl = async () => [
+      {
+        checkType: "ACCESSIBILITY",
+        outcome: { status: "PASS", results: { violationCount: 0 }, documentSha256: "a".repeat(64) },
+      },
+      { checkType: "SEO_META", outcome: null },
+      { checkType: "DEAD_LINKS", outcome: null },
+    ];
+
+    const { runScanForPaidOrder } = await import("@/lib/qa/standalone-order");
+    const result = await runScanForPaidOrder("order-1");
+
+    expect(result.ok).toBe(true);
+    expect(reportInsertCalls.map((r) => [r.check_type, r.status])).toEqual([
+      ["ACCESSIBILITY", "PASS"],
+      ["SEO_META", "ERROR"],
+      ["DEAD_LINKS", "ERROR"],
+    ]);
+    // ERROR rows are sealed like any other -- the column is NOT NULL and
+    // constrained to 64 hex chars, so an unsealed row would be rejected.
+    for (const row of reportInsertCalls.filter((r) => r.status === "ERROR")) {
+      expect(row.results).toEqual({ error: "MODULE_FAILED" });
+      expect(String(row.document_sha256)).toMatch(/^[0-9a-f]{64}$/);
+    }
   });
 
-  it("surfaces a report-insert failure after a successful scan", async () => {
+  it("still writes ERROR rows when every module fails", async () => {
+    // The money is already taken, so a total failure must be recorded, not
+    // swallowed -- this is what arms the customer's free re-scan. The
+    // pre-payment flow used to abort here and write nothing.
+    orderSelectRoute = paidOrder();
+    packageImpl = async () => [
+      { checkType: "ACCESSIBILITY", outcome: null },
+      { checkType: "SEO_META", outcome: null },
+    ];
+
+    const { runScanForPaidOrder } = await import("@/lib/qa/standalone-order");
+    const result = await runScanForPaidOrder("order-1");
+
+    expect(result.ok).toBe(true);
+    expect(reportInsertCalls.map((r) => r.status)).toEqual(["ERROR", "ERROR"]);
+  });
+
+  it("does not scan twice when Polar redelivers order.paid", async () => {
+    orderSelectRoute = paidOrder([{ id: "existing-report" }]);
+
+    const { runScanForPaidOrder } = await import("@/lib/qa/standalone-order");
+    const result = await runScanForPaidOrder("order-1");
+
+    expect(result.ok).toBe(true);
+    expect(reportInsertCalls).toHaveLength(0);
+  });
+
+  it("surfaces a report-insert failure", async () => {
+    orderSelectRoute = paidOrder();
     reportInsertRoute = () => ({ error: { message: "insert failed" } });
-    const { createStandaloneCheck } = await import("./standalone-qa-actions");
-    const result = await createStandaloneCheck(
-      { error: null },
-      formData({ targetUrl: "https://example.com", packageId: "BASIC" }),
-    );
-    expect(result.error).toBeTruthy();
+
+    const { runScanForPaidOrder } = await import("@/lib/qa/standalone-order");
+    const result = await runScanForPaidOrder("order-1");
+
+    expect(result.ok).toBe(false);
+  });
+
+  it("reports a missing order instead of throwing", async () => {
+    orderSelectRoute = () => ({ data: null, error: { message: "not found" } });
+
+    const { runScanForPaidOrder } = await import("@/lib/qa/standalone-order");
+    const result = await runScanForPaidOrder("order-1");
+
+    expect(result.ok).toBe(false);
+    expect(reportInsertCalls).toHaveLength(0);
   });
 });
 
@@ -361,7 +395,7 @@ describe("rescanStandaloneCheck", () => {
     expect(result.error).toBeNull();
     expect(reportInsertCalls).toHaveLength(1);
     expect(reportInsertCalls[0]).toMatchObject({ check_type: "SEO_META", status: "ERROR" });
-    expect(reportInsertCalls[0].document_sha256).toMatch(/^[0-9a-f]{64}$/);
+    expect(String(reportInsertCalls[0]?.document_sha256)).toMatch(/^[0-9a-f]{64}$/);
   });
 
   it("refuses once a module has burned through its attempts", async () => {

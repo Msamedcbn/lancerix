@@ -4,7 +4,12 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { toUserMessage } from "@/lib/forms";
 import { latestReportPerModule } from "@/lib/data/standalone-qa";
-import { hashResults, runStandaloneCheck, runStandalonePackage } from "@/lib/qa/standalone";
+import {
+  hashResults,
+  runStandaloneCheck,
+  runStandalonePackage,
+  type PackageCheckOutcome,
+} from "@/lib/qa/standalone";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { Database } from "@/lib/supabase/database.types";
 import {
@@ -13,32 +18,68 @@ import {
   STANDALONE_MODULE_MAX_ATTEMPTS,
   type StandaloneCheckInput,
   type StandaloneCheckType,
+  type StandalonePackageId,
 } from "@/lib/validations/standalone-qa";
 
 export type StandaloneOrderResult =
   | { ok: true; orderId: string }
   | { ok: false; error: string };
 
+/** One report row, shaped for insert. A module that produced no outcome is
+ * recorded as ERROR -- not FAIL: the site did not fail the check, the check
+ * never happened. Sealed like any other row, because
+ * standalone_qa_reports.document_sha256 is NOT NULL and 64-hex, and because
+ * "this module did not run" is itself evidence worth making tamper-evident.
+ * See 20260908070000_standalone_report_error_status.sql. */
+function reportRow(orderId: string, checkType: string, outcome: PackageCheckOutcome["outcome"]) {
+  if (!outcome) {
+    const results = { error: "MODULE_FAILED" };
+    return {
+      order_id: orderId,
+      check_type: checkType,
+      status: "ERROR",
+      results,
+      document_sha256: hashResults(results),
+    };
+  }
+  return {
+    order_id: orderId,
+    check_type: checkType,
+    status: outcome.status,
+    results: outcome.results,
+    document_sha256: outcome.documentSha256,
+  };
+}
+
 /**
- * The order-creation + scan + report-write sequence shared by every path
- * that can start a standalone check: createStandaloneCheck
+ * Creates the order row and stops. The scan is NOT run here.
+ *
+ * Shared by both purchase paths: createStandaloneCheck
  * (standalone-qa-actions.ts, an already-signed-in user) and
  * purchaseStandaloneCheck (marketing-actions.ts, a homepage visitor whose
- * account was just created in the same request). Both need the exact same
- * daily-cap-then-order-then-scan-then-report sequence against a caller-
- * supplied userId -- pulled out here once so neither call site can drift
- * from the other's cap/error handling.
+ * account was created in the same request). Both need identical cap and
+ * error handling, so it lives here once.
  *
- * `supabase` must already be authenticated as `userId` (its RLS policies
- * are what actually enforce that the insert can only ever write that
- * requester's own row) -- this function does not itself check who the
- * caller is.
+ * Pay-first (2026-09-08 decision): the scan used to run inside this
+ * function, before the customer had paid anything. That handed every free
+ * signup real headless-Chromium minutes with no revenue attached, and it
+ * gave away the product's answer while payment only unlocked the detail.
+ * Now the order is written PENDING, the caller sends the customer to Polar,
+ * and runScanForPaidOrder() runs off the verified order.paid webhook.
+ *
+ * `supabase` must already be authenticated as `userId` -- RLS
+ * (standalone_qa_orders_insert) is what actually enforces that the insert
+ * can only write that requester's own row; this function does not check who
+ * the caller is.
  */
-export async function createOrderAndRunCheck(
+export async function createStandaloneOrder(
   supabase: SupabaseClient<Database>,
   userId: string,
   input: StandaloneCheckInput,
 ): Promise<StandaloneOrderResult> {
+  // Still capped, but for a different reason than before: nothing free is
+  // handed out any more, so this is no longer about bounding compute -- it
+  // bounds how many abandoned PENDING orders one account can pile up.
   const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
   const { count, error: countError } = await supabase
     .from("standalone_qa_orders")
@@ -66,41 +107,51 @@ export async function createOrderAndRunCheck(
     return { ok: false, error: toUserMessage(insertError ?? { message: "insert failed" }, "Sipariş oluşturulamadı.") };
   }
 
-  const packageResults = await runStandalonePackage(input.packageId, input.targetUrl);
-  if (!packageResults.some((r) => r.outcome !== null)) {
-    // Nothing at all ran: the URL itself is the likely problem, and a report
-    // consisting only of ERROR rows is worth neither writing nor charging for.
-    return { ok: false, error: "Site yüklenemedi. Adresi kontrol edip tekrar dene." };
+  return { ok: true, orderId: order.id };
+}
+
+/**
+ * Runs the purchased package for an order that has been paid, and writes one
+ * report row per module.
+ *
+ * Called from the Polar order.paid webhook (via after(), so the webhook can
+ * answer immediately -- a full package scan takes minutes and Polar retries
+ * a slow endpoint). Uses the admin client throughout: there is no user
+ * session on a webhook, and the caller has already established that this
+ * specific order was paid for.
+ *
+ * Unlike the pre-payment flow this replaces, a total scan failure does NOT
+ * abort without writing anything. The money is already taken, so silence
+ * would be the worst outcome: every module is recorded as ERROR instead,
+ * which is what surfaces the failure to the customer and arms their free
+ * re-scan (rescanFailedModules).
+ */
+export async function runScanForPaidOrder(orderId: string): Promise<StandaloneOrderResult> {
+  const admin = createAdminClient();
+
+  const { data: order, error: orderError } = await admin
+    .from("standalone_qa_orders")
+    .select("id, target_url, package_id, standalone_qa_reports(id)")
+    .eq("id", orderId)
+    .maybeSingle();
+  if (orderError || !order) {
+    console.error("[FAIL] scan requested for unknown order", orderId, orderError?.message);
+    return { ok: false, error: "Sipariş bulunamadı." };
   }
 
-  const admin = createAdminClient();
-  // Every module the customer bought gets a row -- including the ones that
-  // did not run, as ERROR. Dropping those (which this did until 2026-09-08)
-  // silently shrinks a paid 7-module scan into a 6-module report that looks
-  // complete; the customer has no way to see what they were owed and did not
-  // get. ERROR is not FAIL: the site did not fail the check, the check never
-  // happened. See 20260908070000_standalone_report_error_status.sql.
-  const reportRows = packageResults.map((r) => {
-    if (!r.outcome) {
-      const results = { error: "MODULE_FAILED" };
-      return {
-        order_id: order.id,
-        check_type: r.checkType,
-        status: "ERROR",
-        results,
-        document_sha256: hashResults(results),
-      };
-    }
-    return {
-      order_id: order.id,
-      check_type: r.checkType,
-      status: r.outcome.status,
-      results: r.outcome.results,
-      document_sha256: r.outcome.documentSha256,
-    };
-  });
+  // Polar can deliver order.paid more than once. The webhook's own
+  // PENDING -> PAID guard already makes the status update idempotent; this
+  // second check keeps a retry that slips past it from scanning twice and
+  // doubling the report rows.
+  if ((order.standalone_qa_reports ?? []).length > 0) {
+    return { ok: true, orderId: order.id };
+  }
 
-  const { error: reportError } = await admin.from("standalone_qa_reports").insert(reportRows);
+  const packageId = (order.package_id ?? "BASIC") as StandalonePackageId;
+  const packageResults = await runStandalonePackage(packageId, order.target_url);
+  const rows = packageResults.map((r) => reportRow(order.id, r.checkType, r.outcome));
+
+  const { error: reportError } = await admin.from("standalone_qa_reports").insert(rows);
   if (reportError) {
     console.error("[FAIL]", reportError.message);
     return { ok: false, error: "Rapor kaydedilemedi." };
@@ -157,14 +208,7 @@ export async function rescanFailedModules(
   const rows = [];
   for (const checkType of retryable) {
     const outcome = await runStandaloneCheck(checkType, order.target_url);
-    const results = outcome ? outcome.results : { error: "MODULE_FAILED" };
-    rows.push({
-      order_id: order.id,
-      check_type: checkType,
-      status: outcome ? outcome.status : "ERROR",
-      results,
-      document_sha256: outcome ? outcome.documentSha256 : hashResults(results),
-    });
+    rows.push(reportRow(order.id, checkType, outcome));
   }
 
   const admin = createAdminClient();

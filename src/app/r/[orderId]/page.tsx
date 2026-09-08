@@ -398,12 +398,23 @@ export default async function PublicReportPage({ params }: Props) {
               Bu Raporun Ödemesi Tamamlanmadı
             </h3>
             <p className="mt-1 text-xs text-amber-700 dark:text-amber-300 max-w-md mx-auto">
-              Detaylı kod kırılımlarını ve mühürlü analiz verisini incelemek için sipariş sahibinin ödemeyi tamamlaması gerekmektedir.
+              Tarama, ödeme onaylandıktan sonra başlar. Sipariş sahibi ödemeyi tamamladığında
+              sonuçlar burada yayınlanır.
             </p>
           </div>
         ) : (
           <div className="space-y-4">
             <h2 className="text-sm font-bold text-foreground px-1">Tarama Sonuçları & Analiz Detayları</h2>
+
+            {reports.length === 0 && (
+              <div className="rounded-xl border border-zinc-300 bg-zinc-50 p-4 dark:border-zinc-700 dark:bg-zinc-900/60">
+                <p className="text-xs font-semibold text-foreground">Tarama sürüyor</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Ödeme alındı ve tarama başlatıldı. Paketteki modüller tamamlandıkça bu sayfada
+                  yayınlanacak; birkaç dakika sürebilir.
+                </p>
+              </div>
+            )}
 
             {failedModuleCount > 0 && (
               <div className="rounded-xl border border-zinc-300 bg-zinc-50 p-4 dark:border-zinc-700 dark:bg-zinc-900/60">

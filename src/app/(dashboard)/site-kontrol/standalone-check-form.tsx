@@ -5,7 +5,6 @@ import { useFormStatus } from "react-dom";
 
 import { createStandaloneCheck, type FormState } from "@/app/(dashboard)/standalone-qa-actions";
 import { FormFeedback, SubmitButton } from "@/components/form-feedback";
-import { LiveScanStepper } from "@/components/qa/live-scan-stepper";
 import {
   packageFeeKurus,
   STANDALONE_PACKAGE_IDS,
@@ -89,12 +88,11 @@ function FormFields({
 
       <p className="text-xs text-muted-foreground">
         Seçili Paket Ücreti: <strong>₺{currentFee}</strong> -- sözleşme veya proje gerekmez, herhangi bir link.
+        Ödeme tamamlanınca tarama otomatik başlar.
       </p>
 
-      <LiveScanStepper isScanning={pending} />
-
-      <SubmitButton pendingLabel="Laboratuvar Taraması Yapılıyor..." className="self-start">
-        Taramayı başlat
+      <SubmitButton pendingLabel="Ödemeye yönlendiriliyor..." className="self-start">
+        Satın al ve taramayı başlat
       </SubmitButton>
       <FormFeedback state={state} />
     </>

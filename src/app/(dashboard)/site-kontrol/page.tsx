@@ -388,6 +388,9 @@ export default async function SiteKontrolPage() {
                               </p>
                             </>
                           ) : (
+                            // Only reachable for orders scanned before the
+                            // pay-first switch: new orders have no rows until
+                            // payment is confirmed.
                             <p className="mt-1 text-xs text-muted-foreground">
                               {report.status === "ERROR" ? MODULE_ERROR_NOTE : summaryLine(cType, report.results)}{" "}
                               Detaylı sonucu ve değiştirilemez kaydı görmek için ödeme yap.
@@ -397,8 +400,20 @@ export default async function SiteKontrolPage() {
                       );
                     })}
                   </div>
+                ) : isPaid ? (
+                  // Paid, no rows yet: the order.paid webhook has fired and the
+                  // scan is running in the background. Refreshing is the whole
+                  // UX -- a package takes minutes.
+                  <p className="mt-3 text-xs text-muted-foreground">
+                    Tarama sürüyor. Modüller bittikçe burada görünecek, sayfayı birazdan
+                    yenile.
+                  </p>
                 ) : (
-                  <p className="mt-3 text-xs text-muted-foreground">Rapor hazırlanıyor.</p>
+                  // Pay-first: an unpaid order has no report rows by design, so
+                  // there is nothing to tease here any more.
+                  <p className="mt-3 text-xs text-muted-foreground">
+                    Ödeme tamamlanınca tarama otomatik başlar.
+                  </p>
                 )}
               </div>
             );

@@ -2,7 +2,7 @@
 
 import { FAIL, firstIssue, type FormState } from "@/lib/forms";
 import { createStandaloneOrderCheckout, payViaPolarCheckout } from "@/lib/polar";
-import { createOrderAndRunCheck } from "@/lib/qa/standalone-order";
+import { createStandaloneOrder } from "@/lib/qa/standalone-order";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -14,8 +14,9 @@ export type { FormState };
 
 /**
  * The homepage's self-serve package purchase: a visitor with no account at
- * all fills in email + password + a URL, and the whole thing -- account,
- * order, scan, Polar checkout redirect -- happens from this one submit.
+ * all fills in email + password + a URL, and account, order and Polar
+ * checkout redirect all happen from this one submit. The scan does not --
+ * it runs off the order.paid webhook (pay-first, 2026-09-08).
  * Everything downstream of "the account now exists" reuses the exact same,
  * already-tested pieces createStandaloneCheck/payStandaloneCheck
  * (standalone-qa-actions.ts) use; this action only owns the part that's new
@@ -67,7 +68,7 @@ export async function purchaseStandaloneCheck(
     return FAIL("Hesap açıldı ama giriş yapılamadı. /login üzerinden giriş yapıp tekrar dene.");
   }
 
-  const result = await createOrderAndRunCheck(supabase, created.user.id, { targetUrl, packageId });
+  const result = await createStandaloneOrder(supabase, created.user.id, { targetUrl, packageId });
   if (!result.ok) return FAIL(result.error);
 
   const feeKurus = packageFeeKurus(packageId);

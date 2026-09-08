@@ -5,9 +5,9 @@ import { revalidatePath } from "next/cache";
 import { requireSession } from "@/lib/auth/session";
 import { FAIL, firstIssue, OK, type FormState } from "@/lib/forms";
 import { createStandaloneOrderCheckout, payViaPolarCheckout } from "@/lib/polar";
-import { createOrderAndRunCheck, rescanFailedModules } from "@/lib/qa/standalone-order";
+import { createStandaloneOrder, rescanFailedModules } from "@/lib/qa/standalone-order";
 import { createClient } from "@/lib/supabase/server";
-import { standaloneCheckSchema } from "@/lib/validations/standalone-qa";
+import { packageFeeKurus, standaloneCheckSchema } from "@/lib/validations/standalone-qa";
 
 export type { FormState };
 
@@ -18,16 +18,15 @@ export type { FormState };
  * setQaSelection/submitQaDelivery which requireRole() a specific side of a
  * contract.
  *
- * The scan runs synchronously here, not via after()/a cron sweep like
- * Tier 2 -- axe-core has no multi-step LLM loop whose latency needs hiding
- * from the request, so there's nothing an async trigger would buy.
+ * Pay-first (2026-09-08): this used to run the whole scan and only then ask
+ * for money, which meant a free account bought real headless-Chromium
+ * minutes and saw the verdict before paying for anything. Now it writes a
+ * PENDING order and sends the customer straight to Polar; the scan runs off
+ * the verified order.paid webhook (runScanForPaidOrder).
  *
- * The daily cap exists because this is the one QA codepath with no contract
- * relationship gating who can reach it: every Tier1-4 order requires a real
- * signed contract first, which is itself a natural rate limit. A standalone
- * order needs nothing but a free account, and each one launches a real
- * headless Chromium process (src/lib/qa/standalone.ts) -- real compute cost
- * with no revenue guarantee until the cap exists.
+ * The daily cap stays, with a narrower job than before: nothing free is
+ * handed out any more, so it bounds abandoned PENDING orders rather than
+ * free compute.
  */
 export async function createStandaloneCheck(
   _prev: FormState,
@@ -42,11 +41,15 @@ export async function createStandaloneCheck(
   if (!parsed.success) return FAIL(firstIssue(parsed.error));
 
   const supabase = await createClient();
-  const result = await createOrderAndRunCheck(supabase, session.userId, parsed.data);
+  const result = await createStandaloneOrder(supabase, session.userId, parsed.data);
   if (!result.ok) return FAIL(result.error);
 
   revalidatePath("/site-kontrol");
-  return OK("Rapor hazır. Devam etmek için ödeme yapabilirsin.");
+
+  const feeKurus = packageFeeKurus(parsed.data.packageId);
+  return payViaPolarCheckout((customerIp) =>
+    createStandaloneOrderCheckout(result.orderId, feeKurus, parsed.data.packageId, customerIp),
+  );
 }
 
 /**
@@ -55,12 +58,14 @@ export async function createStandaloneCheck(
  * (based on package_id), this just hands it to Polar via the shared
  * payViaPolarCheckout() helper.
  *
- * Unlike every contract-bound tier, the *detail* of a standalone report is
- * gated on payment_status (see site-kontrol/page.tsx) -- pre-payment shows
- * only PASS/FAIL/PARTIAL + a violation count, full detail unlocks once this
- * pays. Those tiers have a real contract relationship supplying a reason to
- * pay regardless of report visibility; standalone has none, so paying has to
- * actually unlock something.
+ * Since the pay-first switch this is the retry path, not the main one:
+ * createStandaloneCheck already sends the customer to checkout on the first
+ * submit. This exists for an order whose checkout was abandoned or whose
+ * payment failed, so it can be paid without re-creating the order.
+ *
+ * There is no longer a pre-payment teaser to unlock -- a PENDING order has
+ * no report rows at all, because the scan does not run until the webhook
+ * confirms payment.
  */
 export async function payStandaloneCheck(
   _prev: FormState,

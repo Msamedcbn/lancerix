@@ -1,8 +1,10 @@
 /**
  * purchaseStandaloneCheck: the only genuinely new logic here is account
- * creation + immediate sign-in (createOrderAndRunCheck itself is already
+ * creation + immediate sign-in (createStandaloneOrder itself is already
  * covered by standalone-qa-actions.test.ts and standalone.test.ts, so it's
- * mocked rather than re-exercised). What's worth proving in TS: a bad form
+ * mocked rather than re-exercised). Since the pay-first switch this action
+ * no longer scans anything -- it writes a PENDING order and redirects; the
+ * scan runs off the order.paid webhook. What's worth proving in TS: a bad form
  * never reaches admin.createUser, a duplicate email surfaces a "log in
  * instead" message without ever calling signInWithPassword, a failed
  * sign-in stops before any order is created, and a successful run redirects
@@ -48,9 +50,9 @@ vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: vi.fn(() => adminCli
 vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn(async () => userClient()) }));
 
 let orderResult: { ok: true; orderId: string } | { ok: false; error: string };
-const createOrderAndRunCheckMock = vi.fn(async (..._args: unknown[]) => orderResult);
+const createStandaloneOrderMock = vi.fn(async (..._args: unknown[]) => orderResult);
 vi.mock("@/lib/qa/standalone-order", () => ({
-  createOrderAndRunCheck: (...args: unknown[]) => createOrderAndRunCheckMock(...args),
+  createStandaloneOrder: (...args: unknown[]) => createStandaloneOrderMock(...args),
 }));
 
 // Same reasoning as standalone-qa-actions.test.ts's own @/lib/polar mock:
@@ -87,7 +89,7 @@ beforeEach(() => {
   createUserRoute = () => ({ data: { user: { id: "user-1" } }, error: null });
   signInRoute = () => ({ error: null });
   orderResult = { ok: true, orderId: "order-1" };
-  createOrderAndRunCheckMock.mockClear();
+  createStandaloneOrderMock.mockClear();
   createCheckoutMock.mockClear();
   signInMock.mockClear();
 });
@@ -101,7 +103,7 @@ describe("purchaseStandaloneCheck", () => {
     );
     expect(result.error).toBeTruthy();
     expect(signInMock).not.toHaveBeenCalled();
-    expect(createOrderAndRunCheckMock).not.toHaveBeenCalled();
+    expect(createStandaloneOrderMock).not.toHaveBeenCalled();
   });
 
   it("refuses a password under 8 characters without creating an account", async () => {
@@ -120,7 +122,7 @@ describe("purchaseStandaloneCheck", () => {
     const result = await purchaseStandaloneCheck({ error: null }, formData(VALID_FORM));
     expect(result.error).toMatch(/giriş yap/i);
     expect(signInMock).not.toHaveBeenCalled();
-    expect(createOrderAndRunCheckMock).not.toHaveBeenCalled();
+    expect(createStandaloneOrderMock).not.toHaveBeenCalled();
   });
 
   it("surfaces a generic account-creation failure", async () => {
@@ -136,10 +138,10 @@ describe("purchaseStandaloneCheck", () => {
     const { purchaseStandaloneCheck } = await import("./marketing-actions");
     const result = await purchaseStandaloneCheck({ error: null }, formData(VALID_FORM));
     expect(result.error).toBeTruthy();
-    expect(createOrderAndRunCheckMock).not.toHaveBeenCalled();
+    expect(createStandaloneOrderMock).not.toHaveBeenCalled();
   });
 
-  it("surfaces the order/scan failure without redirecting to checkout", async () => {
+  it("surfaces the order-creation failure without redirecting to checkout", async () => {
     orderResult = { ok: false, error: "Site yüklenemedi. Adresi kontrol edip tekrar dene." };
     const { purchaseStandaloneCheck } = await import("./marketing-actions");
     const result = await purchaseStandaloneCheck({ error: null }, formData(VALID_FORM));
@@ -147,13 +149,13 @@ describe("purchaseStandaloneCheck", () => {
     expect(createCheckoutMock).not.toHaveBeenCalled();
   });
 
-  it("creates the account, runs the check, and redirects straight to Polar checkout", async () => {
+  it("creates the account and redirects straight to Polar checkout, without scanning", async () => {
     const { purchaseStandaloneCheck } = await import("./marketing-actions");
     await expect(purchaseStandaloneCheck({ error: null }, formData(VALID_FORM))).rejects.toThrow(
       "REDIRECT:https://polar.sh/mock-checkout",
     );
     expect(signInMock).toHaveBeenCalledWith({ email: VALID_FORM.email, password: VALID_FORM.password });
-    expect(createOrderAndRunCheckMock).toHaveBeenCalledWith(expect.anything(), "user-1", {
+    expect(createStandaloneOrderMock).toHaveBeenCalledWith(expect.anything(), "user-1", {
       targetUrl: VALID_FORM.targetUrl,
       packageId: VALID_FORM.packageId,
     });

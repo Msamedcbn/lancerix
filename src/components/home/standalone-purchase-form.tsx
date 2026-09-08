@@ -7,7 +7,6 @@ import { CheckCircle2 } from "lucide-react";
 
 import { purchaseStandaloneCheck, type FormState } from "@/app/marketing-actions";
 import { FormFeedback, SubmitButton } from "@/components/form-feedback";
-import { LiveScanStepper } from "@/components/qa/live-scan-stepper";
 import type { StandalonePackageCopy } from "@/lib/i18n/dictionaries/home";
 import {
   STANDALONE_PACKAGE_IDS,
@@ -149,9 +148,7 @@ function MarketingFormFields({
         </div>
       </div>
 
-      <LiveScanStepper isScanning={pending} />
-
-      <SubmitButton pendingLabel="Laboratuvar Taraması Yapılıyor..." className="mt-1">
+      <SubmitButton pendingLabel="Ödemeye yönlendiriliyor..." className="mt-1">
         {copy.submit}
       </SubmitButton>
 

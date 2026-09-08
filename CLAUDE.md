@@ -18,6 +18,17 @@ how this codebase is read:
    - **Tam Tarama (`FULL`, ₺449)**: All 7 modules including Form Validation & Interaction Scan (`POLAR_PRODUCT_FULL`).
    - **Polar MoR Resolution & Fallback**: `resolvePolarProductId()` in `src/lib/polar.ts` maps package labels to specific Polar product IDs, falling back to `POLAR_QA_PRODUCT_ID`. `customerIpAddress` is passed for automatic geolocation & multi-currency detection.
    - **Public Audit Reports & Webhook Email**: Shareable public audit route at `/r/[orderId]` with cryptographic SHA-256 seal and `@media print` PDF styling (`src/app/r/[orderId]/page.tsx`). Polar `order.paid` webhook (`src/app/api/webhooks/polar/route.ts`) updates payment status and sends Resend notification emails via `notifyStandaloneCheckPaid()`. (Decision records: `~/.gstack/projects/Msamedcbn-lancerix/ceo-plans/2026-09-08-standalone-qa-polar-packages.md` and `2026-09-08-positioning-verification-first.md`.)
+   - **Pay-first (2026-09-08)**: nothing is scanned until payment is
+     confirmed. Both purchase paths (`createStandaloneCheck` for a signed-in
+     user, `purchaseStandaloneCheck` from the homepage) write a PENDING order
+     via `createStandaloneOrder()` and redirect straight to Polar; the scan
+     runs from the verified `order.paid` webhook through `after()`
+     (`runScanForPaidOrder`), which is why that route carries
+     `maxDuration = 300`. The earlier flow ran the whole scan first and only
+     gated report *detail* on payment, which handed every free signup real
+     headless-Chromium minutes and the verdict before any money. A total scan
+     failure after payment writes ERROR rows rather than aborting -- the
+     money is already taken, so silence is the worst outcome.
    - **Delivery guarantee (2026-09-08)**: every module in the purchased
      package writes a `standalone_qa_reports` row, including one that could
      not run -- status `ERROR`, distinct from `FAIL` (the site failed the
