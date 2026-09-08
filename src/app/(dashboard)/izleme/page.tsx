@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 
 import { getMyMonitoring } from "@/lib/data/monitoring";
+import { resolveVisitorCurrency } from "@/lib/i18n/currency-detect";
+import { formatMoney, type SupportedCurrency } from "@/lib/validations/currency";
 import { MONITORING_PLAN_IDS, MONITORING_PLANS } from "@/lib/validations/monitoring";
 
 import { AddSiteForm, RemoveSiteButton, StartMonitoringButton } from "./monitoring-forms";
@@ -18,11 +21,8 @@ const STATUS_LABEL: Record<string, string> = {
   CANCELED: "İptal edildi",
 };
 
-function priceLabel(minor: number, currency: string): string {
-  const major = minor / 100;
-  if (currency === "TRY") return `₺${major.toFixed(0)}/ay`;
-  if (currency === "USD") return `$${major.toFixed(0)}/ay`;
-  return `€${major.toFixed(0)}/ay`;
+function priceLabel(minor: number, currency: SupportedCurrency): string {
+  return `${formatMoney(minor, currency)}/ay`;
 }
 
 /**
@@ -36,7 +36,10 @@ function priceLabel(minor: number, currency: string): string {
  * keep scanning a URL, so it ends when the subscription does.
  */
 export default async function IzlemePage() {
-  const overview = await getMyMonitoring();
+  const [overview, defaultCurrency] = await Promise.all([
+    getMyMonitoring(),
+    headers().then(resolveVisitorCurrency),
+  ]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -57,7 +60,7 @@ export default async function IzlemePage() {
               <div key={planId} className="rounded-xl border border-border p-5">
                 <p className="text-sm font-semibold text-foreground">{plan.label}</p>
                 <p className="tnum mt-1 text-lg font-semibold text-foreground">
-                  {priceLabel(plan.priceMinor.TRY, "TRY")}
+                  {priceLabel(plan.priceMinor[defaultCurrency], defaultCurrency)}
                 </p>
                 <ul className="mt-3 flex flex-col gap-1.5 text-xs text-muted-foreground">
                   <li>{plan.siteLimit} siteye kadar</li>
@@ -81,7 +84,8 @@ export default async function IzlemePage() {
                   {MONITORING_PLANS[overview.subscription.plan_id as "MONITORING" | "AGENCY"].label} planı
                 </p>
                 <p className="tnum mt-0.5 text-xs text-muted-foreground">
-                  {priceLabel(overview.subscription.price_minor, overview.subscription.currency)} ·{" "}
+                  {priceLabel(overview.subscription.price_minor, overview.subscription.currency as SupportedCurrency)}{" "}
+                  ·{" "}
                   {CADENCE_LABEL[overview.subscription.cadence] ?? overview.subscription.cadence} tarama ·{" "}
                   {overview.sites.length}/{overview.subscription.site_limit} site
                 </p>

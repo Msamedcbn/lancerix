@@ -6,10 +6,13 @@ import Link from "next/link";
 import { CheckCircle2 } from "lucide-react";
 
 import { purchaseStandaloneCheck, type FormState } from "@/app/marketing-actions";
+import { CurrencySwitcher } from "@/components/currency-switcher";
 import { FormFeedback, SubmitButton } from "@/components/form-feedback";
 import type { StandalonePackageCopy } from "@/lib/i18n/dictionaries/home";
+import { formatMoney, type SupportedCurrency } from "@/lib/validations/currency";
 import {
   STANDALONE_PACKAGE_IDS,
+  STANDALONE_PACKAGES,
   type StandalonePackageId,
 } from "@/lib/validations/standalone-qa";
 
@@ -32,11 +35,13 @@ export type StandaloneFormCopy = {
 
 function MarketingFormFields({
   copy,
+  currency,
   packageId,
   setPackageId,
   state,
 }: {
   copy: StandaloneFormCopy;
+  currency: SupportedCurrency;
   packageId: StandalonePackageId;
   setPackageId: (id: StandalonePackageId) => void;
   state: FormState;
@@ -81,7 +86,7 @@ function MarketingFormFields({
 
                 <div className="mb-2">
                   <span className="mono font-display text-2xl font-bold text-foreground">
-                    {pkg.price}
+                    {formatMoney(STANDALONE_PACKAGES[id].priceMinor[currency], currency)}
                   </span>
                 </div>
 
@@ -169,7 +174,15 @@ function MarketingFormFields({
   );
 }
 
-export function StandalonePurchaseForm({ copy }: Readonly<{ copy: StandaloneFormCopy }>) {
+export function StandalonePurchaseForm({
+  copy,
+  currency,
+  onCurrencyChange,
+}: Readonly<{
+  copy: StandaloneFormCopy;
+  currency: SupportedCurrency;
+  onCurrencyChange: (currency: SupportedCurrency) => void;
+}>) {
   const [state, action] = useActionState(purchaseStandaloneCheck, INITIAL);
   const [packageId, setPackageId] = useState<StandalonePackageId>("PRO");
 
@@ -183,10 +196,13 @@ export function StandalonePurchaseForm({ copy }: Readonly<{ copy: StandaloneForm
         <p className="mx-auto mt-3 max-w-xl text-base leading-relaxed text-muted-foreground">
           {copy.body}
         </p>
+        <div className="mt-5 flex justify-center">
+          <CurrencySwitcher currency={currency} onChange={onCurrencyChange} />
+        </div>
       </div>
 
       <form action={action} className="glass flex flex-col gap-6 rounded-2xl border border-border p-6 md:p-8">
-        <MarketingFormFields copy={copy} packageId={packageId} setPackageId={setPackageId} state={state} />
+        <MarketingFormFields copy={copy} currency={currency} packageId={packageId} setPackageId={setPackageId} state={state} />
       </form>
     </div>
   );

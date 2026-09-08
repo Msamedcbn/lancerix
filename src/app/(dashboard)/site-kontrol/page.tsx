@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import Link from "next/link";
 
 import { requireSession } from "@/lib/auth/session";
 import { latestReportPerModule, listMyStandaloneOrders } from "@/lib/data/standalone-qa";
+import { resolveVisitorCurrency } from "@/lib/i18n/currency-detect";
 import { STANDALONE_MODULE_MAX_ATTEMPTS } from "@/lib/validations/standalone-qa";
 import type {
   AccessibilityResults,
@@ -278,7 +280,11 @@ function ReportDetail({
  * a separate table/RLS/report pair rather than a retrofit of qa_tier_orders.
  */
 export default async function SiteKontrolPage() {
-  const [session, orders] = await Promise.all([requireSession(), listMyStandaloneOrders()]);
+  const [session, orders, defaultCurrency] = await Promise.all([
+    requireSession(),
+    listMyStandaloneOrders(),
+    headers().then(resolveVisitorCurrency),
+  ]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -291,7 +297,7 @@ export default async function SiteKontrolPage() {
 
       {session.role === "ADMIN" ? <AdminFreeTrialForm /> : null}
 
-      <StandaloneCheckForm />
+      <StandaloneCheckForm defaultCurrency={defaultCurrency} />
 
       {orders.length > 0 ? (
         <div className="flex flex-col gap-3">

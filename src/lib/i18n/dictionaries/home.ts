@@ -35,7 +35,6 @@ export type Step = { title: string; body: string };
 
 export type StandalonePackageCopy = {
   label: string;
-  price: string;
   hint: string;
   popular?: boolean;
   features: readonly string[];
@@ -107,9 +106,11 @@ export type HomeCopy = {
     eyebrow: string;
     title: string;
     body: string;
+    /** "ay" / "mo" -- appended after the price as "/{perMonth}". */
+    perMonth: string;
     plans: Record<
       "MONITORING" | "AGENCY",
-      { label: string; price: string; hint: string; features: string[] }
+      { label: string; hint: string; features: string[] }
     >;
     cta: string;
     note: string;
@@ -206,7 +207,6 @@ export const HOME_COPY: Record<Locale, HomeCopy> = {
       packages: {
         BASIC: {
           label: "Temel Kontrol",
-          price: "₺199",
           hint: "Erişilebilirlik, SEO ve Ölü Link taraması.",
           features: [
             "Erişilebilirlik (WCAG 2.1 A/AA)",
@@ -216,7 +216,6 @@ export const HOME_COPY: Record<Locale, HomeCopy> = {
         },
         PRO: {
           label: "Profesyonel",
-          price: "₺349",
           popular: true,
           hint: "Temel Kontrol + Hız & Mobil Taşma kontrolleri.",
           features: [
@@ -227,7 +226,6 @@ export const HOME_COPY: Record<Locale, HomeCopy> = {
         },
         FULL: {
           label: "Tam Tarama",
-          price: "₺449",
           hint: "Sistemdeki tüm 7 modül ve etkileşim taramaları.",
           features: [
             "Profesyonel paketindeki tüm modüller",
@@ -249,10 +247,10 @@ export const HOME_COPY: Record<Locale, HomeCopy> = {
       eyebrow: "SÜREKLİ KORUMA",
       title: "Bir kere değil, her hafta.",
       body: "Siteni haftalık olarak otomatik tarar, bir şey değiştiğinde e-posta ile haber veririz. Değişmeyen kontroller için posta gelmez.",
+      perMonth: "ay",
       plans: {
         MONITORING: {
           label: "İzleme",
-          price: "₺799/ay",
           hint: "Tek bir site sahibi için.",
           features: [
             "3 siteye kadar",
@@ -262,7 +260,6 @@ export const HOME_COPY: Record<Locale, HomeCopy> = {
         },
         AGENCY: {
           label: "Ajans",
-          price: "₺3.500/ay",
           hint: "Birden çok müşteri yöneten ajanslar için.",
           features: [
             "5 siteye kadar",
@@ -391,7 +388,6 @@ export const HOME_COPY: Record<Locale, HomeCopy> = {
       packages: {
         BASIC: {
           label: "Basic Check",
-          price: "₺199",
           hint: "Accessibility, SEO, and Dead Link scan.",
           features: [
             "Accessibility (WCAG 2.1 A/AA)",
@@ -401,7 +397,6 @@ export const HOME_COPY: Record<Locale, HomeCopy> = {
         },
         PRO: {
           label: "Professional",
-          price: "₺349",
           popular: true,
           hint: "Basic Check + Speed & Mobile Overflow checks.",
           features: [
@@ -412,7 +407,6 @@ export const HOME_COPY: Record<Locale, HomeCopy> = {
         },
         FULL: {
           label: "Full Scan",
-          price: "₺449",
           hint: "All 7 modules including browser interactions.",
           features: [
             "All modules in Professional",
@@ -434,10 +428,10 @@ export const HOME_COPY: Record<Locale, HomeCopy> = {
       eyebrow: "CONTINUOUS COVERAGE",
       title: "Not once — every week.",
       body: "We scan your site automatically every week and email you only when something changes. No news, no email.",
+      perMonth: "mo",
       plans: {
         MONITORING: {
           label: "Monitoring",
-          price: "₺799/mo",
           hint: "For a single site owner.",
           features: [
             "Up to 3 sites",
@@ -447,7 +441,6 @@ export const HOME_COPY: Record<Locale, HomeCopy> = {
         },
         AGENCY: {
           label: "Agency",
-          price: "₺3,500/mo",
           hint: "For agencies managing multiple clients.",
           features: [
             "Up to 5 sites",

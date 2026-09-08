@@ -4,33 +4,12 @@ import { revalidatePath } from "next/cache";
 
 import { requireSession } from "@/lib/auth/session";
 import { FAIL, firstIssue, OK, toUserMessage, type FormState } from "@/lib/forms";
+import { resolveVisitorCurrency } from "@/lib/i18n/currency-detect";
 import { createMonitoringCheckout, payViaPolarCheckout } from "@/lib/polar";
 import { createClient } from "@/lib/supabase/server";
-import {
-  MONITORING_PLANS,
-  monitoredSiteSchema,
-  startMonitoringSchema,
-  type SupportedCurrency,
-} from "@/lib/validations/monitoring";
+import { MONITORING_PLANS, monitoredSiteSchema, startMonitoringSchema } from "@/lib/validations/monitoring";
 
 export type { FormState };
-
-/**
- * Which currency a subscriber is billed in.
- *
- * Recorded here for our own reporting only -- Polar decides what the customer
- * actually pays, from the per-currency prices on the product and the buyer's
- * region (2026-09-08 regional pricing decision). Deriving it from a header is
- * a hint, not a source of truth, which is why the amount stored alongside it
- * is corrected from the webhook if Polar priced it differently.
- */
-function currencyFromLocaleHint(hint: string | null): SupportedCurrency {
-  if (!hint) return "TRY";
-  const lower = hint.toLowerCase();
-  if (lower.startsWith("tr")) return "TRY";
-  if (/^(de|fr|es|it|nl|pt|fi|el|et|lv|lt|sk|sl|ga|mt)/.test(lower)) return "EUR";
-  return "USD";
-}
 
 /**
  * Starts a monitoring subscription: writes the row, then hands off to Polar.
@@ -59,8 +38,7 @@ export async function startMonitoring(_prev: FormState, formData: FormData): Pro
   if (existing) return FAIL("Zaten aktif bir izleme aboneliğin var.");
 
   const { headers } = await import("next/headers");
-  const h = await headers();
-  const currency = currencyFromLocaleHint(h.get("accept-language"));
+  const currency = resolveVisitorCurrency(await headers());
 
   const { data: subscription, error } = await supabase
     .from("monitoring_subscriptions")

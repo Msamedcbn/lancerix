@@ -1,6 +1,9 @@
 import { z } from "zod";
 
+import type { SupportedCurrency } from "@/lib/validations/currency";
 import { STANDALONE_CHECK_TYPES } from "@/lib/validations/standalone-qa";
+
+export { SUPPORTED_CURRENCIES, type SupportedCurrency } from "@/lib/validations/currency";
 
 /**
  * Continuous monitoring: the same deterministic engine as a standalone check,
@@ -25,20 +28,6 @@ export const CADENCE_DAYS: Record<ScanCadence, number> = {
 
 export const MONITORING_PLAN_IDS = ["MONITORING", "AGENCY"] as const;
 export type MonitoringPlanId = (typeof MONITORING_PLAN_IDS)[number];
-
-/**
- * Prices are per currency, NOT converted from one another. Regional pricing is
- * a willingness-to-pay decision, and TRY is volatile enough that pegging the
- * others to it would move the foreign prices every month (2026-09-08).
- *
- * Amounts are integers in each currency's minor unit (kuruş, cent), the same
- * convention as standalone_qa_orders -- see CLAUDE.md on money. Note this is
- * the one place the codebase holds non-TRY amounts: the escrow rules in
- * CLAUDE.md ("every amount is an integer of kuruş") describe Faz 2's escrow
- * ledger, which is TRY-only and unaffected.
- */
-export const SUPPORTED_CURRENCIES = ["TRY", "USD", "EUR"] as const;
-export type SupportedCurrency = (typeof SUPPORTED_CURRENCIES)[number];
 
 export type MonitoringPlan = {
   readonly label: string;

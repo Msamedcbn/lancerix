@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import type { SupportedCurrency } from "@/lib/validations/currency";
+
 /**
  * A contract-free check: just a URL, no acceptance_criteria, no
  * counterparty. Seven check types as of 2026-09-08
@@ -52,24 +54,37 @@ export const STANDALONE_PACKAGES: Record<
   StandalonePackageId,
   {
     readonly modules: readonly StandaloneCheckType[];
+    /** The TRY price, in kuruş -- what standalone_qa_orders.fee_kurus stores
+     * for this package regardless of which currency Polar actually billed
+     * the customer in. Always equal to priceMinor.TRY; kept as its own field
+     * because every existing caller (packageFeeKurus, the RLS fee_check
+     * policy) reads it, not priceMinor. */
     readonly feeKurus: number;
     readonly label: string;
+    /** TRY/USD/EUR prices, matching the fixed prices set on this package's
+     * own Polar product (POLAR_PRODUCT_BASIC/PRO/FULL, 2026-09-09) exactly --
+     * this is what a visitor sees on the site, so it must never drift from
+     * what checkout actually charges. */
+    readonly priceMinor: Record<SupportedCurrency, number>;
   }
 > = {
   BASIC: {
     modules: ["ACCESSIBILITY", "SEO_META", "DEAD_LINKS"],
     feeKurus: 19900,
     label: "Temel Kontrol",
+    priceMinor: { TRY: 19900, USD: 1900, EUR: 1900 },
   },
   PRO: {
     modules: ["ACCESSIBILITY", "SEO_META", "DEAD_LINKS", "PERFORMANCE", "VISUAL_OVERFLOW"],
     feeKurus: 34900,
     label: "Profesyonel",
+    priceMinor: { TRY: 34900, USD: 2900, EUR: 2900 },
   },
   FULL: {
     modules: [...STANDALONE_CHECK_TYPES],
     feeKurus: 44900,
     label: "Tam Tarama",
+    priceMinor: { TRY: 44900, USD: 3900, EUR: 3900 },
   },
 } as const;
 

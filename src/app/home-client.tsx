@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, type ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import {
@@ -15,6 +15,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 
+import { CurrencySwitcher } from "@/components/currency-switcher";
 import { HorizontalAccordion } from "@/components/home/horizontal-accordion";
 import { StandalonePurchaseForm } from "@/components/home/standalone-purchase-form";
 import { gsap, useGSAP } from "@/lib/gsap";
@@ -22,6 +23,8 @@ import { SiteHeader } from "@/components/layout/site-header";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/config";
 import { HOME_COPY } from "@/lib/i18n/dictionaries/home";
+import { formatMoney, type SupportedCurrency } from "@/lib/validations/currency";
+import { MONITORING_PLAN_IDS, MONITORING_PLANS } from "@/lib/validations/monitoring";
 
 // Dynamically import WorldMap to avoid SSR issues with canvas/svg if any
 const WorldMap = dynamic(() => import("@/components/ui/world-map"), {
@@ -99,8 +102,17 @@ const FIRST_SHOW_THRESHOLD = 5;
 export function HomeClient({
   verifiedCount,
   locale = DEFAULT_LOCALE,
-}: Readonly<{ verifiedCount: number | null; locale?: Locale }>) {
+  defaultCurrency = "TRY",
+}: Readonly<{
+  verifiedCount: number | null;
+  locale?: Locale;
+  /** Best-effort guess from the visitor's IP (resolveVisitorCurrency,
+   * page.tsx) -- the visible CurrencySwitcher next to each pricing section
+   * is the correction when it's wrong, not a decoration. */
+  defaultCurrency?: SupportedCurrency;
+}>) {
   const root = useRef<HTMLElement>(null);
+  const [currency, setCurrency] = useState<SupportedCurrency>(defaultCurrency);
   const showVerifiedCount = verifiedCount !== null && verifiedCount >= FIRST_SHOW_THRESHOLD;
   const t = HOME_COPY[locale];
   const steps = [
@@ -358,7 +370,7 @@ export function HomeClient({
            the header and footer link to. ------------------------------------- */}
       <section id="fiyat" className="px-6 pb-24 md:pb-32">
         <span id="dene" className="sr-only" aria-hidden />
-        <StandalonePurchaseForm copy={t.standalone} />
+        <StandalonePurchaseForm copy={t.standalone} currency={currency} onCurrencyChange={setCurrency} />
       </section>
 
       {/* --- continuous monitoring subscription: same engine, run weekly ------
@@ -380,11 +392,15 @@ export function HomeClient({
           <p className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-muted-foreground">
             {t.monitoring.body}
           </p>
+          <div className="mt-5 flex justify-center">
+            <CurrencySwitcher currency={currency} onChange={setCurrency} />
+          </div>
         </div>
 
         <div className="mx-auto mt-10 grid max-w-3xl gap-4 sm:grid-cols-2">
-          {(["MONITORING", "AGENCY"] as const).map((planId) => {
+          {MONITORING_PLAN_IDS.map((planId) => {
             const plan = t.monitoring.plans[planId];
+            const price = formatMoney(MONITORING_PLANS[planId].priceMinor[currency], currency);
             return (
               <div
                 key={planId}
@@ -392,7 +408,10 @@ export function HomeClient({
               >
                 <div className="flex items-baseline justify-between gap-2">
                   <span className="text-sm font-semibold text-foreground">{plan.label}</span>
-                  <span className="tnum text-lg font-bold text-foreground">{plan.price}</span>
+                  <span className="tnum text-lg font-bold text-foreground">
+                    {price}
+                    <span className="text-xs font-medium text-muted-foreground">/{t.monitoring.perMonth}</span>
+                  </span>
                 </div>
                 <p className="mt-1 text-xs text-muted-foreground">{plan.hint}</p>
                 <ul className="mt-4 flex flex-col gap-2 text-sm text-muted-foreground">
