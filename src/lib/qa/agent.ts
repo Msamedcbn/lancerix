@@ -8,7 +8,7 @@ import { chromium as playwrightChromium, type Browser, type Page } from "playwri
 import { z } from "zod";
 
 import { notifyDeliverySubmitted } from "@/lib/notify/email";
-import { resolveChromium } from "@/lib/qa/chromium";
+import { resolveChromium, type ChromiumRuntime } from "@/lib/qa/chromium";
 import { isBlockedTarget } from "@/lib/qa/ssrf-guard";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -219,10 +219,48 @@ async function escalate(
   if (error) console.error(`[qa-agent] escalation RPC failed for ${orderId}`, error);
 }
 
+async function launchAndNavigate(
+  runtime: ChromiumRuntime,
+  url: string,
+): Promise<{ browser: Browser; page: Page }> {
+  const browser = await playwrightChromium.launch({
+    args: runtime.args,
+    executablePath: runtime.executablePath,
+    headless: true,
+  });
+  try {
+    // browser.newContext() rather than browser.newPage(): @axe-core/playwright
+    // refuses to analyze a page that belongs to the browser's implicit default
+    // context ("Please use browser.newContext()"), which silently cost us the
+    // entire accessibility module -- the one check CLAUDE.md calls the cleanest,
+    // zero-judgment case. Closing the browser closes the context with it, so
+    // callers' existing browser.close() is still the whole cleanup story.
+    const context = await browser.newContext();
+    const page = await context.newPage();
+    await page.goto(url, { waitUntil: "networkidle", timeout: 15_000 });
+    return { browser, page };
+  } catch (err) {
+    await browser.close().catch(() => {});
+    throw err;
+  }
+}
+
 /** Launches a browser and navigates to the staging URL. Null on any failure
- * (launch, navigation, timeout). Caller owns closing the returned browser.
- * Exported for src/lib/qa/standalone.ts, which reuses the same chromium
- * launch instead of duplicating the resolveChromium() boilerplate. */
+ * (launch, navigation, timeout) that survives one retry. Caller owns closing
+ * the returned browser. Exported for src/lib/qa/standalone.ts, which reuses
+ * the same chromium launch instead of duplicating the resolveChromium()
+ * boilerplate.
+ *
+ * The retry exists because production evidence (2026-09-09: a FULL package
+ * scan where Visual Overflow and Form Validation failed on the first pass
+ * but Accessibility, Performance and Interaction Scan -- the same launch
+ * path, same container, same request -- succeeded around them) points to
+ * transient resource pressure on @sparticuz/chromium's --single-process
+ * build under repeated launches within one warm container, not a bug in any
+ * one module: which module trips it varies run to run. A single retry after
+ * a short backoff is cheap insurance against that kind of transient
+ * failure; a second consecutive failure is treated as real.
+ */
 export async function openStagingPage(url: string): Promise<{ browser: Browser; page: Page } | null> {
   if (await isBlockedTarget(url)) {
     console.error(`[qa-agent] refusing to load ${url}: resolves to a private/internal address`);
@@ -235,26 +273,18 @@ export async function openStagingPage(url: string): Promise<{ browser: Browser; 
     return null;
   }
 
-  let browser: Browser | undefined;
   try {
-    browser = await playwrightChromium.launch({
-      args: runtime.args,
-      executablePath: runtime.executablePath,
-      headless: true,
-    });
-    // browser.newContext() rather than browser.newPage(): @axe-core/playwright
-    // refuses to analyze a page that belongs to the browser's implicit default
-    // context ("Please use browser.newContext()"), which silently cost us the
-    // entire accessibility module -- the one check CLAUDE.md calls the cleanest,
-    // zero-judgment case. Closing the browser closes the context with it, so
-    // callers' existing browser.close() is still the whole cleanup story.
-    const context = await browser.newContext();
-    const page = await context.newPage();
-    await page.goto(url, { waitUntil: "networkidle", timeout: 15_000 });
-    return { browser, page };
+    return await launchAndNavigate(runtime, url);
   } catch (err) {
-    console.error(`[qa-agent] failed to load ${url}`, err);
-    await browser?.close().catch(() => {});
+    console.error(`[qa-agent] failed to load ${url}, retrying once`, err);
+  }
+
+  await new Promise((resolve) => setTimeout(resolve, 500));
+
+  try {
+    return await launchAndNavigate(runtime, url);
+  } catch (err) {
+    console.error(`[qa-agent] failed to load ${url} on retry`, err);
     return null;
   }
 }

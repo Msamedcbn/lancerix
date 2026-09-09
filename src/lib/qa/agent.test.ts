@@ -335,7 +335,7 @@ describe("processTier2Order", () => {
     expect(notifyDeliverySubmitted).not.toHaveBeenCalled();
   });
 
-  it("escalates when the staging URL can't be loaded", async () => {
+  it("escalates when the staging URL can't be loaded, even after retrying once", async () => {
     launchImpl = async () => {
       throw new Error("net::ERR_CONNECTION_REFUSED");
     };
@@ -346,6 +346,27 @@ describe("processTier2Order", () => {
       p_order_id: ORDER_ID,
       p_reason: `could not load staging URL: ${STAGING_URL}`,
     });
+  });
+
+  it("recovers and completes normally when only the first launch attempt fails", async () => {
+    // Production evidence (2026-09-09): which browser-based module trips a
+    // transient launch failure on the shared serverless container varies
+    // run to run, so openStagingPage retries once before giving up -- this
+    // proves a single bad attempt no longer escalates the whole order.
+    let attempts = 0;
+    launchImpl = async () => {
+      attempts++;
+      if (attempts === 1) throw new Error("transient launch failure");
+      return { newContext: async () => ({ newPage: async () => makeMockPage(pageState) }), close: async () => {} };
+    };
+    const { processTier2Order } = await import("./agent");
+    await processTier2Order(ORDER_ID);
+
+    expect(attempts).toBe(2);
+    expect(admin.rpc).not.toHaveBeenCalledWith(
+      "auto_escalate_qa_tier",
+      expect.objectContaining({ p_reason: `could not load staging URL: ${STAGING_URL}` }),
+    );
   });
 
   it("escalates when OPENAI_API_KEY is not configured, without launching a browser session for nothing", async () => {

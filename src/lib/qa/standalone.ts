@@ -5,10 +5,10 @@ import crypto from "crypto";
 import AxeBuilder from "@axe-core/playwright";
 import * as cheerio from "cheerio";
 import { LinkChecker } from "linkinator";
-import { chromium as playwrightChromium } from "playwright-core";
+import { chromium as playwrightChromium, type Browser, type Page } from "playwright-core";
 
 import { openStagingPage } from "@/lib/qa/agent";
-import { resolveChromium } from "@/lib/qa/chromium";
+import { resolveChromium, type ChromiumRuntime } from "@/lib/qa/chromium";
 import { isBlockedTarget } from "@/lib/qa/ssrf-guard";
 import {
   STANDALONE_PACKAGES,
@@ -217,6 +217,29 @@ function scoreMetric(value: number, good: number, poor: number): number {
  * throttling lab score (see scoreMetric) -- a different number in the same
  * shape, not a like-for-like reproduction.
  */
+async function launchPerformancePage(
+  runtime: ChromiumRuntime,
+  url: string,
+): Promise<{ browser: Browser; page: Page }> {
+  const browser = await playwrightChromium.launch({
+    executablePath: runtime.executablePath,
+    args: runtime.args,
+    headless: true,
+  });
+  try {
+    const context = await browser.newContext();
+    const page = await context.newPage();
+    // Must be registered before goto() -- see installVitalsCollector's own
+    // comment on why longtask entries specifically need this ordering.
+    await page.addInitScript(installVitalsCollector);
+    await page.goto(url, { waitUntil: "load", timeout: 15_000 });
+    return { browser, page };
+  } catch (err) {
+    await browser.close().catch(() => {});
+    throw err;
+  }
+}
+
 export async function runPerformanceCheck(url: string): Promise<PerformanceCheckOutcome | null> {
   if (await isBlockedTarget(url)) {
     console.error(`[standalone-qa] refusing ${url}: resolves to a private/internal address`);
@@ -226,19 +249,27 @@ export async function runPerformanceCheck(url: string): Promise<PerformanceCheck
   const runtime = await resolveChromium();
   if (!runtime) return null;
 
-  let browser: Awaited<ReturnType<typeof playwrightChromium.launch>> | undefined;
+  // Retried once, same reasoning as openStagingPage's own retry
+  // (src/lib/qa/agent.ts): production evidence points to transient
+  // resource pressure from repeated Chromium launches within one warm
+  // @sparticuz/chromium --single-process container, not a bug specific to
+  // this module -- which module trips it varies run to run.
+  let launched: Awaited<ReturnType<typeof launchPerformancePage>>;
   try {
-    browser = await playwrightChromium.launch({
-      executablePath: runtime.executablePath,
-      args: runtime.args,
-      headless: true,
-    });
-    const context = await browser.newContext();
-    const page = await context.newPage();
-    // Must be registered before goto() -- see installVitalsCollector's own
-    // comment on why longtask entries specifically need this ordering.
-    await page.addInitScript(installVitalsCollector);
-    await page.goto(url, { waitUntil: "load", timeout: 15_000 });
+    launched = await launchPerformancePage(runtime, url);
+  } catch (err) {
+    console.error(`[standalone-qa] failed to launch chrome for ${url}, retrying once`, err);
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    try {
+      launched = await launchPerformancePage(runtime, url);
+    } catch (retryErr) {
+      console.error(`[standalone-qa] failed to launch chrome for ${url} on retry`, retryErr);
+      return null;
+    }
+  }
+
+  const { browser, page } = launched;
+  try {
     // A real visit keeps generating CLS/long-task signal for a bit after
     // load fires; Lighthouse's own timespan is in a similar range for a
     // simple page. Long enough to catch late layout shifts, short enough to

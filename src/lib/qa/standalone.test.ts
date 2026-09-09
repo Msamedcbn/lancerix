@@ -311,10 +311,20 @@ describe("runPerformanceCheck", () => {
     expect(browserCloseMock).toHaveBeenCalledTimes(1);
   });
 
-  it("returns null without evaluating vitals when chrome fails to launch", async () => {
-    playwrightLaunchMock.mockRejectedValueOnce(new Error("chrome launch failed"));
+  it("recovers on a retry after one failed launch attempt", async () => {
+    playwrightLaunchMock.mockRejectedValueOnce(new Error("transient launch failure"));
+    const result = await runPerformanceCheck("https://example.com");
+    expect(result?.status).toBe("PASS");
+    expect(playwrightLaunchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("returns null without evaluating vitals when chrome fails to launch twice in a row", async () => {
+    playwrightLaunchMock
+      .mockRejectedValueOnce(new Error("chrome launch failed"))
+      .mockRejectedValueOnce(new Error("chrome launch failed again"));
     const result = await runPerformanceCheck("https://example.com");
     expect(result).toBeNull();
+    expect(playwrightLaunchMock).toHaveBeenCalledTimes(2);
     expect(perfEvaluateMock).not.toHaveBeenCalled();
   });
 });
