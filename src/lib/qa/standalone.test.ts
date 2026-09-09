@@ -59,10 +59,10 @@ vi.mock("@axe-core/playwright", () => ({
   })),
 }));
 
-// runPerformanceCheck doesn't go through openStagingPage (Lighthouse drives
-// its own Chrome via chrome-launcher, it can't attach to a Playwright page),
-// so its SSRF check is a separate call site -- mocked here the same way
-// agent.test.ts mocks it for openStagingPage's internal check.
+// runPerformanceCheck doesn't go through openStagingPage (it needs its own
+// tab, not one shared with another check), so its SSRF check is a separate
+// call site -- mocked here the same way agent.test.ts mocks it for
+// openStagingPage's internal check.
 let blockedTarget = false;
 vi.mock("@/lib/qa/ssrf-guard", () => ({
   isBlockedTarget: vi.fn(async () => blockedTarget),
@@ -78,18 +78,16 @@ vi.mock("@/lib/qa/chromium", () => ({
   ),
 }));
 
-// Direct references to these two consts inside a vi.mock factory (unlike
-// wrapping them in a brand-new inline vi.fn(), the pattern the axe-core mock
-// above uses) get evaluated the moment the factory itself runs -- which,
-// because standalone.ts is imported statically below, happens before this
-// file's own top-level `const` declarations do (ESM: a module's imports
-// finish executing before its own body does). A thin deferred wrapper here
-// avoids evaluating the const until the wrapper is actually called, by
-// which point everything below has run.
-const chromeKillMock = vi.fn(async () => {});
-const chromeLaunchMock = vi.fn(async (..._args: unknown[]) => ({ port: 9222, kill: chromeKillMock }));
-vi.mock("chrome-launcher", () => ({
-  launch: (...args: unknown[]) => chromeLaunchMock(...args),
+// runPerformanceCheck launches its own Chromium directly via playwright-core
+// (openStagingPage, mocked wholesale above, is a separate call path) and
+// hands Lighthouse an explicit --remote-debugging-port to attach to instead
+// of going through chrome-launcher's own spawn-and-detect-the-port mechanism
+// -- same deferred-wrapper reasoning as the axe-core mock above applies to
+// browserCloseMock here.
+const browserCloseMock = vi.fn(async () => {});
+const playwrightLaunchMock = vi.fn(async (..._args: unknown[]) => ({ close: browserCloseMock }));
+vi.mock("playwright-core", () => ({
+  chromium: { launch: (...args: unknown[]) => playwrightLaunchMock(...args) },
 }));
 
 type LighthouseAudits = Record<string, { numericValue: number } | undefined>;
@@ -140,8 +138,8 @@ beforeEach(() => {
   analyzeResult = { violations: [], passes: [] };
   blockedTarget = false;
   chromiumAvailable = true;
-  chromeKillMock.mockClear();
-  chromeLaunchMock.mockClear();
+  browserCloseMock.mockClear();
+  playwrightLaunchMock.mockClear();
   lighthouseMock.mockClear();
   lighthouseResult = { lhr: { categories: { performance: { score: 1 } }, audits: perfAudits() } };
 
@@ -222,27 +220,24 @@ describe("runPerformanceCheck", () => {
     blockedTarget = true;
     const result = await runPerformanceCheck("https://169.254.169.254/");
     expect(result).toBeNull();
-    expect(chromeLaunchMock).not.toHaveBeenCalled();
+    expect(playwrightLaunchMock).not.toHaveBeenCalled();
     expect(lighthouseMock).not.toHaveBeenCalled();
   });
 
   it("returns null without launching chrome when no browser is available", async () => {
-    // chrome-launcher's launch() spawns the process directly and can crash
-    // the process with an unhandled 'error' event on a bad path (unlike
-    // Playwright's chromium.launch(), which rejects cleanly) -- this is the
-    // real failure mode hit on Windows dev machines, and the reason
-    // resolveChromium() is consulted before anything is spawned.
+    // Picking (and existence-checking) the binary belongs to
+    // resolveChromium(); when it can't find one, nothing should be spawned.
     chromiumAvailable = false;
     const result = await runPerformanceCheck("https://example.com");
     expect(result).toBeNull();
-    expect(chromeLaunchMock).not.toHaveBeenCalled();
+    expect(playwrightLaunchMock).not.toHaveBeenCalled();
   });
 
   it("returns null when lighthouse produces no result", async () => {
     lighthouseResult = null;
     const result = await runPerformanceCheck("https://example.com");
     expect(result).toBeNull();
-    expect(chromeKillMock).toHaveBeenCalledTimes(1);
+    expect(browserCloseMock).toHaveBeenCalledTimes(1);
   });
 
   it("PASS when the performance score is 90 or above", async () => {
@@ -286,39 +281,20 @@ describe("runPerformanceCheck", () => {
     });
   });
 
-  it("closes chrome after a successful scan", async () => {
+  it("closes the browser after a successful scan", async () => {
     await runPerformanceCheck("https://example.com");
-    expect(chromeKillMock).toHaveBeenCalledTimes(1);
+    expect(browserCloseMock).toHaveBeenCalledTimes(1);
   });
 
-  it("closes chrome even when lighthouse itself throws", async () => {
+  it("closes the browser even when lighthouse itself throws", async () => {
     lighthouseMock.mockRejectedValueOnce(new Error("lighthouse crashed"));
     const result = await runPerformanceCheck("https://example.com");
     expect(result).toBeNull();
-    expect(chromeKillMock).toHaveBeenCalledTimes(1);
+    expect(browserCloseMock).toHaveBeenCalledTimes(1);
   });
 
   it("returns null without calling lighthouse when chrome fails to launch", async () => {
-    chromeLaunchMock.mockRejectedValueOnce(new Error("chrome launch failed"));
-    const result = await runPerformanceCheck("https://example.com");
-    expect(result).toBeNull();
-    expect(lighthouseMock).not.toHaveBeenCalled();
-  });
-
-  it("returns null instead of crashing when chrome-launcher's spawn fires an unhandled error", async () => {
-    // The real bug this locks in: chrome-launcher can fail via an
-    // unhandled 'error' event on the spawned child process rather than a
-    // promise rejection -- verified locally (a Linux-only binary on a
-    // Windows dev machine crashed the whole `next dev` process, taking
-    // down every in-flight request, not just this one). Simulated here by
-    // emitting the same event chrome-launcher's internals would, since
-    // actually throwing an uncaught exception would crash this test run.
-    chromeLaunchMock.mockImplementationOnce(
-      () =>
-        new Promise(() => {
-          process.emit("uncaughtException", new Error("spawn ENOENT"));
-        }),
-    );
+    playwrightLaunchMock.mockRejectedValueOnce(new Error("chrome launch failed"));
     const result = await runPerformanceCheck("https://example.com");
     expect(result).toBeNull();
     expect(lighthouseMock).not.toHaveBeenCalled();
@@ -562,7 +538,7 @@ describe("runStandaloneCheck", () => {
   it("dispatches ACCESSIBILITY to the axe-core scan", async () => {
     const result = await runStandaloneCheck("ACCESSIBILITY", "https://example.com");
     expect(result?.status).toBe("PASS");
-    expect(chromeLaunchMock).not.toHaveBeenCalled();
+    expect(playwrightLaunchMock).not.toHaveBeenCalled();
   });
 
   it("dispatches PERFORMANCE to the lighthouse scan", async () => {
@@ -579,7 +555,7 @@ describe("runStandaloneCheck", () => {
     });
     const result = await runStandaloneCheck("SEO_META", "https://example.com");
     expect(result?.status).toBe("PASS");
-    expect(chromeLaunchMock).not.toHaveBeenCalled();
+    expect(playwrightLaunchMock).not.toHaveBeenCalled();
   });
 
   it("dispatches DEAD_LINKS to the linkinator scan", async () => {

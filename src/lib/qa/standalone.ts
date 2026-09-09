@@ -2,11 +2,13 @@ import "server-only";
 
 import crypto from "crypto";
 
+import { createServer } from "net";
+
 import AxeBuilder from "@axe-core/playwright";
 import * as cheerio from "cheerio";
-import * as chromeLauncher from "chrome-launcher";
 import { LinkChecker } from "linkinator";
 import lighthouse from "lighthouse";
+import { chromium as playwrightChromium } from "playwright-core";
 
 import { openStagingPage } from "@/lib/qa/agent";
 import { resolveChromium } from "@/lib/qa/chromium";
@@ -139,12 +141,51 @@ export type PerformanceCheckOutcome = {
 };
 
 /**
- * Runs one standalone Core Web Vitals check via Lighthouse. Unlike
- * runAccessibilityCheck, this does NOT reuse openStagingPage() -- Lighthouse
- * drives its own Chrome instance over CDP (chrome-launcher), it can't attach
- * to a Playwright-owned page. That means the SSRF guard openStagingPage()
- * applies internally has to be re-checked explicitly here, first, before any
- * Chrome process is launched against the target.
+ * Reserves an OS-assigned free TCP port and immediately releases it, so the
+ * caller can hand a specific --remote-debugging-port to Chrome instead of
+ * discovering whatever port it picked afterwards. There is a narrow race
+ * (something else could claim the port between release and Chrome's bind),
+ * but only against other processes on the same Lambda instance, which this
+ * codebase does not run concurrently against itself.
+ */
+function getFreePort(): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const server = createServer();
+    server.on("error", reject);
+    server.listen(0, () => {
+      const address = server.address();
+      if (!address || typeof address !== "object") {
+        server.close(() => reject(new Error("could not determine a free port")));
+        return;
+      }
+      const { port } = address;
+      server.close(() => resolve(port));
+    });
+  });
+}
+
+/**
+ * Runs one standalone Core Web Vitals check via Lighthouse.
+ *
+ * Launches its own Chromium via Playwright -- the same launch path
+ * openStagingPage() already proves reliable, rather than chrome-launcher's
+ * separate spawn-and-detect-the-DevTools-port mechanism, which turned out
+ * not to work against @sparticuz/chromium's serverless build: chrome-
+ * launcher believed it had a port, but nothing was listening on it
+ * (ECONNREFUSED), a documented flaky combination in the wild
+ * (GoogleChrome/lighthouse#2661, #3275), not something a next.config.ts
+ * tracing tweak can fix. Instead: pick a free port ourselves, tell Chrome
+ * to open its DevTools protocol there via --remote-debugging-port, and
+ * point Lighthouse at that same port. Playwright still owns the actual
+ * process; Lighthouse only needs a CDP port to attach to, not to be the one
+ * that launched it.
+ *
+ * Unlike runAccessibilityCheck, this does not reuse openStagingPage() --
+ * Lighthouse needs its own tab, and sharing one with another check would
+ * mean whichever failed first takes the other down with it. That means the
+ * SSRF guard openStagingPage() applies internally has to be re-checked
+ * explicitly here, first, before any Chrome process is launched against the
+ * target.
  */
 export async function runPerformanceCheck(url: string): Promise<PerformanceCheckOutcome | null> {
   if (await isBlockedTarget(url)) {
@@ -155,55 +196,32 @@ export async function runPerformanceCheck(url: string): Promise<PerformanceCheck
   // resolveChromium() picks the binary for this runtime (sparticuz on
   // Vercel, a real local Chrome otherwise) and verifies it exists, so the
   // "no file at all" case is already ruled out by the time we get here.
-  //
-  // The uncaughtException guard below covers what that check cannot: a
-  // file that IS present but is not a runnable binary for this OS/arch.
-  // Unlike Playwright's chromium.launch() (which rejects its promise on a
-  // bad executable path -- see openStagingPage's own try/catch), chrome-
-  // launcher spawns the process directly and can fail via an unhandled
-  // 'error' event on the child process instead of a promise rejection --
-  // an uncaught exception that crashes the whole server (verified: it
-  // takes down every in-flight request, not just this one). The listener
-  // is removed the moment the launch settles either way, so it can't
-  // swallow an unrelated error from a concurrent request.
   const runtime = await resolveChromium();
   if (!runtime) return null;
 
-  let chrome: chromeLauncher.LaunchedChrome;
+  const debugPort = await getFreePort();
+
+  let browser: Awaited<ReturnType<typeof playwrightChromium.launch>> | undefined;
   try {
-    chrome = await new Promise<chromeLauncher.LaunchedChrome>((resolve, reject) => {
-      const onCrash = (err: unknown) => reject(err instanceof Error ? err : new Error(String(err)));
-      process.once("uncaughtException", onCrash);
-      chromeLauncher
-        .launch({
-          chromePath: runtime.executablePath,
-          chromeFlags: [...runtime.args, "--headless=new"],
-        })
-        .then((launched) => {
-          process.removeListener("uncaughtException", onCrash);
-          resolve(launched);
-        })
-        .catch((err: unknown) => {
-          process.removeListener("uncaughtException", onCrash);
-          reject(err);
-        });
+    browser = await playwrightChromium.launch({
+      executablePath: runtime.executablePath,
+      args: [...runtime.args, `--remote-debugging-port=${debugPort}`],
+      headless: true,
     });
   } catch (err) {
     console.error(`[standalone-qa] failed to launch chrome for lighthouse scan of ${url}`, err);
     return null;
   }
 
-  // Same class of problem as the chrome-launcher guard above, a different
-  // trigger: lighthouse's own report-generator module reads its flow-report
-  // HTML/CSS assets via a runtime path.join(__dirname, '../../flow-report/...')
-  // that Vercel's file tracer cannot see statically (outputFileTracingIncludes
-  // in next.config.ts is the attempted fix for that), so on a deploy where
-  // that file is still missing, lighthouse() throws ENOENT from somewhere in
-  // its own internals as an unhandled rejection rather than surfacing through
-  // the returned promise -- verified 2026-09-09: it crashed the whole server,
-  // not just this request, exactly like the undocumented chrome-launcher
-  // 'error' event above. Guarding it the same way turns "every in-flight
-  // request dies" into "this one performance check comes back ERROR."
+  // lighthouse's own report-generator module reads its flow-report HTML/CSS
+  // assets via a runtime path.join(__dirname, '../../flow-report/...') that
+  // Vercel's file tracer cannot see statically (outputFileTracingIncludes in
+  // next.config.ts is the fix for that), so on a deploy where that file is
+  // still missing, lighthouse() throws ENOENT from somewhere in its own
+  // internals as an unhandled rejection rather than surfacing through the
+  // returned promise -- verified 2026-09-09: it crashed the whole server,
+  // not just this request. Guarding it turns "every in-flight request dies"
+  // into "this one performance check comes back ERROR."
   try {
     const runnerResult = await new Promise<Awaited<ReturnType<typeof lighthouse>>>((resolve, reject) => {
       const onCrash = (err: unknown) => reject(err instanceof Error ? err : new Error(String(err)));
@@ -214,7 +232,7 @@ export async function runPerformanceCheck(url: string): Promise<PerformanceCheck
         process.removeListener("unhandledRejection", onCrash);
       };
       lighthouse(url, {
-        port: chrome.port,
+        port: debugPort,
         output: "json",
         onlyCategories: ["performance"],
         logLevel: "error",
@@ -251,11 +269,7 @@ export async function runPerformanceCheck(url: string): Promise<PerformanceCheck
     console.error(`[standalone-qa] lighthouse scan failed for ${url}`, err);
     return null;
   } finally {
-    try {
-      chrome.kill();
-    } catch {
-      // best-effort cleanup, same as browser.close().catch(() => {}) above
-    }
+    await browser.close().catch(() => {});
   }
 }
 
