@@ -193,12 +193,38 @@ export async function runPerformanceCheck(url: string): Promise<PerformanceCheck
     return null;
   }
 
+  // Same class of problem as the chrome-launcher guard above, a different
+  // trigger: lighthouse's own report-generator module reads its flow-report
+  // HTML/CSS assets via a runtime path.join(__dirname, '../../flow-report/...')
+  // that Vercel's file tracer cannot see statically (outputFileTracingIncludes
+  // in next.config.ts is the attempted fix for that), so on a deploy where
+  // that file is still missing, lighthouse() throws ENOENT from somewhere in
+  // its own internals as an unhandled rejection rather than surfacing through
+  // the returned promise -- verified 2026-09-09: it crashed the whole server,
+  // not just this request, exactly like the undocumented chrome-launcher
+  // 'error' event above. Guarding it the same way turns "every in-flight
+  // request dies" into "this one performance check comes back ERROR."
   try {
-    const runnerResult = await lighthouse(url, {
-      port: chrome.port,
-      output: "json",
-      onlyCategories: ["performance"],
-      logLevel: "error",
+    const runnerResult = await new Promise<Awaited<ReturnType<typeof lighthouse>>>((resolve, reject) => {
+      const onCrash = (err: unknown) => reject(err instanceof Error ? err : new Error(String(err)));
+      process.once("uncaughtException", onCrash);
+      process.once("unhandledRejection", onCrash);
+      const settle = () => {
+        process.removeListener("uncaughtException", onCrash);
+        process.removeListener("unhandledRejection", onCrash);
+      };
+      lighthouse(url, {
+        port: chrome.port,
+        output: "json",
+        onlyCategories: ["performance"],
+        logLevel: "error",
+      }).then((result) => {
+        settle();
+        resolve(result);
+      }).catch((err: unknown) => {
+        settle();
+        reject(err);
+      });
     });
     if (!runnerResult?.lhr) return null;
 
