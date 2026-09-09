@@ -666,11 +666,18 @@ export type PackageCheckOutcome = {
 };
 
 /**
- * Runs all module checks included in the given package.
+ * Runs all module checks included in the given package, one at a time.
+ *
+ * onModuleComplete fires after each module settles, before the next one
+ * starts -- runScanForPaidOrder uses it to save each report row as soon as
+ * it exists rather than batching every row until the whole package
+ * finishes, so a customer watching the order fill in sees modules complete
+ * one by one instead of everything appearing at once at the very end.
  */
 export async function runStandalonePackage(
   packageId: StandalonePackageId,
   url: string,
+  onModuleComplete?: (result: PackageCheckOutcome) => void | Promise<void>,
 ): Promise<PackageCheckOutcome[]> {
   const pkg = STANDALONE_PACKAGES[packageId];
   if (!pkg) return [];
@@ -678,7 +685,9 @@ export async function runStandalonePackage(
   const results: PackageCheckOutcome[] = [];
   for (const checkType of pkg.modules) {
     const outcome = await runStandaloneCheck(checkType, url);
-    results.push({ checkType, outcome });
+    const result = { checkType, outcome };
+    results.push(result);
+    await onModuleComplete?.(result);
   }
   return results;
 }

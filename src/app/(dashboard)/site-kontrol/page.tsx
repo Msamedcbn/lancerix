@@ -5,7 +5,7 @@ import Link from "next/link";
 import { requireSession } from "@/lib/auth/session";
 import { latestReportPerModule, listMyStandaloneOrders } from "@/lib/data/standalone-qa";
 import { resolveVisitorCurrency } from "@/lib/i18n/currency-detect";
-import { STANDALONE_MODULE_MAX_ATTEMPTS } from "@/lib/validations/standalone-qa";
+import { STANDALONE_MODULE_MAX_ATTEMPTS, STANDALONE_PACKAGES } from "@/lib/validations/standalone-qa";
 import type {
   AccessibilityResults,
   DeadLinksResults,
@@ -19,6 +19,7 @@ import type {
 import { AdminFreeTrialForm } from "./admin-free-trial-form";
 import { PayStandaloneButton } from "./pay-standalone-button";
 import { RescanButton } from "./rescan-button";
+import { ScanProgressPoller } from "./scan-progress-poller";
 import { StandaloneCheckForm } from "./standalone-check-form";
 
 export const metadata: Metadata = { title: "Site Kontrolü" };
@@ -69,6 +70,16 @@ const PACKAGE_LABEL: Record<string, string> = {
   PRO: "Profesyonel Paket",
   FULL: "Tam Tarama Paket",
 };
+
+/** order.package_id comes back as a plain string from the DB, not the
+ * STANDALONE_PACKAGES literal union -- a legacy single-module order (no
+ * package_id at all) is exactly one module. */
+function expectedModuleCount(packageId: string | null): number {
+  if (packageId && packageId in STANDALONE_PACKAGES) {
+    return STANDALONE_PACKAGES[packageId as keyof typeof STANDALONE_PACKAGES].modules.length;
+  }
+  return 1;
+}
 
 /** One line per check type, for the pre-payment summary -- never the full
  * detail (that's what paying unlocks). */
@@ -286,8 +297,20 @@ export default async function SiteKontrolPage() {
     headers().then(resolveVisitorCurrency),
   ]);
 
+  // An order is still filling in when it's paid but has fewer report rows
+  // than its package's module count -- runScanForPaidOrder now saves each
+  // row as its module finishes, so this genuinely tracks live progress, not
+  // a guess. ScanProgressPoller below polls only while true.
+  const anyInProgress = orders.some((order) => {
+    const fallbackCheckType = order.check_type ?? "ACCESSIBILITY";
+    const reportCount = latestReportPerModule(order.standalone_qa_reports, fallbackCheckType).length;
+    return order.payment_status === "PAID" && reportCount < expectedModuleCount(order.package_id);
+  });
+
   return (
     <div className="flex flex-col gap-6">
+      <ScanProgressPoller active={anyInProgress} />
+
       <div>
         <h1 className="text-xl font-semibold text-foreground">Site Kontrolü</h1>
         <p className="mt-1 text-sm text-muted-foreground">
@@ -323,6 +346,7 @@ export default async function SiteKontrolPage() {
                   STANDALONE_MODULE_MAX_ATTEMPTS,
             ).length;
             const isPaid = order.payment_status === "PAID";
+            const remainingCount = expectedModuleCount(order.package_id) - reports.length;
             const orderTitle = order.package_id
               ? (PACKAGE_LABEL[order.package_id] ?? order.package_id)
               : (CHECK_TYPE_LABEL[order.check_type ?? ""] ?? order.check_type ?? "Tarama");
@@ -409,14 +433,24 @@ export default async function SiteKontrolPage() {
                         </div>
                       );
                     })}
+                    {remainingCount > 0 && (
+                      // Some modules landed, more are still running --
+                      // ScanProgressPoller keeps refreshing this page, so the
+                      // rest appear here on their own as each one finishes.
+                      <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <span className="bg-brand size-1.5 shrink-0 animate-pulse rounded-full" aria-hidden />
+                        {remainingCount} modül daha sürüyor…
+                      </p>
+                    )}
                   </div>
                 ) : isPaid ? (
                   // Paid, no rows yet: the order.paid webhook has fired and the
-                  // scan is running in the background. Refreshing is the whole
-                  // UX -- a package takes minutes.
-                  <p className="mt-3 text-xs text-muted-foreground">
-                    Tarama sürüyor. Modüller bittikçe burada görünecek, sayfayı birazdan
-                    yenile.
+                  // scan is running in the background. ScanProgressPoller
+                  // refreshes this page on its own, so the first module's row
+                  // appears here without the customer doing anything.
+                  <p className="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <span className="bg-brand size-1.5 shrink-0 animate-pulse rounded-full" aria-hidden />
+                    Tarama sürüyor. Modüller bittikçe burada görünecek.
                   </p>
                 ) : (
                   // Pay-first: an unpaid order has no report rows by design, so

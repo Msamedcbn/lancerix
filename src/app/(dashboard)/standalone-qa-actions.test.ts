@@ -37,11 +37,27 @@ let checkImpl: () => Promise<unknown>;
 let packageImpl: (() => Promise<{ checkType: string; outcome: unknown }[]>) | null;
 vi.mock("@/lib/qa/standalone", () => ({
   runStandaloneCheck: vi.fn(async () => checkImpl()),
-  runStandalonePackage: vi.fn(async () => {
-    if (packageImpl) return packageImpl();
-    const outcome = await checkImpl();
-    return outcome ? [{ checkType: "ACCESSIBILITY", outcome }] : [];
-  }),
+  // Mirrors the real function's shape (2026-09-09: per-module callback, so
+  // runScanForPaidOrder can save each row as its module finishes instead of
+  // batching until the whole package is done) -- calling onModuleComplete
+  // here is what makes reportInsertCalls below reflect one insert per
+  // module, the same as production.
+  runStandalonePackage: vi.fn(
+    async (
+      _packageId: string,
+      _url: string,
+      onModuleComplete?: (result: { checkType: string; outcome: unknown }) => void | Promise<void>,
+    ) => {
+      const results = packageImpl
+        ? await packageImpl()
+        : await (async () => {
+            const outcome = await checkImpl();
+            return outcome ? [{ checkType: "ACCESSIBILITY", outcome }] : [];
+          })();
+      for (const r of results) await onModuleComplete?.(r);
+      return results;
+    },
+  ),
   hashResults: (results: unknown) =>
     createHash("sha256").update(JSON.stringify(results)).digest("hex"),
 }));

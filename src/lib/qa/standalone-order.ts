@@ -197,12 +197,27 @@ export async function runScanForPaidOrder(orderId: string): Promise<StandaloneOr
   }
 
   const packageId = (order.package_id ?? "BASIC") as StandalonePackageId;
-  const packageResults = await runStandalonePackage(packageId, order.target_url);
-  const rows = packageResults.map((r) => reportRow(order.id, r.checkType, r.outcome));
 
-  const { error: reportError } = await admin.from("standalone_qa_reports").insert(rows);
-  if (reportError) {
-    console.error("[FAIL]", reportError.message);
+  // Each row is saved the moment its module finishes, not batched until the
+  // whole package is done -- /site-kontrol polls this order while it's
+  // incomplete, so a customer watching it sees modules complete one by one
+  // instead of a long silence followed by everything at once (2026-09-09).
+  let savedAny = false;
+  await runStandalonePackage(packageId, order.target_url, async (result) => {
+    const row = reportRow(order.id, result.checkType, result.outcome);
+    // [row], not row: the single-row insert overload wants one exact shape,
+    // and reportRow's return type is a union (ERROR vs a real outcome) --
+    // the array overload already accepted that union before this was
+    // batched, so it still does here.
+    const { error: reportError } = await admin.from("standalone_qa_reports").insert([row]);
+    if (reportError) {
+      console.error("[FAIL] could not save module report", result.checkType, reportError.message);
+      return;
+    }
+    savedAny = true;
+  });
+
+  if (!savedAny) {
     return { ok: false, error: "Rapor kaydedilemedi." };
   }
 
