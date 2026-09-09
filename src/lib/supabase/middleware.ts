@@ -41,6 +41,12 @@ const PUBLIC_ROUTES = [
   "/yol-haritasi",
   "/rehber",
   "/report",
+  // The actual shareable standalone-QA report link (src/app/r/[orderId]) --
+  // a shorter, separate path from /report/ornek's static example. Missing
+  // here the same way /sozlesmeli-dogrulama was: the one thing a shareable
+  // link exists for is working with no account at all, and this bounced
+  // every such visitor to /login instead (2026-09-09).
+  "/r",
   "/reviewer-report",
   "/guven-mimarisi",
   "/hakkinda",
