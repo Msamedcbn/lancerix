@@ -20,7 +20,7 @@
     "@polar-sh/sdk": "^0.49.0",
     "@radix-ui/react-label": "^2.1.7",
     "@radix-ui/react-slot": "^1.2.3",
-    "@sparticuz/chromium": "^149.0.0",
+    "@sparticuz/chromium": "^152.0.0",
     "@supabase/ssr": "^0.7.0",
     "@supabase/supabase-js": "^2.58.0",
     "@tabler/icons-react": "^3.46.0",

@@ -5,7 +5,9 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ShieldCheck, Lock, ExternalLink, Calendar, CheckCircle2, AlertTriangle, XCircle, ArrowLeft } from "lucide-react";
 
+import { ScanProgressPoller } from "@/components/qa/scan-progress-poller";
 import { getStandaloneOrderPublic, latestReportPerModule } from "@/lib/data/standalone-qa";
+import { STANDALONE_PACKAGES } from "@/lib/validations/standalone-qa";
 import type {
   AccessibilityResults,
   DeadLinksResults,
@@ -260,6 +262,15 @@ export default async function PublicReportPage({ params }: Props) {
     order.check_type ?? "ACCESSIBILITY",
   );
   const isPaid = order.payment_status === "PAID";
+  // Same live-progress signal site-kontrol/page.tsx uses: a paid order with
+  // fewer rows than its package's module count is still being scanned.
+  // Whoever this link was shared with should see modules complete on their
+  // own too, not just the order's owner.
+  const expectedModuleCount = order.package_id
+    ? (STANDALONE_PACKAGES[order.package_id as keyof typeof STANDALONE_PACKAGES]?.modules.length ?? 1)
+    : 1;
+  const remainingCount = expectedModuleCount - reports.length;
+  const inProgress = isPaid && remainingCount > 0;
   // The document's headline verdict is the worst finding across every module
   // that actually ran -- not reports[0].status, which used to let whichever
   // module happened to come back first speak for the entire audit. ERROR rows
@@ -294,6 +305,7 @@ export default async function PublicReportPage({ params }: Props) {
 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 py-10 px-4 sm:px-6 lg:px-8">
+      <ScanProgressPoller active={inProgress} />
       {/* Printable page container */}
       <div className="max-w-4xl mx-auto space-y-6">
 
@@ -406,12 +418,15 @@ export default async function PublicReportPage({ params }: Props) {
           <div className="space-y-4">
             <h2 className="text-sm font-bold text-foreground px-1">Tarama Sonuçları & Analiz Detayları</h2>
 
-            {reports.length === 0 && (
+            {reports.length === 0 && isPaid && (
               <div className="rounded-xl border border-zinc-300 bg-zinc-50 p-4 dark:border-zinc-700 dark:bg-zinc-900/60">
-                <p className="text-xs font-semibold text-foreground">Tarama sürüyor</p>
+                <p className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
+                  <span className="bg-brand size-1.5 shrink-0 animate-pulse rounded-full" aria-hidden />
+                  Tarama sürüyor
+                </p>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Ödeme alındı ve tarama başlatıldı. Paketteki modüller tamamlandıkça bu sayfada
-                  yayınlanacak; birkaç dakika sürebilir.
+                  Ödeme alındı ve tarama başlatıldı. Paketteki modüller tamamlandıkça bu sayfa
+                  kendiliğinden güncellenip burada yayınlanacak.
                 </p>
               </div>
             )}
@@ -463,6 +478,13 @@ export default async function PublicReportPage({ params }: Props) {
                 </div>
               );
             })}
+
+            {isPaid && remainingCount > 0 && reports.length > 0 && (
+              <p className="flex items-center gap-1.5 px-1 text-xs text-muted-foreground">
+                <span className="bg-brand size-1.5 shrink-0 animate-pulse rounded-full" aria-hidden />
+                {remainingCount} modül daha sürüyor — bu sayfa kendiliğinden güncellenecek.
+              </p>
+            )}
           </div>
         )}
 

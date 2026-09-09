@@ -173,5 +173,5 @@ export async function adminFreeStandaloneCheck(
   });
 
   revalidatePath("/site-kontrol");
-  return OK("Ücretsiz deneme başlatıldı. Tarama sürüyor, sayfayı birazdan yenile.");
+  return OK("Ücretsiz deneme başlatıldı. Tarama sürüyor, modüller bittikçe aşağıda görünecek.");
 }

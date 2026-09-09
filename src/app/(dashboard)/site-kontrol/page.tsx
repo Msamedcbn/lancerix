@@ -19,7 +19,7 @@ import type {
 import { AdminFreeTrialForm } from "./admin-free-trial-form";
 import { PayStandaloneButton } from "./pay-standalone-button";
 import { RescanButton } from "./rescan-button";
-import { ScanProgressPoller } from "./scan-progress-poller";
+import { ScanProgressPoller } from "@/components/qa/scan-progress-poller";
 import { StandaloneCheckForm } from "./standalone-check-form";
 
 export const metadata: Metadata = { title: "Site Kontrolü" };
