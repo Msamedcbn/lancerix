@@ -28,12 +28,28 @@ const nextConfig: NextConfig = {
   // testing the admin free trial: every browser-based module was silently
   // never running in production, only the plain-HTTP ones (dead links, SEO
   // meta) worked.
+  //
+  // @axe-core/playwright (ACCESSIBILITY) has a different failure mode again:
+  // bundled, it produced "page.evaluate: ReferenceError: b is not defined"
+  // inside Playwright's own UtilityScript, on the real target site, in
+  // production only. Root cause (confirmed against known Playwright issues
+  // with the identical signature -- #5395, #17872, both
+  // "ReferenceError: <tslib helper> is not defined" at UtilityScript.evaluate):
+  // page.evaluate() serializes a function to a string and re-runs it in the
+  // browser, so if that function was compiled down to use a tslib helper
+  // (__read, __name, ...) for destructuring/spread, minifying it renames
+  // that helper -- to a single letter here -- and the stringified version
+  // sent to the browser calls a name that only ever existed in the Node
+  // module scope, never in the browser. playwright-core itself was already
+  // safe (Next.js externalizes it by default); @axe-core/playwright, which
+  // builds and evaluates its own complex injected script, was not.
   serverExternalPackages: [
     "lighthouse",
     "chrome-launcher",
     "@paulirish/trace_engine",
     "linkinator",
     "@sparticuz/chromium",
+    "@axe-core/playwright",
   ],
   // Being external keeps webpack from choking on lighthouse's module shape,
   // but Vercel's own file tracer still decides what actually ships in the
