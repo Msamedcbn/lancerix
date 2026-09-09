@@ -165,6 +165,37 @@ function getFreePort(): Promise<number> {
 }
 
 /**
+ * Polls Chrome's own /json/version endpoint until its DevTools protocol
+ * server answers on debugPort, or gives up.
+ *
+ * playwright-core's chromium.launch() resolving is not proof this port is
+ * up: Playwright drives Chromium over its own --remote-debugging-pipe (its
+ * launch readiness is tied to that pipe -- see playwright-core's
+ * defaultArgs/waitForReadyState), a completely separate channel from the
+ * --remote-debugging-port we additionally pass for Lighthouse. Chromium
+ * accepts both at once, but nothing guarantees they finish initializing in
+ * the same instant, and @sparticuz/chromium's --single-process build is
+ * exactly the kind of constrained environment where that race would show up
+ * as an ECONNREFUSED that looks identical to the one chrome-launcher hit
+ * (the actual production symptom this file used to have, before this
+ * function existed). Checking for real readiness here, rather than assuming
+ * it, is the difference between fixing that failure mode and just moving it
+ * from one launcher to another.
+ */
+async function waitForDebugPort(port: number, attempts = 10, delayMs = 300): Promise<boolean> {
+  for (let attempt = 0; attempt < attempts; attempt++) {
+    try {
+      const res = await fetch(`http://127.0.0.1:${port}/json/version`);
+      if (res.ok) return true;
+    } catch {
+      // Not up yet -- expected on the first few attempts, retry below.
+    }
+    await new Promise((resolve) => setTimeout(resolve, delayMs));
+  }
+  return false;
+}
+
+/**
  * Runs one standalone Core Web Vitals check via Lighthouse.
  *
  * Launches its own Chromium via Playwright -- the same launch path
@@ -210,6 +241,14 @@ export async function runPerformanceCheck(url: string): Promise<PerformanceCheck
     });
   } catch (err) {
     console.error(`[standalone-qa] failed to launch chrome for lighthouse scan of ${url}`, err);
+    return null;
+  }
+
+  if (!(await waitForDebugPort(debugPort))) {
+    console.error(
+      `[standalone-qa] chrome launched but its DevTools port ${debugPort} never came up for ${url}`,
+    );
+    await browser.close().catch(() => {});
     return null;
   }
 
