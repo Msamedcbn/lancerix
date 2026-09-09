@@ -2,12 +2,9 @@ import "server-only";
 
 import crypto from "crypto";
 
-import { createServer } from "net";
-
 import AxeBuilder from "@axe-core/playwright";
 import * as cheerio from "cheerio";
 import { LinkChecker } from "linkinator";
-import lighthouse from "lighthouse";
 import { chromium as playwrightChromium } from "playwright-core";
 
 import { openStagingPage } from "@/lib/qa/agent";
@@ -125,7 +122,10 @@ export async function runAccessibilityCheck(url: string): Promise<AccessibilityC
   }
 }
 
-/** Lighthouse's own metric names, trimmed to what a report needs to show. */
+/** Core Web Vitals, trimmed to what a report needs to show. Same shape
+ * Lighthouse used to produce, kept stable so the UI (r/[orderId], site-
+ * kontrol) and the diff/hash logic didn't need to change when the collection
+ * method underneath did. */
 export type PerformanceResults = {
   performanceScore: number;
   lcpMs: number;
@@ -140,83 +140,82 @@ export type PerformanceCheckOutcome = {
   documentSha256: string;
 };
 
+type RawVitals = { lcp: number; fcp: number; cls: number; longTasks: number[] };
+
 /**
- * Reserves an OS-assigned free TCP port and immediately releases it, so the
- * caller can hand a specific --remote-debugging-port to Chrome instead of
- * discovering whatever port it picked afterwards. There is a narrow race
- * (something else could claim the port between release and Chrome's bind),
- * but only against other processes on the same Lambda instance, which this
- * codebase does not run concurrently against itself.
+ * Registered via page.addInitScript() -- runs in the page before any of its
+ * own scripts do, on every navigation -- so these observers are listening
+ * from the very first paint rather than attached after the fact. paint,
+ * largest-contentful-paint and layout-shift entries are buffered by the
+ * browser and would still be readable via getEntriesByType() even from a
+ * late-attached observer, but longtask entries are not: they are only ever
+ * delivered to an observer that was already listening when they occurred,
+ * so this has to run this early for that metric to mean anything.
  */
-function getFreePort(): Promise<number> {
-  return new Promise((resolve, reject) => {
-    const server = createServer();
-    server.on("error", reject);
-    server.listen(0, () => {
-      const address = server.address();
-      if (!address || typeof address !== "object") {
-        server.close(() => reject(new Error("could not determine a free port")));
-        return;
-      }
-      const { port } = address;
-      server.close(() => resolve(port));
-    });
+function installVitalsCollector() {
+  const w = window as unknown as { __qaVitals: RawVitals };
+  w.__qaVitals = { lcp: 0, fcp: 0, cls: 0, longTasks: [] };
+  const observe = (type: string, cb: (entries: PerformanceEntryList) => void) => {
+    try {
+      new PerformanceObserver((list) => cb(list.getEntries())).observe({ type, buffered: true });
+    } catch {
+      // Entry type unsupported on this Chromium build -- that metric stays 0.
+    }
+  };
+  observe("largest-contentful-paint", (entries) => {
+    const last = entries.at(-1);
+    if (last) w.__qaVitals.lcp = last.startTime;
+  });
+  observe("paint", (entries) => {
+    const fcp = entries.find((e) => e.name === "first-contentful-paint");
+    if (fcp) w.__qaVitals.fcp = fcp.startTime;
+  });
+  observe("layout-shift", (entries) => {
+    for (const entry of entries as unknown as { hadRecentInput: boolean; value: number }[]) {
+      if (!entry.hadRecentInput) w.__qaVitals.cls += entry.value;
+    }
+  });
+  observe("longtask", (entries) => {
+    for (const entry of entries) w.__qaVitals.longTasks.push(entry.duration);
   });
 }
 
-/**
- * Polls Chrome's own /json/version endpoint until its DevTools protocol
- * server answers on debugPort, or gives up.
- *
- * playwright-core's chromium.launch() resolving is not proof this port is
- * up: Playwright drives Chromium over its own --remote-debugging-pipe (its
- * launch readiness is tied to that pipe -- see playwright-core's
- * defaultArgs/waitForReadyState), a completely separate channel from the
- * --remote-debugging-port we additionally pass for Lighthouse. Chromium
- * accepts both at once, but nothing guarantees they finish initializing in
- * the same instant, and @sparticuz/chromium's --single-process build is
- * exactly the kind of constrained environment where that race would show up
- * as an ECONNREFUSED that looks identical to the one chrome-launcher hit
- * (the actual production symptom this file used to have, before this
- * function existed). Checking for real readiness here, rather than assuming
- * it, is the difference between fixing that failure mode and just moving it
- * from one launcher to another.
- */
-async function waitForDebugPort(port: number, attempts = 10, delayMs = 300): Promise<boolean> {
-  for (let attempt = 0; attempt < attempts; attempt++) {
-    try {
-      const res = await fetch(`http://127.0.0.1:${port}/json/version`);
-      if (res.ok) return true;
-    } catch {
-      // Not up yet -- expected on the first few attempts, retry below.
-    }
-    await new Promise((resolve) => setTimeout(resolve, delayMs));
-  }
-  return false;
+/** Piecewise-linear 0-100 score from Google's own published Core Web
+ * Vitals "good"/"poor" control points (web.dev/articles/lcp,cls,inp etc,
+ * and Lighthouse's own TBT scoring curve for the `good`/`poor` ends) --
+ * not Lighthouse's proprietary log-normal curve, which needs a simulated
+ * network/CPU-throttled run this file does not do. A simpler, honestly
+ * different number in the same 0-100 shape, not a reproduction. */
+function scoreMetric(value: number, good: number, poor: number): number {
+  if (value <= good) return 100;
+  if (value >= poor) return 0;
+  return Math.round(100 - ((value - good) / (poor - good)) * 100);
 }
 
 /**
- * Runs one standalone Core Web Vitals check via Lighthouse.
+ * Runs one standalone Core Web Vitals check.
  *
- * Launches its own Chromium via Playwright -- the same launch path
- * openStagingPage() already proves reliable, rather than chrome-launcher's
- * separate spawn-and-detect-the-DevTools-port mechanism, which turned out
- * not to work against @sparticuz/chromium's serverless build: chrome-
- * launcher believed it had a port, but nothing was listening on it
- * (ECONNREFUSED), a documented flaky combination in the wild
- * (GoogleChrome/lighthouse#2661, #3275), not something a next.config.ts
- * tracing tweak can fix. Instead: pick a free port ourselves, tell Chrome
- * to open its DevTools protocol there via --remote-debugging-port, and
- * point Lighthouse at that same port. Playwright still owns the actual
- * process; Lighthouse only needs a CDP port to attach to, not to be the one
- * that launched it.
+ * This used to shell out to Lighthouse, which insists on driving its own
+ * Chrome via a CDP debug port rather than an already-open Playwright page.
+ * Two rewrites chasing that requirement (chrome-launcher, then Playwright
+ * launched with an extra --remote-debugging-port) each hit a version of the
+ * same wall: @sparticuz/chromium's --single-process serverless build is
+ * fragile about a *second* debug channel on top of Playwright's own
+ * --remote-debugging-pipe, and the second attempt's failure mode got worse,
+ * not better -- a browser that never got read cleanly closed appears to
+ * have left the container degraded for every browser-based check that ran
+ * after it in the same request (Visual Overflow and Interaction Scan both
+ * started failing alongside Performance, which had never happened before).
  *
- * Unlike runAccessibilityCheck, this does not reuse openStagingPage() --
- * Lighthouse needs its own tab, and sharing one with another check would
- * mean whichever failed first takes the other down with it. That means the
- * SSRF guard openStagingPage() applies internally has to be re-checked
- * explicitly here, first, before any Chrome process is launched against the
- * target.
+ * So: no Lighthouse, no second debug port. This collects the same four
+ * metrics itself via the browser's own standard Performance Observer APIs,
+ * through the exact single-browser-instance launch path already proven
+ * reliable by every other module (runAccessibilityCheck, runVisualOverflow-
+ * Check, ...) -- one browser, one page, nothing else competing for the
+ * container's one process. The tradeoff is performanceScore is now a
+ * simpler threshold-based number instead of Lighthouse's simulated-
+ * throttling lab score (see scoreMetric) -- a different number in the same
+ * shape, not a like-for-like reproduction.
  */
 export async function runPerformanceCheck(url: string): Promise<PerformanceCheckOutcome | null> {
   if (await isBlockedTarget(url)) {
@@ -224,80 +223,51 @@ export async function runPerformanceCheck(url: string): Promise<PerformanceCheck
     return null;
   }
 
-  // resolveChromium() picks the binary for this runtime (sparticuz on
-  // Vercel, a real local Chrome otherwise) and verifies it exists, so the
-  // "no file at all" case is already ruled out by the time we get here.
   const runtime = await resolveChromium();
   if (!runtime) return null;
-
-  const debugPort = await getFreePort();
 
   let browser: Awaited<ReturnType<typeof playwrightChromium.launch>> | undefined;
   try {
     browser = await playwrightChromium.launch({
       executablePath: runtime.executablePath,
-      args: [...runtime.args, `--remote-debugging-port=${debugPort}`],
+      args: runtime.args,
       headless: true,
     });
-  } catch (err) {
-    console.error(`[standalone-qa] failed to launch chrome for lighthouse scan of ${url}`, err);
-    return null;
-  }
+    const context = await browser.newContext();
+    const page = await context.newPage();
+    // Must be registered before goto() -- see installVitalsCollector's own
+    // comment on why longtask entries specifically need this ordering.
+    await page.addInitScript(installVitalsCollector);
+    await page.goto(url, { waitUntil: "load", timeout: 15_000 });
+    // A real visit keeps generating CLS/long-task signal for a bit after
+    // load fires; Lighthouse's own timespan is in a similar range for a
+    // simple page. Long enough to catch late layout shifts, short enough to
+    // stay well inside the per-module budget the rest of this file assumes.
+    await page.waitForTimeout(3000);
 
-  if (!(await waitForDebugPort(debugPort))) {
-    console.error(
-      `[standalone-qa] chrome launched but its DevTools port ${debugPort} never came up for ${url}`,
+    const raw = await page.evaluate<RawVitals>(
+      () => (window as unknown as { __qaVitals: RawVitals }).__qaVitals,
     );
-    await browser.close().catch(() => {});
-    return null;
-  }
 
-  // lighthouse's own report-generator module reads its flow-report HTML/CSS
-  // assets via a runtime path.join(__dirname, '../../flow-report/...') that
-  // Vercel's file tracer cannot see statically (outputFileTracingIncludes in
-  // next.config.ts is the fix for that), so on a deploy where that file is
-  // still missing, lighthouse() throws ENOENT from somewhere in its own
-  // internals as an unhandled rejection rather than surfacing through the
-  // returned promise -- verified 2026-09-09: it crashed the whole server,
-  // not just this request. Guarding it turns "every in-flight request dies"
-  // into "this one performance check comes back ERROR."
-  try {
-    const runnerResult = await new Promise<Awaited<ReturnType<typeof lighthouse>>>((resolve, reject) => {
-      const onCrash = (err: unknown) => reject(err instanceof Error ? err : new Error(String(err)));
-      process.once("uncaughtException", onCrash);
-      process.once("unhandledRejection", onCrash);
-      const settle = () => {
-        process.removeListener("uncaughtException", onCrash);
-        process.removeListener("unhandledRejection", onCrash);
-      };
-      lighthouse(url, {
-        port: debugPort,
-        output: "json",
-        onlyCategories: ["performance"],
-        logLevel: "error",
-      }).then((result) => {
-        settle();
-        resolve(result);
-      }).catch((err: unknown) => {
-        settle();
-        reject(err);
-      });
-    });
-    if (!runnerResult?.lhr) return null;
-
-    const { lhr } = runnerResult;
-    const audits = lhr.audits;
+    const totalBlockingTimeMs = Math.round(
+      raw.longTasks.reduce((sum, duration) => sum + Math.max(0, duration - 50), 0),
+    );
     const results: PerformanceResults = {
-      performanceScore: Math.round((lhr.categories.performance?.score ?? 0) * 100),
-      lcpMs: Math.round(audits["largest-contentful-paint"]?.numericValue ?? 0),
-      fcpMs: Math.round(audits["first-contentful-paint"]?.numericValue ?? 0),
-      clsScore: Number((audits["cumulative-layout-shift"]?.numericValue ?? 0).toFixed(3)),
-      totalBlockingTimeMs: Math.round(audits["total-blocking-time"]?.numericValue ?? 0),
+      lcpMs: Math.round(raw.lcp),
+      fcpMs: Math.round(raw.fcp),
+      clsScore: Number(raw.cls.toFixed(3)),
+      totalBlockingTimeMs,
+      performanceScore: Math.round(
+        (scoreMetric(raw.lcp, 2500, 4000) +
+          scoreMetric(raw.fcp, 1800, 3000) +
+          scoreMetric(raw.cls * 1000, 100, 250) +
+          scoreMetric(totalBlockingTimeMs, 200, 600)) /
+          4,
+      ),
     };
 
-    // Deterministic reduction on Lighthouse's own 0-100 performance score --
-    // no LLM judgment here either. Thresholds match Lighthouse's own
-    // published "good/needs improvement/poor" score bands.
+    // Deterministic reduction, same bands the old Lighthouse-backed version
+    // used -- no LLM judgment in this path either.
     const status: PerformanceCheckOutcome["status"] =
       results.performanceScore >= 90 ? "PASS" : results.performanceScore >= 50 ? "PARTIAL" : "FAIL";
 
@@ -305,10 +275,10 @@ export async function runPerformanceCheck(url: string): Promise<PerformanceCheck
 
     return { status, results, documentSha256 };
   } catch (err) {
-    console.error(`[standalone-qa] lighthouse scan failed for ${url}`, err);
+    console.error(`[standalone-qa] performance scan failed for ${url}`, err);
     return null;
   } finally {
-    await browser.close().catch(() => {});
+    await browser?.close().catch(() => {});
   }
 }
 

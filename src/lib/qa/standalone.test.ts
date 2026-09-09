@@ -79,23 +79,35 @@ vi.mock("@/lib/qa/chromium", () => ({
 }));
 
 // runPerformanceCheck launches its own Chromium directly via playwright-core
-// (openStagingPage, mocked wholesale above, is a separate call path) and
-// hands Lighthouse an explicit --remote-debugging-port to attach to instead
-// of going through chrome-launcher's own spawn-and-detect-the-port mechanism
-// -- same deferred-wrapper reasoning as the axe-core mock above applies to
-// browserCloseMock here.
+// (openStagingPage, mocked wholesale above, is a separate call path) rather
+// than shelling out to Lighthouse -- it collects Core Web Vitals itself via
+// page.evaluate() against window.__qaVitals, the object its own
+// addInitScript-installed PerformanceObservers write into. The mock page
+// here stands in for that: perfVitals is read back by the mocked
+// evaluate() the same way the real browser's own window object would be.
 const browserCloseMock = vi.fn(async () => {});
-const playwrightLaunchMock = vi.fn(async (..._args: unknown[]) => ({ close: browserCloseMock }));
+const perfAddInitScriptMock = vi.fn(async () => {});
+const perfGotoMock = vi.fn(async () => {});
+const perfWaitForTimeoutMock = vi.fn(async () => {});
+let perfEvaluateImpl: () => unknown = () => perfVitals;
+const perfEvaluateMock = vi.fn(async () => perfEvaluateImpl());
+const perfNewPageMock = vi.fn(async () => ({
+  addInitScript: perfAddInitScriptMock,
+  goto: perfGotoMock,
+  waitForTimeout: perfWaitForTimeoutMock,
+  evaluate: perfEvaluateMock,
+}));
+const perfNewContextMock = vi.fn(async () => ({ newPage: perfNewPageMock }));
+const playwrightLaunchMock = vi.fn(async (..._args: unknown[]) => ({
+  close: browserCloseMock,
+  newContext: perfNewContextMock,
+}));
 vi.mock("playwright-core", () => ({
   chromium: { launch: (...args: unknown[]) => playwrightLaunchMock(...args) },
 }));
 
-type LighthouseAudits = Record<string, { numericValue: number } | undefined>;
-let lighthouseResult: { lhr: { categories: { performance?: { score: number } }; audits: LighthouseAudits } } | null;
-const lighthouseMock = vi.fn(async (..._args: unknown[]) => lighthouseResult);
-vi.mock("lighthouse", () => ({
-  default: (...args: unknown[]) => lighthouseMock(...args),
-}));
+type RawVitals = { lcp: number; fcp: number; cls: number; longTasks: number[] };
+let perfVitals: RawVitals;
 
 import {
   runAccessibilityCheck,
@@ -108,17 +120,6 @@ import {
   runStandalonePackage,
   runVisualOverflowCheck,
 } from "./standalone";
-
-function perfAudits(overrides: Partial<Record<string, number>> = {}): LighthouseAudits {
-  const base = {
-    "largest-contentful-paint": 1200,
-    "first-contentful-paint": 800,
-    "cumulative-layout-shift": 0.05,
-    "total-blocking-time": 150,
-    ...overrides,
-  };
-  return Object.fromEntries(Object.entries(base).map(([k, v]) => [k, { numericValue: v }]));
-}
 
 function violation(impact: "critical" | "serious" | "moderate" | "minor", nodeCount = 1) {
   return {
@@ -140,8 +141,17 @@ beforeEach(() => {
   chromiumAvailable = true;
   browserCloseMock.mockClear();
   playwrightLaunchMock.mockClear();
-  lighthouseMock.mockClear();
-  lighthouseResult = { lhr: { categories: { performance: { score: 1 } }, audits: perfAudits() } };
+  perfAddInitScriptMock.mockClear();
+  perfGotoMock.mockClear();
+  perfWaitForTimeoutMock.mockClear();
+  perfEvaluateMock.mockClear();
+  perfEvaluateImpl = () => perfVitals;
+  perfNewPageMock.mockClear();
+  perfNewContextMock.mockClear();
+  // Comfortably "good" on every metric by default (see scoreMetric's
+  // thresholds), so a test that doesn't care about the exact score gets a
+  // clean PASS without having to spell out all four fields itself.
+  perfVitals = { lcp: 1200, fcp: 800, cls: 0.02, longTasks: [] };
 
   pageEvaluateMock.mockReset();
   pageSetViewportSizeMock.mockClear();
@@ -221,7 +231,6 @@ describe("runPerformanceCheck", () => {
     const result = await runPerformanceCheck("https://169.254.169.254/");
     expect(result).toBeNull();
     expect(playwrightLaunchMock).not.toHaveBeenCalled();
-    expect(lighthouseMock).not.toHaveBeenCalled();
   });
 
   it("returns null without launching chrome when no browser is available", async () => {
@@ -233,52 +242,59 @@ describe("runPerformanceCheck", () => {
     expect(playwrightLaunchMock).not.toHaveBeenCalled();
   });
 
-  it("returns null when lighthouse produces no result", async () => {
-    lighthouseResult = null;
-    const result = await runPerformanceCheck("https://example.com");
-    expect(result).toBeNull();
-    expect(browserCloseMock).toHaveBeenCalledTimes(1);
+  it("registers the vitals collector before navigating, not after", async () => {
+    await runPerformanceCheck("https://example.com");
+    expect(perfAddInitScriptMock).toHaveBeenCalledTimes(1);
+    expect(perfGotoMock).toHaveBeenCalledTimes(1);
+    const [initOrder] = perfAddInitScriptMock.mock.invocationCallOrder;
+    const [gotoOrder] = perfGotoMock.mock.invocationCallOrder;
+    expect(initOrder).toBeLessThan(gotoOrder as number);
   });
 
-  it("PASS when the performance score is 90 or above", async () => {
-    lighthouseResult = { lhr: { categories: { performance: { score: 0.95 } }, audits: perfAudits() } };
+  it("PASS when every metric is comfortably within Google's 'good' thresholds", async () => {
+    perfVitals = { lcp: 1200, fcp: 800, cls: 0.02, longTasks: [] };
     const result = await runPerformanceCheck("https://example.com");
     expect(result?.status).toBe("PASS");
-    expect(result?.results.performanceScore).toBe(95);
+    expect(result?.results.performanceScore).toBe(100);
   });
 
-  it("PARTIAL when the score is between 50 and 89", async () => {
-    lighthouseResult = { lhr: { categories: { performance: { score: 0.7 } }, audits: perfAudits() } };
+  it("PARTIAL when every metric sits at its own good/poor midpoint", async () => {
+    // Each of the four scoreMetric() calls lands on exactly 50 at these
+    // values (halfway between its own good and poor control points).
+    perfVitals = { lcp: 3250, fcp: 2400, cls: 0.175, longTasks: [450] };
     const result = await runPerformanceCheck("https://example.com");
     expect(result?.status).toBe("PARTIAL");
+    expect(result?.results.performanceScore).toBe(50);
   });
 
-  it("FAIL when the score is below 50", async () => {
-    lighthouseResult = { lhr: { categories: { performance: { score: 0.2 } }, audits: perfAudits() } };
+  it("FAIL when every metric is past its 'poor' threshold", async () => {
+    perfVitals = { lcp: 5000, fcp: 4000, cls: 0.5, longTasks: [1050] };
     const result = await runPerformanceCheck("https://example.com");
     expect(result?.status).toBe("FAIL");
+    expect(result?.results.performanceScore).toBe(0);
   });
 
-  it("maps Lighthouse audit values onto the results shape", async () => {
-    lighthouseResult = {
-      lhr: {
-        categories: { performance: { score: 1 } },
-        audits: perfAudits({
-          "largest-contentful-paint": 2500,
-          "first-contentful-paint": 1000,
-          "cumulative-layout-shift": 0.123456,
-          "total-blocking-time": 300,
-        }),
-      },
+  it("rounds raw vitals onto the results shape", async () => {
+    perfVitals = {
+      lcp: 2500.6,
+      fcp: 999.4,
+      cls: 0.123456,
+      longTasks: [175.7],
     };
     const result = await runPerformanceCheck("https://example.com");
-    expect(result?.results).toEqual({
-      performanceScore: 100,
-      lcpMs: 2500,
-      fcpMs: 1000,
-      clsScore: 0.123,
-      totalBlockingTimeMs: 300,
-    });
+    expect(result?.results.lcpMs).toBe(2501);
+    expect(result?.results.fcpMs).toBe(999);
+    expect(result?.results.clsScore).toBe(0.123);
+    // max(0, 175.7 - 50) rounded
+    expect(result?.results.totalBlockingTimeMs).toBe(126);
+  });
+
+  it("sums total blocking time across multiple long tasks, ignoring ones under 50ms", async () => {
+    perfVitals = { lcp: 0, fcp: 0, cls: 0, longTasks: [30, 150, 80] };
+    const result = await runPerformanceCheck("https://example.com");
+    // 30ms task contributes 0 (under the 50ms floor); 150 and 80 contribute
+    // 100 and 30.
+    expect(result?.results.totalBlockingTimeMs).toBe(130);
   });
 
   it("closes the browser after a successful scan", async () => {
@@ -286,18 +302,20 @@ describe("runPerformanceCheck", () => {
     expect(browserCloseMock).toHaveBeenCalledTimes(1);
   });
 
-  it("closes the browser even when lighthouse itself throws", async () => {
-    lighthouseMock.mockRejectedValueOnce(new Error("lighthouse crashed"));
+  it("closes the browser even when metric collection throws", async () => {
+    perfEvaluateImpl = () => {
+      throw new Error("page crashed");
+    };
     const result = await runPerformanceCheck("https://example.com");
     expect(result).toBeNull();
     expect(browserCloseMock).toHaveBeenCalledTimes(1);
   });
 
-  it("returns null without calling lighthouse when chrome fails to launch", async () => {
+  it("returns null without evaluating vitals when chrome fails to launch", async () => {
     playwrightLaunchMock.mockRejectedValueOnce(new Error("chrome launch failed"));
     const result = await runPerformanceCheck("https://example.com");
     expect(result).toBeNull();
-    expect(lighthouseMock).not.toHaveBeenCalled();
+    expect(perfEvaluateMock).not.toHaveBeenCalled();
   });
 });
 
@@ -541,7 +559,7 @@ describe("runStandaloneCheck", () => {
     expect(playwrightLaunchMock).not.toHaveBeenCalled();
   });
 
-  it("dispatches PERFORMANCE to the lighthouse scan", async () => {
+  it("dispatches PERFORMANCE to the vitals scan", async () => {
     const result = await runStandaloneCheck("PERFORMANCE", "https://example.com");
     expect(result?.status).toBe("PASS");
     expect(analyzeMock).not.toHaveBeenCalled();
