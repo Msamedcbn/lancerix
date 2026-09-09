@@ -21,18 +21,16 @@ const nextConfig: NextConfig = {
   // Being external keeps webpack from choking on lighthouse's module shape,
   // but Vercel's own file tracer still decides what actually ships in the
   // deployed function -- and it walks require()/import() statically, so it
-  // never sees the `../../flow-report/assets/...html` path lighthouse's
-  // report generator builds at runtime with path.join(). Without this, that
-  // file is simply missing on the server (2026-09-09: ENOENT crashed every
-  // in-flight request on Vercel, same failure class as the uncaught-exception
-  // note on chrome-launcher in standalone.ts -- an unhandled error from
-  // lighthouse's own asset loading, not something the try/catch around
-  // lighthouse() can see because it's thrown from outside that call).
+  // never sees the runtime path.join(__dirname, '../../whatever') paths
+  // lighthouse's report generator uses to reach its own template/bundle
+  // files. Two rounds of including one specific missing file at a time
+  // (flow-report/assets/*.html, then report/assets/*.html) each just
+  // surfaced the next one lighthouse touches (dist/report/flow.js) --
+  // whack-a-mole, not a fix. The package is 21MB with no nested
+  // node_modules, so including all of it outright is cheaper than guessing
+  // its internal file-read patterns one ENOENT at a time (2026-09-09).
   outputFileTracingIncludes: {
-    "/**": [
-      "node_modules/lighthouse/flow-report/assets/**/*",
-      "node_modules/lighthouse/report/assets/**/*",
-    ],
+    "/**": ["node_modules/lighthouse/**/*"],
   },
   images: {
     remotePatterns: [
