@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, type ReactNode } from "react";
+import { useRef, type ReactNode } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import {
@@ -15,7 +15,6 @@ import {
 } from "lucide-react";
 
 import { HorizontalAccordion } from "@/components/home/horizontal-accordion";
-import { StandalonePurchaseForm } from "@/components/home/standalone-purchase-form";
 import { gsap, useGSAP } from "@/lib/gsap";
 import { SiteHeader } from "@/components/layout/site-header";
 import { SiteFooter } from "@/components/layout/site-footer";
@@ -98,7 +97,6 @@ export function HomeClient({
   currency?: SupportedCurrency;
 }>) {
   const root = useRef<HTMLElement>(null);
-  const [pricingTab, setPricingTab] = useState<"onetime" | "subscription">("onetime");
   const t = HOME_COPY[locale];
   const steps = [
     { ...t.steps[0], icon: STEP_ICONS[0] },
@@ -317,12 +315,16 @@ export function HomeClient({
         </div>
       </section>
 
-      {/* --- pricing: one-time or subscription, one shared header -------------
-           Also carries id="fiyat": the contract-bound tiers moved to their own
-           page (2026-09-08), so these automated packages ARE the pricing
-           section the header and footer link to. Was two full sections with
-           near-identical headers (2026-09-09 shorten pass merged them into
-           one, tab-switched). ------------------------------------------------ */}
+      {/* --- pricing: monitoring subscription only ------------------------
+           Also carries id="fiyat": the contract-bound tiers moved to their
+           own page (2026-09-08). The 3-tier one-time Site Kontrolü packages
+           (BASIC/PRO/FULL) that used to share this section as a tab were
+           dropped from the homepage (2026-09-13) -- no real customer had
+           paid for one (every "paid" order on file was an admin free-trial
+           test scan) and the packaging didn't fit where the product is
+           heading. The scan engine and its Polar products are untouched;
+           only the homepage's promotion of the 3-tier framing is gone.
+           ------------------------------------------------------------------ */}
       <section id="fiyat" className="px-6 pb-24 md:pb-32">
         <span id="dene" className="sr-only" aria-hidden />
         <div className="mx-auto max-w-3xl text-center">
@@ -333,85 +335,52 @@ export function HomeClient({
           <p className="mx-auto mt-3 max-w-xl text-base leading-relaxed text-muted-foreground">
             {t.pricing.body}
           </p>
-
-          <div className="mt-6 flex justify-center">
-            <div role="tablist" aria-label={t.pricing.title} className="inline-flex rounded-full border border-border bg-muted/40 p-1">
-              <button
-                type="button"
-                role="tab"
-                aria-selected={pricingTab === "onetime"}
-                onClick={() => setPricingTab("onetime")}
-                className={`rounded-full px-4 py-1.5 text-sm font-semibold transition-colors ${
-                  pricingTab === "onetime" ? "bg-brand text-brand-foreground" : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                {t.pricing.tabOneTime}
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={pricingTab === "subscription"}
-                onClick={() => setPricingTab("subscription")}
-                className={`rounded-full px-4 py-1.5 text-sm font-semibold transition-colors ${
-                  pricingTab === "subscription" ? "bg-brand text-brand-foreground" : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                {t.pricing.tabSubscription}
-              </button>
-            </div>
-          </div>
         </div>
 
-        {pricingTab === "onetime" ? (
-          <div className="mt-10">
-            <StandalonePurchaseForm copy={t.standalone} currency={currency} />
-          </div>
-        ) : (
-          <div className="mt-10">
-            <div className="mx-auto grid max-w-3xl gap-4 sm:grid-cols-2">
-              {MONITORING_PLAN_IDS.map((planId) => {
-                const plan = t.monitoring.plans[planId];
-                const price = formatMoney(MONITORING_PLANS[planId].priceMinor[currency], currency);
-                return (
-                  <div
-                    key={planId}
-                    className="flex flex-col rounded-xl border border-border bg-background p-6 shadow-sm"
-                  >
-                    <div className="flex items-baseline justify-between gap-2">
-                      <span className="text-sm font-semibold text-foreground">{plan.label}</span>
-                      <span className="tnum text-lg font-bold text-foreground">
-                        {price}
-                        <span className="text-xs font-medium text-muted-foreground">/{t.monitoring.perMonth}</span>
-                      </span>
-                    </div>
-                    <p className="mt-1 text-xs text-muted-foreground">{plan.hint}</p>
-                    <ul className="mt-4 flex flex-col gap-2 text-sm text-muted-foreground">
-                      {plan.features.map((feature) => (
-                        <li key={feature} className="flex items-start gap-2">
-                          <CheckCircle2 className="text-brand mt-0.5 size-4 shrink-0" aria-hidden />
-                          {feature}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                );
-              })}
-            </div>
-
-            <div className="mx-auto mt-8 flex max-w-3xl flex-col items-center gap-2 text-center">
-              <Magnetic>
-                <Link
-                  href="/izleme"
-                  className="mac-spring bg-brand text-brand-foreground inline-flex items-center gap-2 rounded-xl px-7 py-3.5 text-base font-medium shadow-md transition-all hover:opacity-90 active:scale-[0.98]"
+        <div className="mt-10">
+          <div className="mx-auto grid max-w-3xl gap-4 sm:grid-cols-2">
+            {MONITORING_PLAN_IDS.map((planId) => {
+              const plan = t.monitoring.plans[planId];
+              const price = formatMoney(MONITORING_PLANS[planId].priceMinor[currency], currency);
+              return (
+                <div
+                  key={planId}
+                  className="flex flex-col rounded-xl border border-border bg-background p-6 shadow-sm"
                 >
-                  {t.monitoring.cta}
-                  <ArrowRight className="size-4" aria-hidden />
-                </Link>
-              </Magnetic>
-              <p className="text-xs text-muted-foreground">{t.monitoring.note}</p>
-            </div>
+                  <div className="flex items-baseline justify-between gap-2">
+                    <span className="text-sm font-semibold text-foreground">{plan.label}</span>
+                    <span className="tnum text-lg font-bold text-foreground">
+                      {price}
+                      <span className="text-xs font-medium text-muted-foreground">/{t.monitoring.perMonth}</span>
+                    </span>
+                  </div>
+                  <p className="mt-1 text-xs text-muted-foreground">{plan.hint}</p>
+                  <ul className="mt-4 flex flex-col gap-2 text-sm text-muted-foreground">
+                    {plan.features.map((feature) => (
+                      <li key={feature} className="flex items-start gap-2">
+                        <CheckCircle2 className="text-brand mt-0.5 size-4 shrink-0" aria-hidden />
+                        {feature}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              );
+            })}
           </div>
-        )}
+
+          <div className="mx-auto mt-8 flex max-w-3xl flex-col items-center gap-2 text-center">
+            <Magnetic>
+              <Link
+                href="/izleme"
+                className="mac-spring bg-brand text-brand-foreground inline-flex items-center gap-2 rounded-xl px-7 py-3.5 text-base font-medium shadow-md transition-all hover:opacity-90 active:scale-[0.98]"
+              >
+                {t.monitoring.cta}
+                <ArrowRight className="size-4" aria-hidden />
+              </Link>
+            </Magnetic>
+            <p className="text-xs text-muted-foreground">{t.monitoring.note}</p>
+          </div>
+        </div>
       </section>
 
       {/* --- close ------------------------------------------------------------ */}

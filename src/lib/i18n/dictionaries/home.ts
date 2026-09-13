@@ -89,8 +89,6 @@ export type HomeCopy = {
     eyebrow: string;
     title: string;
     body: string;
-    tabOneTime: string;
-    tabSubscription: string;
   };
   /** The self-serve /site-kontrol purchase, sold with no contract and no
    * dashboard visit -- see StandaloneFormCopy in standalone-purchase-form.tsx. */
@@ -186,10 +184,8 @@ export const HOME_COPY: Record<Locale, HomeCopy> = {
     },
     pricing: {
       eyebrow: "SÖZLEŞME GEREKMEZ",
-      title: "Hemen dene ya da sürekli izlet.",
-      body: "Herhangi bir linki şimdi tek seferlik test et, ya da siteni her hafta otomatik taratıp bir şey bozulunca haber al.",
-      tabOneTime: "Tek seferlik",
-      tabSubscription: "Sürekli izleme",
+      title: "Sitenizi her hafta biz izleriz.",
+      body: "Siteni her hafta otomatik taratır, bir şey bozulunca haber veririz.",
     },
     standalone: {
       packages: {
@@ -352,10 +348,8 @@ export const HOME_COPY: Record<Locale, HomeCopy> = {
     },
     pricing: {
       eyebrow: "NO CONTRACT NEEDED",
-      title: "Try it now, or keep watch every week.",
-      body: "Test any link right now, one time -- or have your site scanned automatically every week and hear from us only when something breaks.",
-      tabOneTime: "One-time",
-      tabSubscription: "Continuous",
+      title: "We keep watch on your site every week.",
+      body: "Your site gets scanned automatically every week -- we only reach out when something breaks.",
     },
     standalone: {
       packages: {
