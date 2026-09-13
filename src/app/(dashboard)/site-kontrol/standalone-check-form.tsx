@@ -6,28 +6,27 @@ import { useFormStatus } from "react-dom";
 import { createStandaloneCheck, type FormState } from "@/app/(dashboard)/standalone-qa-actions";
 import { FormFeedback, SubmitButton } from "@/components/form-feedback";
 import { formatMoney, type SupportedCurrency } from "@/lib/validations/currency";
-import {
-  STANDALONE_PACKAGE_IDS,
-  STANDALONE_PACKAGES,
-  type StandalonePackageId,
-} from "@/lib/validations/standalone-qa";
+import { STANDALONE_PACKAGES, type StandalonePackageId } from "@/lib/validations/standalone-qa";
 
 const INITIAL: FormState = { error: null };
 
 function FormFields({
   currency,
+  packageIds,
   packageId,
   setPackageId,
   currentFee,
   state,
 }: {
   currency: SupportedCurrency;
+  packageIds: readonly StandalonePackageId[];
   packageId: StandalonePackageId;
   setPackageId: (id: StandalonePackageId) => void;
   currentFee: string;
   state: FormState;
 }) {
   const { pending } = useFormStatus();
+  const gridCols = packageIds.length >= 3 ? "md:grid-cols-3" : "md:grid-cols-1";
 
   return (
     <>
@@ -48,8 +47,8 @@ function FormFields({
 
       <div className="flex flex-col gap-2">
         <span className="text-sm font-medium text-foreground">Paket seçimi</span>
-        <div className="grid gap-3 md:grid-cols-3">
-          {STANDALONE_PACKAGE_IDS.map((id) => {
+        <div className={`grid gap-3 ${gridCols}`}>
+          {packageIds.map((id) => {
             const pkg = STANDALONE_PACKAGES[id];
             const selected = packageId === id;
             const priceDisplay = formatMoney(pkg.priceMinor[currency], currency);
@@ -101,21 +100,28 @@ function FormFields({
   );
 }
 
+/** packageIds restricts which cards render (2026-09-13: BASIC/PRO/FULL's
+ * Polar products are archived -- zero real customers, killed alongside the
+ * homepage packages -- so only DISPUTE_SHIELD stays purchasable here too;
+ * checking out against an archived product would just fail at Polar). */
 export function StandaloneCheckForm({
   currency = "TRY",
+  packageIds = ["DISPUTE_SHIELD"],
 }: Readonly<{
   /** The visitor's currency, resolved server-side from their IP
    * (resolveVisitorCurrency, page.tsx) -- purely automatic, no override. */
   currency?: SupportedCurrency;
+  packageIds?: readonly StandalonePackageId[];
 }>) {
   const [state, action] = useActionState(createStandaloneCheck, INITIAL);
-  const [packageId, setPackageId] = useState<StandalonePackageId>("PRO");
+  const [packageId, setPackageId] = useState<StandalonePackageId>(packageIds[0] ?? "DISPUTE_SHIELD");
   const currentFee = formatMoney(STANDALONE_PACKAGES[packageId].priceMinor[currency], currency);
 
   return (
     <form action={action} className="flex flex-col gap-4 rounded-xl border border-border p-5 dark:border-border/50">
       <FormFields
         currency={currency}
+        packageIds={packageIds}
         packageId={packageId}
         setPackageId={setPackageId}
         currentFee={currentFee}
