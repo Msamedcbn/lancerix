@@ -15,13 +15,14 @@ import {
 } from "lucide-react";
 
 import { HorizontalAccordion } from "@/components/home/horizontal-accordion";
+import { StandalonePurchaseForm } from "@/components/home/standalone-purchase-form";
 import { gsap, useGSAP } from "@/lib/gsap";
 import { SiteHeader } from "@/components/layout/site-header";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/config";
 import { HOME_COPY } from "@/lib/i18n/dictionaries/home";
 import { formatMoney, type SupportedCurrency } from "@/lib/validations/currency";
-import { MONITORING_PLAN_IDS, MONITORING_PLANS } from "@/lib/validations/monitoring";
+import { DISPUTE_SHIELD_RETAINER_PRICE_MINOR } from "@/lib/validations/standalone-qa";
 
 // Dynamically import WorldMap to avoid SSR issues with canvas/svg if any
 const WorldMap = dynamic(() => import("@/components/ui/world-map"), {
@@ -315,15 +316,19 @@ export function HomeClient({
         </div>
       </section>
 
-      {/* --- pricing: monitoring subscription only ------------------------
+      {/* --- pricing: Dispute Shield ---------------------------------------
            Also carries id="fiyat": the contract-bound tiers moved to their
-           own page (2026-09-08). The 3-tier one-time Site Kontrolü packages
-           (BASIC/PRO/FULL) that used to share this section as a tab were
-           dropped from the homepage (2026-09-13) -- no real customer had
-           paid for one (every "paid" order on file was an admin free-trial
-           test scan) and the packaging didn't fit where the product is
-           heading. The scan engine and its Polar products are untouched;
-           only the homepage's promotion of the 3-tier framing is gone.
+           own page (2026-09-08). Both the 3-tier one-time Site Kontrolü
+           packages (BASIC/PRO/FULL) and the İzleme/Agency monitoring
+           subscription that used to live here were dropped from the
+           homepage (2026-09-13) -- neither ever had a real customer (every
+           "paid" order on file was an admin free-trial test scan). Replaced
+           by the single package the product is actually pivoting toward:
+           Dispute Shield, live and purchasable, plus its $29/mo retainer
+           shown as a non-interactive "coming soon" card (real usage
+           metering deferred until the one-time package has demand
+           evidence -- see coban-main-design-20260913-180412.md). The scan
+           engine and its Polar products are otherwise untouched.
            ------------------------------------------------------------------ */}
       <section id="fiyat" className="px-6 pb-24 md:pb-32">
         <span id="dene" className="sr-only" aria-hidden />
@@ -338,47 +343,32 @@ export function HomeClient({
         </div>
 
         <div className="mt-10">
-          <div className="mx-auto grid max-w-3xl gap-4 sm:grid-cols-2">
-            {MONITORING_PLAN_IDS.map((planId) => {
-              const plan = t.monitoring.plans[planId];
-              const price = formatMoney(MONITORING_PLANS[planId].priceMinor[currency], currency);
-              return (
-                <div
-                  key={planId}
-                  className="flex flex-col rounded-xl border border-border bg-background p-6 shadow-sm"
-                >
-                  <div className="flex items-baseline justify-between gap-2">
-                    <span className="text-sm font-semibold text-foreground">{plan.label}</span>
-                    <span className="tnum text-lg font-bold text-foreground">
-                      {price}
-                      <span className="text-xs font-medium text-muted-foreground">/{t.monitoring.perMonth}</span>
-                    </span>
-                  </div>
-                  <p className="mt-1 text-xs text-muted-foreground">{plan.hint}</p>
-                  <ul className="mt-4 flex flex-col gap-2 text-sm text-muted-foreground">
-                    {plan.features.map((feature) => (
-                      <li key={feature} className="flex items-start gap-2">
-                        <CheckCircle2 className="text-brand mt-0.5 size-4 shrink-0" aria-hidden />
-                        {feature}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              );
-            })}
-          </div>
+          <StandalonePurchaseForm copy={t.standalone} currency={currency} packageIds={["DISPUTE_SHIELD"]} />
 
-          <div className="mx-auto mt-8 flex max-w-3xl flex-col items-center gap-2 text-center">
-            <Magnetic>
-              <Link
-                href="/izleme"
-                className="mac-spring bg-brand text-brand-foreground inline-flex items-center gap-2 rounded-xl px-7 py-3.5 text-base font-medium shadow-md transition-all hover:opacity-90 active:scale-[0.98]"
-              >
-                {t.monitoring.cta}
-                <ArrowRight className="size-4" aria-hidden />
-              </Link>
-            </Magnetic>
-            <p className="text-xs text-muted-foreground">{t.monitoring.note}</p>
+          <div className="mx-auto mt-4 max-w-5xl">
+            <div className="flex flex-col justify-between gap-4 rounded-2xl border border-dashed border-border bg-muted/20 p-6 sm:flex-row sm:items-center">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-semibold text-foreground">{t.standalone.retainer.label}</span>
+                  <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                    {t.standalone.retainer.comingSoon}
+                  </span>
+                </div>
+                <p className="mt-1 text-xs text-muted-foreground">{t.standalone.retainer.hint}</p>
+                <ul className="mt-3 flex flex-col gap-1.5 text-xs text-muted-foreground">
+                  {t.standalone.retainer.features.map((feature) => (
+                    <li key={feature} className="flex items-start gap-2">
+                      <CheckCircle2 className="text-brand mt-0.5 size-3.5 shrink-0" aria-hidden />
+                      {feature}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <span className="tnum shrink-0 text-lg font-bold text-foreground">
+                {formatMoney(DISPUTE_SHIELD_RETAINER_PRICE_MINOR[currency], currency)}
+                <span className="text-xs font-medium text-muted-foreground">/{t.standalone.retainer.perMonth}</span>
+              </span>
+            </div>
           </div>
         </div>
       </section>

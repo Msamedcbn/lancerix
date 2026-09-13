@@ -102,6 +102,15 @@ export type HomeCopy = {
     footer: string;
     loginPrompt: string;
     loginLink: string;
+    /** The $29/mo agency plan next to the live DISPUTE_SHIELD package --
+     * display-only (2026-09-13), see DISPUTE_SHIELD_RETAINER_PRICE_MINOR. */
+    retainer: {
+      label: string;
+      perMonth: string;
+      hint: string;
+      features: string[];
+      comingSoon: string;
+    };
   };
   monitoring: {
     /** "ay" / "mo" -- appended after the price as "/{perMonth}". */
@@ -184,8 +193,8 @@ export const HOME_COPY: Record<Locale, HomeCopy> = {
     },
     pricing: {
       eyebrow: "SÖZLEŞME GEREKMEZ",
-      title: "Sitenizi her hafta biz izleriz.",
-      body: "Siteni her hafta otomatik taratır, bir şey bozulunca haber veririz.",
+      title: "İşin teslim edildiğine dair bağımsız kanıt.",
+      body: "Bir ödeme anlaşmazlığında karşı tarafa veya hakeme sunulabilecek, değiştirilemez bir doğrulama raporu.",
     },
     standalone: {
       packages: {
@@ -200,7 +209,6 @@ export const HOME_COPY: Record<Locale, HomeCopy> = {
         },
         PRO: {
           label: "Profesyonel",
-          popular: true,
           hint: "Temel Kontrol + Hız & Mobil Taşma kontrolleri.",
           features: [
             "Temel Kontrol paketindeki tüm modüller",
@@ -217,6 +225,18 @@ export const HOME_COPY: Record<Locale, HomeCopy> = {
             "Genel Etkileşim & Konsol Hata Taraması",
           ],
         },
+        DISPUTE_SHIELD: {
+          label: "Dispute Shield",
+          popular: true,
+          hint: "Teslim edilen işin gerçekten çalıştığının delili -- bir anlaşmazlıkta sunulmak üzere.",
+          features: [
+            "Genel Etkileşim & Konsol Hata Taraması",
+            "Form & Validasyon Bütünlüğü",
+            "Ölü/Kırık Link Taraması",
+            "Görsel / Mobil Taşma Taraması",
+            "SHA-256 mühürlü, kamuya açık rapor linki",
+          ],
+        },
       },
       urlLabel: "Test edilecek link",
       urlPlaceholder: "https://ornek-site.com",
@@ -226,6 +246,17 @@ export const HOME_COPY: Record<Locale, HomeCopy> = {
       footer: "Kayıt formu yok — ödeme onayıyla hesabın anında açılır.",
       loginPrompt: "Zaten hesabın var mı?",
       loginLink: "Giriş yap",
+      retainer: {
+        label: "Dispute Shield Retainer",
+        perMonth: "ay",
+        hint: "Birden çok proje teslim eden ajans/freelancer için -- ayda 10 sertifikaya kadar.",
+        features: [
+          "Ayda 10 sertifikaya kadar",
+          "Her teslimat için ayrı ödeme yok",
+          "Aynı SHA-256 mühürlü rapor formatı",
+        ],
+        comingSoon: "Yakında",
+      },
     },
     monitoring: {
       perMonth: "ay",
@@ -348,8 +379,8 @@ export const HOME_COPY: Record<Locale, HomeCopy> = {
     },
     pricing: {
       eyebrow: "NO CONTRACT NEEDED",
-      title: "We keep watch on your site every week.",
-      body: "Your site gets scanned automatically every week -- we only reach out when something breaks.",
+      title: "Independent proof the work was delivered.",
+      body: "A tamper-proof verification report you can hand to the other party, or an arbiter, in a payment dispute.",
     },
     standalone: {
       packages: {
@@ -364,7 +395,6 @@ export const HOME_COPY: Record<Locale, HomeCopy> = {
         },
         PRO: {
           label: "Professional",
-          popular: true,
           hint: "Basic Check + Speed & Mobile Overflow checks.",
           features: [
             "All modules in Basic Check",
@@ -381,6 +411,18 @@ export const HOME_COPY: Record<Locale, HomeCopy> = {
             "General Interaction & Error Scan",
           ],
         },
+        DISPUTE_SHIELD: {
+          label: "Dispute Shield",
+          popular: true,
+          hint: "Proof the delivered work actually works -- built to submit in a payment dispute.",
+          features: [
+            "General Interaction & Console Error Scan",
+            "Form & Validation Integrity",
+            "Dead Link Scan",
+            "Visual / Mobile Overflow Scan",
+            "SHA-256 sealed, publicly shareable report link",
+          ],
+        },
       },
       urlLabel: "Link to test",
       urlPlaceholder: "https://example.com",
@@ -390,6 +432,17 @@ export const HOME_COPY: Record<Locale, HomeCopy> = {
       footer: "No separate signup form — a successful payment opens the account instantly.",
       loginPrompt: "Already have an account?",
       loginLink: "Log in",
+      retainer: {
+        label: "Dispute Shield Retainer",
+        perMonth: "mo",
+        hint: "For agencies and freelancers delivering multiple projects -- up to 10 certificates a month.",
+        features: [
+          "Up to 10 certificates a month",
+          "No separate charge per delivery",
+          "Same SHA-256 sealed report format",
+        ],
+        comingSoon: "Coming soon",
+      },
     },
     monitoring: {
       perMonth: "mo",

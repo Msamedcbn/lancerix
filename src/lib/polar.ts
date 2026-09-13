@@ -47,6 +47,7 @@ function resolvePolarProductId(key: string): { productId: string | undefined; de
     BASIC: process.env.POLAR_PRODUCT_BASIC,
     PRO: process.env.POLAR_PRODUCT_PRO,
     FULL: process.env.POLAR_PRODUCT_FULL,
+    DISPUTE_SHIELD: process.env.POLAR_PRODUCT_DISPUTE_SHIELD,
     TIER2: process.env.POLAR_PRODUCT_TIER2,
     TIER3: process.env.POLAR_PRODUCT_TIER3,
   };

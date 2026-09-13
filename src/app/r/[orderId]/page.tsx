@@ -47,6 +47,7 @@ const PACKAGE_LABEL: Record<string, string> = {
   BASIC: "Temel Kontrol Paket",
   PRO: "Profesyonel Paket",
   FULL: "Tam Tarama Paket",
+  DISPUTE_SHIELD: "Dispute Shield",
 };
 
 const CHECK_TYPE_LABEL: Record<string, string> = {

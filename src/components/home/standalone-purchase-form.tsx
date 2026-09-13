@@ -32,22 +32,25 @@ export type StandaloneFormCopy = {
 function MarketingFormFields({
   copy,
   currency,
+  packageIds,
   packageId,
   setPackageId,
   state,
 }: {
   copy: StandaloneFormCopy;
   currency: SupportedCurrency;
+  packageIds: readonly StandalonePackageId[];
   packageId: StandalonePackageId;
   setPackageId: (id: StandalonePackageId) => void;
   state: FormState;
 }) {
   const { pending } = useFormStatus();
+  const gridCols = packageIds.length >= 3 ? "md:grid-cols-3" : "md:grid-cols-1";
 
   return (
     <>
-      <div className="grid gap-4 md:grid-cols-3">
-        {STANDALONE_PACKAGE_IDS.map((id) => {
+      <div className={`grid gap-4 ${gridCols}`}>
+        {packageIds.map((id) => {
           const pkg = copy.packages[id];
           const selected = packageId === id;
           return (
@@ -171,22 +174,34 @@ function MarketingFormFields({
 }
 
 /** No heading of its own -- the shared pricing section header (home-client.tsx)
- * covers both this and the monitoring tab, so this is just the package
- * picker + purchase form. */
+ * covers this, so it's just the package picker + purchase form.
+ *
+ * packageIds restricts which cards render (2026-09-13: the homepage shows
+ * only DISPUTE_SHIELD, not the full BASIC/PRO/FULL/DISPUTE_SHIELD set) --
+ * defaults to every package for any other caller that wants the full picker. */
 export function StandalonePurchaseForm({
   copy,
   currency,
+  packageIds = STANDALONE_PACKAGE_IDS,
 }: Readonly<{
   copy: StandaloneFormCopy;
   currency: SupportedCurrency;
+  packageIds?: readonly StandalonePackageId[];
 }>) {
   const [state, action] = useActionState(purchaseStandaloneCheck, INITIAL);
-  const [packageId, setPackageId] = useState<StandalonePackageId>("PRO");
+  const [packageId, setPackageId] = useState<StandalonePackageId>(packageIds[0] ?? "BASIC");
 
   return (
     <div className="mx-auto max-w-5xl">
       <form action={action} className="glass flex flex-col gap-6 rounded-2xl border border-border p-6 md:p-8">
-        <MarketingFormFields copy={copy} currency={currency} packageId={packageId} setPackageId={setPackageId} state={state} />
+        <MarketingFormFields
+          copy={copy}
+          currency={currency}
+          packageIds={packageIds}
+          packageId={packageId}
+          setPackageId={setPackageId}
+          state={state}
+        />
       </form>
     </div>
   );

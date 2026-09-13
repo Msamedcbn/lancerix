@@ -25,7 +25,7 @@ export const STANDALONE_CHECK_TYPES = [
 export type StandaloneCheckType = (typeof STANDALONE_CHECK_TYPES)[number];
 
 /**
- * Three curated packages, each a bundle of the check types above.
+ * Curated packages, each a bundle of the check types above.
  *
  * BASIC  → the three checks with the highest standalone signal-to-noise:
  *           Accessibility (WCAG compliance is a legal/contractual concern),
@@ -40,14 +40,26 @@ export type StandaloneCheckType = (typeof STANDALONE_CHECK_TYPES)[number];
  *           level checks (Form Validation + Interaction Scan) that need a
  *           real headless browser clicking through the page.
  *
+ * DISPUTE_SHIELD → the four checks with actual evidentiary value in a
+ *           delivery dispute (was the site live, did forms/links/layout
+ *           work) -- deliberately excludes ACCESSIBILITY/PERFORMANCE/
+ *           SEO_META, which answer "does this meet QA standards" rather
+ *           than "was this delivered and working" (see
+ *           src/lib/qa/delivery-summary.ts's EVIDENCE_CHECK_TYPES, which
+ *           this package mirrors exactly). 2026-09-13: homepage's only
+ *           promoted one-time package, replacing BASIC/PRO/FULL there --
+ *           those three had zero real customers and are no longer marketed,
+ *           though they stay orderable from /site-kontrol.
+ *
  * Fee is in kuruş, same minor-unit convention every other money column in
  * this codebase uses (see qa_tier_orders.fee_kurus, CLAUDE.md).
  *
  * Also hardcoded in standalone_qa_orders_insert's RLS check constraint
- * (20260908060000_standalone_packages.sql) -- change both together, or the
- * insert will be rejected by the database.
+ * (20260908060000_standalone_packages.sql, extended by
+ * 20260913120000_dispute_shield_package.sql) -- change both together, or
+ * the insert will be rejected by the database.
  */
-export const STANDALONE_PACKAGE_IDS = ["BASIC", "PRO", "FULL"] as const;
+export const STANDALONE_PACKAGE_IDS = ["BASIC", "PRO", "FULL", "DISPUTE_SHIELD"] as const;
 export type StandalonePackageId = (typeof STANDALONE_PACKAGE_IDS)[number];
 
 export const STANDALONE_PACKAGES: Record<
@@ -86,12 +98,38 @@ export const STANDALONE_PACKAGES: Record<
     label: "Tam Tarama",
     priceMinor: { TRY: 44900, USD: 3900, EUR: 3900 },
   },
+  // TRY/EUR are placeholders following this file's existing "digits mirror
+  // the USD price" convention (199/19, 349/29, 449/39) -- not a currency
+  // conversion (CLAUDE.md: regional pricing is a willingness-to-pay
+  // decision, never derived algorithmically). Needs a real business call
+  // and a matching update on the actual Polar product before launch.
+  DISPUTE_SHIELD: {
+    modules: ["INTERACTION_SCAN", "FORM_VALIDATION", "DEAD_LINKS", "VISUAL_OVERFLOW"],
+    feeKurus: 54900,
+    label: "Dispute Shield",
+    priceMinor: { TRY: 54900, USD: 4900, EUR: 4900 },
+  },
 } as const;
 
 /** Resolve the fee for a given package -- single source of truth. */
 export function packageFeeKurus(packageId: StandalonePackageId): number {
   return STANDALONE_PACKAGES[packageId].feeKurus;
 }
+
+/**
+ * The "Dispute Shield Retainer" ($29/mo, up to 10 certs/mo for agencies,
+ * per the canvas) is display-only as of 2026-09-13 -- shown on the homepage
+ * as "Coming soon" next to the live DISPUTE_SHIELD package, not orderable.
+ * Building real usage metering (monthly quota, reset, overage behavior) is
+ * deliberately deferred until the one-time package has actual demand
+ * evidence; see coban-main-design-20260913-180412.md's Open Questions.
+ * Same placeholder-pricing caveat as DISPUTE_SHIELD above applies here.
+ */
+export const DISPUTE_SHIELD_RETAINER_PRICE_MINOR: Record<SupportedCurrency, number> = {
+  TRY: 32900,
+  USD: 2900,
+  EUR: 2900,
+};
 
 /**
  * A rolling-24h cap per requester, not a calendar-day cap -- avoids the
