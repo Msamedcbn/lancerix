@@ -1,12 +1,15 @@
-import { createHash } from "crypto";
-
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ShieldCheck, Lock, ExternalLink, Calendar, CheckCircle2, AlertTriangle, XCircle, ArrowLeft } from "lucide-react";
 
 import { ScanProgressPoller } from "@/components/qa/scan-progress-poller";
-import { getStandaloneOrderPublic, latestReportPerModule } from "@/lib/data/standalone-qa";
+import {
+  getStandaloneOrderPublic,
+  latestReportPerModule,
+  type StandaloneOrderRow,
+  type StandaloneQaReport,
+} from "@/lib/data/standalone-qa";
 import { STANDALONE_PACKAGES } from "@/lib/validations/standalone-qa";
 import type {
   AccessibilityResults,
@@ -17,6 +20,12 @@ import type {
   SeoMetaResults,
   VisualOverflowResults,
 } from "@/lib/qa/standalone";
+import {
+  buildDeliverySummary,
+  computeDocumentSeal,
+  computeOverallStatus,
+  splitByEvidenceValue,
+} from "@/lib/qa/delivery-summary";
 import { PrintButton } from "./print-button";
 
 interface Props {
@@ -29,8 +38,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!order) return { title: "Rapor Bulunamadı — Lancerix" };
 
   return {
-    title: `Doğrulanmış QA Raporu (${order.target_url}) — Lancerix`,
-    description: `Lancerix Bağımsız Otomatik QA Doğrulama Raporu. SHA-256 Kriptografik Mühür ile korunan site analiz sonuçları.`,
+    title: `Bağımsız Teslimat Doğrulama Raporu (${order.target_url}) — Lancerix`,
+    description: `Lancerix'in ürettiği, taraflardan bağımsız, SHA-256 mühürlü teslimat doğrulama raporu -- bir anlaşmazlıkta üçüncü tarafa sunulabilir.`,
   };
 }
 
@@ -246,6 +255,41 @@ function InteractionScanDetail({ results }: { results: InteractionScanResults })
   );
 }
 
+function ModuleCard({
+  report,
+  order,
+}: {
+  report: StandaloneQaReport;
+  order: StandaloneOrderRow;
+}) {
+  const cType = report.check_type ?? order.check_type ?? "ACCESSIBILITY";
+  return (
+    <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-xs dark:border-zinc-800 dark:bg-zinc-900 page-break-inside-avoid">
+      <div className="flex items-center justify-between gap-2 border-b border-zinc-100 dark:border-zinc-800/80 pb-3">
+        <span className="text-xs font-bold text-foreground">{CHECK_TYPE_LABEL[cType] ?? cType}</span>
+        <StatusBadge status={report.status} />
+      </div>
+
+      {report.status === "ERROR" ? (
+        <p className="mt-3 text-xs text-muted-foreground">
+          Bu kontrol taranan sitede çalıştırılamadı; sonuç üretilmedi. Aşağıdaki mühür, modülün
+          çalıştırılamadığı kaydının kendisini imzalar.
+        </p>
+      ) : (
+        <>
+          {cType === "PERFORMANCE" && <PerformanceDetail results={report.results as PerformanceResults} />}
+          {cType === "SEO_META" && <SeoMetaDetail results={report.results as SeoMetaResults} />}
+          {cType === "VISUAL_OVERFLOW" && <VisualOverflowDetail results={report.results as VisualOverflowResults} />}
+          {cType === "DEAD_LINKS" && <DeadLinksDetail results={report.results as DeadLinksResults} />}
+          {cType === "FORM_VALIDATION" && <FormValidationDetail results={report.results as FormValidationResults} />}
+          {cType === "INTERACTION_SCAN" && <InteractionScanDetail results={report.results as InteractionScanResults} />}
+          {cType === "ACCESSIBILITY" && <AccessibilityDetail results={report.results as AccessibilityResults} />}
+        </>
+      )}
+    </div>
+  );
+}
+
 export default async function PublicReportPage({ params }: Props) {
   const { orderId } = await params;
   const order = await getStandaloneOrderPublic(orderId);
@@ -278,30 +322,11 @@ export default async function PublicReportPage({ params }: Props) {
   // the site, so it belongs in the coverage line below, not in the verdict.
   const ranReports = reports.filter((r) => r.status !== "ERROR");
   const failedModuleCount = reports.length - ranReports.length;
-  // One seal for the whole document, derived from the per-module seals rather
-  // than borrowing reports[0]'s hash and captioning it as the report's own --
-  // which is what this block used to show. Sorted, because PostgREST does not
-  // promise row order and a seal that changes between two renders of the same
-  // data is not a seal.
-  const documentSeal =
-    reports.length > 0
-      ? createHash("sha256")
-          .update(
-            reports
-              .map((r) => `${r.check_type ?? ""}:${r.status}:${r.document_sha256}`)
-              .sort()
-              .join("|"),
-          )
-          .digest("hex")
-      : null;
-  const overallStatus = ranReports.some((r) => r.status === "FAIL")
-    ? "FAIL"
-    : ranReports.some((r) => r.status === "PARTIAL")
-      ? "PARTIAL"
-      : ranReports.length > 0
-        ? "PASS"
-        : "ERROR";
+  const documentSeal = computeDocumentSeal(reports);
+  const { evidence: evidenceReports, technical: technicalReports } = splitByEvidenceValue(reports);
+  const overallStatus = computeOverallStatus(ranReports);
   const packageName = order.package_id ? PACKAGE_LABEL[order.package_id] ?? order.package_id : "Tekil Tarama";
+  const deliverySummary = buildDeliverySummary(ranReports);
 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 py-10 px-4 sm:px-6 lg:px-8">
@@ -332,8 +357,12 @@ export default async function PublicReportPage({ params }: Props) {
                 </span>
               </div>
               <h1 className="mt-3 text-xl sm:text-2xl font-bold tracking-tight text-foreground">
-                Web Sitesi Otomatik Kalite Analizi
+                Bağımsız Teslimat Doğrulama Raporu
               </h1>
+              <p className="mt-1 text-xs text-muted-foreground max-w-lg">
+                Lancerix, taraflardan bağımsız olarak bu adresi otomatik test etti. Bir
+                anlaşmazlıkta üçüncü tarafa (platform, hakem, avukat) delil olarak sunulabilir.
+              </p>
               <p className="mt-1 text-xs text-muted-foreground flex items-center gap-2">
                 <Calendar className="h-3.5 w-3.5" />
                 Tarama Tarihi: {order.created_at ? new Date(order.created_at).toLocaleString("tr-TR") : "Bilinmiyor"}
@@ -374,6 +403,31 @@ export default async function PublicReportPage({ params }: Props) {
           </div>
         </div>
 
+        {/* Plain-language delivery verdict -- the thing an arbiter or client
+            actually needs to read, ahead of the technical module detail. */}
+        {isPaid && deliverySummary.length > 0 && (
+          <div className="rounded-2xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900">
+            <h2 className="text-sm font-bold text-foreground">Teslimat Doğrulama Özeti</h2>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Bu site {order.created_at ? new Date(order.created_at).toLocaleDateString("tr-TR") : ""}{" "}
+              tarihinde bağımsız olarak test edildi. Aşağıdaki bulgular, işin gerçekten teslim
+              edilip edilmediği ve çalışıp çalışmadığı sorusuna doğrudan cevap verir.
+            </p>
+            <ul className="mt-4 space-y-2.5">
+              {deliverySummary.map((item, idx) => (
+                <li key={idx} className="flex items-start gap-2.5 text-xs">
+                  {item.ok ? (
+                    <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400 mt-0.5" />
+                  ) : (
+                    <XCircle className="h-4 w-4 shrink-0 text-rose-600 dark:text-rose-400 mt-0.5" />
+                  )}
+                  <span className="text-zinc-800 dark:text-zinc-200">{item.text}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
         {/* SHA-256 Cryptographic Seal Block */}
         {documentSeal && (
           <div className="rounded-2xl border border-emerald-200/80 bg-emerald-50/40 p-5 dark:border-emerald-900/60 dark:bg-emerald-950/20">
@@ -389,10 +443,13 @@ export default async function PublicReportPage({ params }: Props) {
                   <span className="text-[0.65rem] font-mono text-emerald-700 dark:text-emerald-400">Değiştirilemez Kayıt</span>
                 </div>
                 <p className="mt-1 text-[0.7rem] text-emerald-800/80 dark:text-emerald-300/80">
-                  Aşağıdaki her modül kendi sonucunun SHA-256 mührünü taşır ve bu mühürler
-                  veritabanına değiştirilemez şekilde kaydedilir. Buradaki birleşik mühür, o
-                  {" "}{reports.length} modül mührünün sıralı özetidir — modül mühürlerinden
-                  yeniden hesaplanabilir, tek bir modül bile değişse tutmaz.
+                  Bu mühür, raporun üretildiği andan sonra ne freelancer&apos;ın ne de müşterinin
+                  içeriği değiştiremeyeceğinin kriptografik kanıtıdır. Aşağıdaki her modül kendi
+                  sonucunun SHA-256 mührünü taşır ve bu mühürler veritabanına değiştirilemez
+                  şekilde kaydedilir; buradaki birleşik mühür o {reports.length} modül mührünün
+                  sıralı özetidir — modül mühürlerinden yeniden hesaplanabilir, tek bir modül bile
+                  değişse tutmaz. Bir anlaşmazlıkta karşı tarafa veya hakeme bu mührün
+                  değişmediği gösterilerek raporun manipüle edilmediği kanıtlanabilir.
                 </p>
                 <p className="mt-2 font-mono text-[0.68rem] font-semibold text-emerald-950 dark:text-emerald-100 break-all select-all">
                   {documentSeal}
@@ -416,8 +473,6 @@ export default async function PublicReportPage({ params }: Props) {
           </div>
         ) : (
           <div className="space-y-4">
-            <h2 className="text-sm font-bold text-foreground px-1">Tarama Sonuçları & Analiz Detayları</h2>
-
             {reports.length === 0 && isPaid && (
               <div className="rounded-xl border border-zinc-300 bg-zinc-50 p-4 dark:border-zinc-700 dark:bg-zinc-900/60">
                 <p className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
@@ -445,39 +500,28 @@ export default async function PublicReportPage({ params }: Props) {
               </div>
             )}
 
-            {reports.map((report) => {
-              const cType = report.check_type ?? order.check_type ?? "ACCESSIBILITY";
-              return (
-                <div
-                  key={report.id}
-                  className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-xs dark:border-zinc-800 dark:bg-zinc-900 page-break-inside-avoid"
-                >
-                  <div className="flex items-center justify-between gap-2 border-b border-zinc-100 dark:border-zinc-800/80 pb-3">
-                    <span className="text-xs font-bold text-foreground">
-                      {CHECK_TYPE_LABEL[cType] ?? cType}
-                    </span>
-                    <StatusBadge status={report.status} />
-                  </div>
+            {evidenceReports.length > 0 && (
+              <div className="space-y-4">
+                <h2 className="text-sm font-bold text-foreground px-1">Teslimat Kanıtı</h2>
+                {evidenceReports.map((report) => (
+                  <ModuleCard key={report.id} report={report} order={order} />
+                ))}
+              </div>
+            )}
 
-                  {report.status === "ERROR" ? (
-                    <p className="mt-3 text-xs text-muted-foreground">
-                      Bu kontrol taranan sitede çalıştırılamadı; sonuç üretilmedi. Aşağıdaki mühür,
-                      modülün çalıştırılamadığı kaydının kendisini imzalar.
-                    </p>
-                  ) : (
-                    <>
-                  {cType === "PERFORMANCE" && <PerformanceDetail results={report.results as PerformanceResults} />}
-                  {cType === "SEO_META" && <SeoMetaDetail results={report.results as SeoMetaResults} />}
-                  {cType === "VISUAL_OVERFLOW" && <VisualOverflowDetail results={report.results as VisualOverflowResults} />}
-                  {cType === "DEAD_LINKS" && <DeadLinksDetail results={report.results as DeadLinksResults} />}
-                  {cType === "FORM_VALIDATION" && <FormValidationDetail results={report.results as FormValidationResults} />}
-                  {cType === "INTERACTION_SCAN" && <InteractionScanDetail results={report.results as InteractionScanResults} />}
-                  {cType === "ACCESSIBILITY" && <AccessibilityDetail results={report.results as AccessibilityResults} />}
-                    </>
-                  )}
-                </div>
-              );
-            })}
+            {technicalReports.length > 0 && (
+              <div className="space-y-4">
+                <h2 className="text-sm font-bold text-foreground px-1">
+                  Ek Teknik Bulgular
+                  <span className="ml-2 text-xs font-normal text-muted-foreground">
+                    (teslimat anlaşmazlığında genelde konu dışı, genel site kalitesiyle ilgili)
+                  </span>
+                </h2>
+                {technicalReports.map((report) => (
+                  <ModuleCard key={report.id} report={report} order={order} />
+                ))}
+              </div>
+            )}
 
             {isPaid && remainingCount > 0 && reports.length > 0 && (
               <p className="flex items-center gap-1.5 px-1 text-xs text-muted-foreground">
