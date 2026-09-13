@@ -98,16 +98,18 @@ export const STANDALONE_PACKAGES: Record<
     label: "Tam Tarama",
     priceMinor: { TRY: 44900, USD: 3900, EUR: 3900 },
   },
-  // TRY/EUR are placeholders following this file's existing "digits mirror
-  // the USD price" convention (199/19, 349/29, 449/39) -- not a currency
-  // conversion (CLAUDE.md: regional pricing is a willingness-to-pay
-  // decision, never derived algorithmically). Needs a real business call
-  // and a matching update on the actual Polar product before launch.
+  // $29, matching the Dispute Shield Retainer's own $29/mo price (2026-09-13
+  // user decision) -- one clean number for both "one incident" and "up to
+  // 10 a month". TRY/EUR follow this file's existing "digits mirror the USD
+  // price" convention (199/19, 349/29, 449/39), same value as PRO's --
+  // not a currency conversion (CLAUDE.md: regional pricing is a
+  // willingness-to-pay decision, never derived algorithmically). Needs a
+  // matching update on the actual Polar product before launch.
   DISPUTE_SHIELD: {
     modules: ["INTERACTION_SCAN", "FORM_VALIDATION", "DEAD_LINKS", "VISUAL_OVERFLOW"],
-    feeKurus: 54900,
+    feeKurus: 34900,
     label: "Dispute Shield",
-    priceMinor: { TRY: 54900, USD: 4900, EUR: 4900 },
+    priceMinor: { TRY: 34900, USD: 2900, EUR: 2900 },
   },
 } as const;
 
