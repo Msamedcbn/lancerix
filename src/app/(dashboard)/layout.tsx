@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import type { Route } from "next";
 import { Briefcase, Building2, ClipboardList } from "lucide-react";
 import Link from "next/link";
 
@@ -53,6 +54,7 @@ const NAV: Record<UserRole, readonly NavItem[]> = {
   ],
   ADMIN: [
     { href: "/admin", label: "Panel", icon: "layout-dashboard" },
+    { href: "/admin/analytics" as Route, label: "Analytics", icon: "trending-up" },
     { href: "/admin/qa-queue", label: "QA kuyruğu", icon: "list-checks" },
     { href: "/admin/disputes", label: "İtirazlar", icon: "alert-triangle" },
     { href: "/admin/search", label: "Arama", icon: "search" },

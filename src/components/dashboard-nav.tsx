@@ -19,6 +19,7 @@ import {
   Search,
   Settings,
   ShieldCheck,
+  TrendingUp,
   UserPlus,
   UserRound,
   Users,
@@ -55,7 +56,8 @@ export type NavIcon =
   | "inbox"
   | "user-plus"
   | "shield-check"
-  | "radar";
+  | "radar"
+  | "trending-up";
 
 export type NavItem = { href: Route; label: string; icon: NavIcon };
 
@@ -80,6 +82,7 @@ const ICONS: Record<NavIcon, typeof Briefcase> = {
   "user-plus": UserPlus,
   "shield-check": ShieldCheck,
   radar: Radar,
+  "trending-up": TrendingUp,
 };
 
 /**
