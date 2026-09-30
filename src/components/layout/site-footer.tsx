@@ -48,9 +48,6 @@ export function SiteFooter({
                 <Link href={`${home}#nasil`} className="hover:text-foreground transition-colors">{t.howItWorks}</Link>
               </li>
               <li>
-                <Link href={PUBLIC_ROUTES.contractVerification[locale]} className="hover:text-foreground transition-colors">{t.verificationMethods}</Link>
-              </li>
-              <li>
                 <Link href={PUBLIC_ROUTES.guideDeliveryAcceptance[locale]} className="hover:text-foreground transition-colors">{t.guide}</Link>
               </li>
               <li>
