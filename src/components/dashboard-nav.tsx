@@ -24,6 +24,14 @@ import {
   UserRound,
   Users,
   Wallet,
+  Shield,
+  ShieldAlert,
+  Terminal,
+  Globe,
+  Bug,
+  Cpu,
+  Bell,
+  Sparkles,
 } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
@@ -56,8 +64,16 @@ export type NavIcon =
   | "inbox"
   | "user-plus"
   | "shield-check"
+  | "shield-alert"
   | "radar"
-  | "trending-up";
+  | "trending-up"
+  | "shield"
+  | "terminal"
+  | "globe"
+  | "bug"
+  | "cpu"
+  | "bell"
+  | "sparkles";
 
 export type NavItem = { href: Route; label: string; icon: NavIcon };
 
@@ -81,8 +97,16 @@ const ICONS: Record<NavIcon, typeof Briefcase> = {
   inbox: Inbox,
   "user-plus": UserPlus,
   "shield-check": ShieldCheck,
+  "shield-alert": ShieldAlert,
   radar: Radar,
   "trending-up": TrendingUp,
+  shield: Shield,
+  terminal: Terminal,
+  globe: Globe,
+  bug: Bug,
+  cpu: Cpu,
+  bell: Bell,
+  sparkles: Sparkles,
 };
 
 /**

@@ -18,11 +18,11 @@ export type Session = {
   publicId: string;
 };
 
-/** Where each role lands after signing in, and what /dashboard redirects to. */
+/** Where each role lands after signing in. */
 export const HOME_FOR: Record<UserRole, Route> = {
-  FREELANCER: "/freelancer",
-  CLIENT: "/client",
-  ADMIN: "/admin",
+  FREELANCER: "/dashboard",
+  CLIENT: "/dashboard",
+  ADMIN: "/dashboard",
 };
 
 /**

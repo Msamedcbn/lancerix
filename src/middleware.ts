@@ -25,6 +25,6 @@ export const config = {
   // extensions (not just today's two filenames) means a future llms.txt needs
   // no matching middleware change to actually be reachable.
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|api/webhooks|api/cron|.*\\.(?:svg|png|jpg|jpeg|gif|webp|html|txt|xml)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|api/webhooks|api/cron|api/badge|api/v1|.*\\.(?:svg|png|jpg|jpeg|gif|webp|html|txt|xml)$).*)",
   ],
 };

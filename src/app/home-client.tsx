@@ -16,6 +16,7 @@ import {
 
 import { HorizontalAccordion } from "@/components/home/horizontal-accordion";
 import { StandalonePurchaseForm } from "@/components/home/standalone-purchase-form";
+import { InstantAuditScanner } from "@/components/home/instant-audit-scanner";
 import { gsap, useGSAP } from "@/lib/gsap";
 import { SiteHeader } from "@/components/layout/site-header";
 import { SiteFooter } from "@/components/layout/site-footer";
@@ -179,6 +180,11 @@ export function HomeClient({
               </a>
             </Magnetic>
           </div>
+
+          {/* Instant Live Domain Audit Hook */}
+          <div className="mt-10 w-full max-w-2xl mx-auto">
+            <InstantAuditScanner />
+          </div>
         </div>
 
         {/* Aceternity World Map */}
@@ -316,19 +322,20 @@ export function HomeClient({
         </div>
       </section>
 
-      {/* --- pricing: Dispute Shield ---------------------------------------
+      {/* --- pricing: Security Seal & Audit ---------------------------------
            Also carries id="fiyat": the contract-bound tiers moved to their
            own page (2026-09-08). Both the 3-tier one-time Site Kontrolü
            packages (BASIC/PRO/FULL) and the İzleme/Agency monitoring
            subscription that used to live here were dropped from the
            homepage (2026-09-13) -- neither ever had a real customer (every
            "paid" order on file was an admin free-trial test scan). Replaced
-           by the single package the product is actually pivoting toward:
-           Dispute Shield, live and purchasable, plus its $29/mo retainer
-           shown as a non-interactive "coming soon" card (real usage
-           metering deferred until the one-time package has demand
-           evidence -- see coban-main-design-20260913-180412.md). The scan
-           engine and its Polar products are otherwise untouched.
+           by the single package (internal id DISPUTE_SHIELD, user-facing
+           label "Güvenlik Mührü & Denetim" after the 2026-09-27 security
+           pivot folded this into the security brand), live and purchasable,
+           plus its $29/mo retainer shown as a non-interactive "coming soon"
+           card (real usage metering deferred until the one-time package has
+           demand evidence -- see coban-main-design-20260913-180412.md). The
+           scan engine and its Polar products are otherwise untouched.
            ------------------------------------------------------------------ */}
       <section id="fiyat" className="px-6 pb-24 md:pb-32">
         <span id="dene" className="sr-only" aria-hidden />

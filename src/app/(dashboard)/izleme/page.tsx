@@ -44,11 +44,10 @@ export default async function IzlemePage() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-xl font-semibold text-foreground">Sürekli İzleme</h1>
+        <h1 className="text-xl font-bold text-foreground">Sürekli Güvenlik İzleme & Abonelikler</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Sitelerin düzenli olarak taranır ve bir önceki taramaya göre{" "}
-          <strong className="text-foreground">bir şey değiştiğinde</strong> e-posta alırsın.
-          Değişmeyen kontroller için posta gitmez.
+          Web uygulamalarınız ve API uç noktalarınız düzenli olarak otonom taranır. Yeni bir CVE zafiyeti, güvenlik başlığı bozulması veya sızıntı tespit edildiğinde{" "}
+          <strong className="text-foreground">anında onarım kodu (Fix PR)</strong> ile uyarı alırsınız.
         </p>
       </div>
 

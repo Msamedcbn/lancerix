@@ -630,3 +630,58 @@ export async function notifyMonitoringChange({
 
   return sendEmail({ to, subject, body: lines.join("\n") });
 }
+
+/**
+ * Sends an urgent security alert when an autonomous audit detects CRITICAL or HIGH findings.
+ */
+export async function notifySecurityVulnerabilityAlert({
+  toUserId,
+  targetName,
+  targetUrl,
+  healthScore,
+  criticalCount,
+  highCount,
+  findings,
+  reportUrl,
+}: Readonly<{
+  toUserId: string;
+  targetName: string;
+  targetUrl: string;
+  healthScore: number;
+  criticalCount: number;
+  highCount: number;
+  findings: readonly { title: string; severity: string }[];
+  reportUrl: string;
+}>): Promise<SendResult> {
+  const to = await addressOf(toUserId);
+  if (!to) return { ok: false, reason: "Kullanıcı e-posta adresi bulunamadı." };
+
+  const subject = `🚨 [Lancerix Güvenlik Uyarısı] ${targetName} üzerinde ${criticalCount > 0 ? `${criticalCount} Kritik` : `${highCount} Yüksek`} Zafiyet Tespit Edildi`;
+
+  const lines = [
+    `Sayın Lancerix Kullanıcısı,`,
+    ``,
+    `Otonom AI Güvenlik Ajanı tarafından yürütülen son denetimde ${targetName} (${targetUrl}) üzerinde acil müdahale gerektiren güvenlik açıkları tespit edilmiştir.`,
+    ``,
+    `Güvenlik Duruş Puanı: %${healthScore}`,
+    `Kritik Açıklar: ${criticalCount}`,
+    `Yüksek Riskli Bulgular: ${highCount}`,
+    ``,
+    `Öne Çıkan Bulgular:`,
+  ];
+
+  for (const f of findings.slice(0, 5)) {
+    lines.push(`  - [${f.severity}] ${f.title}`);
+  }
+
+  lines.push(
+    ``,
+    `Otomatik AI Kod Yamalarını (Fix PR) ve teknik detayları incelemek için:`,
+    reportUrl,
+    ``,
+    `Lancerix Autonomous Security Agent`
+  );
+
+  return sendEmail({ to, subject, body: lines.join("\n") });
+}
+

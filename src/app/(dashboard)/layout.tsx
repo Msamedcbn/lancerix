@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import type { Route } from "next";
-import { Briefcase, Building2, ClipboardList } from "lucide-react";
+import { ShieldCheck } from "lucide-react";
 import Link from "next/link";
 
 import { signOut } from "@/app/(auth)/actions";
@@ -15,74 +15,44 @@ export const metadata: Metadata = {
 };
 
 /**
- * One nav per role. The areas mirror the split in CLAUDE.md: a freelancer sees
- * what they are owed, a client sees what they have to fund or approve, and an
- * admin sees the Faz 1 QA desk -- the queue, the roster, the invoices --
- * plus the two things only an admin may touch: objections and the ledger.
- *
- * icon is a string key, not the lucide component itself: this file is a
- * Server Component and only plain data may cross into Sidebar, a Client
- * Component (see dashboard-nav.tsx for why).
+ * Lancerix Autonomous AI Security & Pentest Agent Navigation.
  */
-/**
- * Order matters here beyond desktop reading order: Sidebar's mobile bar
- * shows at most 5 slots (see MAX_MOBILE_TABS in dashboard-nav.tsx), so for
- * a role with more than that, everything past the 4th item collapses into
- * a "Daha fazla" sheet. The first four below are each role's most
- * frequently-needed destinations; the rest are the more occasional ones.
- */
-const NAV: Record<UserRole, readonly NavItem[]> = {
-  FREELANCER: [
-    { href: "/freelancer", label: "Projeler", icon: "briefcase" },
-    { href: "/freelancer/requests", label: "Talepler", icon: "inbox" },
-    { href: "/freelancer/earnings", label: "Kazanç", icon: "wallet" },
-    { href: "/profil", label: "Profilim", icon: "user" },
-    { href: "/freelancer/invoices", label: "Makbuzlar", icon: "receipt" },
-    { href: "/freelancer/settings", label: "Ayarlar", icon: "settings" },
-    { href: "/site-kontrol", label: "Site Kontrolü", icon: "shield-check" },
-  ],
-  CLIENT: [
-    { href: "/client", label: "Ödemeler", icon: "credit-card" },
-    { href: "/client/approvals", label: "Onaylar", icon: "check-circle" },
-    { href: "/client/requests", label: "Geliştirici çağır", icon: "user-plus" },
-    { href: "/profil", label: "Profilim", icon: "user" },
-    { href: "/client/invoices", label: "Faturalar", icon: "file-text" },
-    { href: "/client/company", label: "Şirket", icon: "building" },
-    { href: "/site-kontrol", label: "Site Kontrolü", icon: "shield-check" },
-  ],
-  ADMIN: [
-    { href: "/admin", label: "Panel", icon: "layout-dashboard" },
-    { href: "/admin/analytics" as Route, label: "Analytics", icon: "trending-up" },
-    { href: "/admin/qa-queue", label: "QA kuyruğu", icon: "list-checks" },
-    { href: "/admin/disputes", label: "İtirazlar", icon: "alert-triangle" },
-    { href: "/admin/search", label: "Arama", icon: "search" },
-    { href: "/admin/users", label: "Kullanıcılar", icon: "contact" },
-    { href: "/admin/reviewers", label: "Mühendisler", icon: "users" },
-    { href: "/admin/invoices", label: "Faturalar", icon: "file-text" },
-    { href: "/admin/audit", label: "Kayıt defteri", icon: "scroll" },
-    { href: "/site-kontrol", label: "Site Kontrolü (ücretsiz)", icon: "shield-check" },
-  ],
-};
+const SECURITY_NAV: readonly NavItem[] = [
+  { href: "/dashboard" as Route, label: "Güvenlik Merkezi", icon: "shield-check" },
+  { href: "/targets" as Route, label: "Hedefler & Varlıklar", icon: "globe" },
+  { href: "/scans" as Route, label: "Ajan Taramaları", icon: "terminal" },
+  { href: "/vulnerabilities" as Route, label: "Zafiyetler & Yamalar", icon: "shield-alert" },
+  { href: "/compliance" as Route, label: "SOC 2 & Uyumluluk", icon: "list-checks" },
+  { href: "/settings/api-keys" as Route, label: "API & CI/CD", icon: "cpu" },
+  { href: "/settings/integrations" as Route, label: "Entegrasyonlar", icon: "bell" },
+  { href: "/settings/white-label" as Route, label: "White-Label Ajans", icon: "sparkles" },
+  { href: "/izleme" as Route, label: "Sürekli İzleme", icon: "radar" },
+  { href: "/profil" as Route, label: "Hesap & Ayarlar", icon: "user" },
+];
 
-const ROLE_ICON: Record<UserRole, typeof ClipboardList> = {
-  FREELANCER: Briefcase,
-  CLIENT: Building2,
-  ADMIN: ClipboardList,
+const NAV: Record<UserRole, readonly NavItem[]> = {
+  FREELANCER: SECURITY_NAV,
+  CLIENT: SECURITY_NAV,
+  ADMIN: [
+    ...SECURITY_NAV,
+    { href: "/admin" as Route, label: "Yönetici Masası", icon: "layout-dashboard" },
+    { href: "/admin/analytics" as Route, label: "Analytics", icon: "trending-up" },
+    { href: "/admin/users" as Route, label: "Kullanıcılar", icon: "contact" },
+  ],
 };
 
 export default async function DashboardLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   const session = await requireSession();
-  const nav = NAV[session.role];
-  const RoleIcon = ROLE_ICON[session.role];
+  const nav = NAV[session.role] || SECURITY_NAV;
 
   const header = (
     <Link href={nav[0]!.href} className="flex items-center gap-2.5">
-      <span className="bg-brand text-brand-foreground flex size-8 items-center justify-center rounded-lg">
-        <RoleIcon className="size-4" aria-hidden />
+      <span className="bg-primary text-primary-foreground flex size-8 items-center justify-center rounded-lg shadow-sm">
+        <ShieldCheck className="size-4" aria-hidden />
       </span>
-      <span className="text-[0.95rem] font-semibold tracking-tight text-foreground">
+      <span className="text-[0.95rem] font-bold tracking-tight text-foreground">
         Lancerix
       </span>
     </Link>

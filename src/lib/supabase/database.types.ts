@@ -1689,6 +1689,295 @@ export type Database = {
           },
         ]
       }
+      security_targets: {
+        Row: {
+          created_at: string
+          id: string
+          is_verified: boolean
+          name: string
+          target_url: string
+          updated_at: string
+          user_id: string
+          verification_method: string
+          verification_token: string
+          verified_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_verified?: boolean
+          name: string
+          target_url: string
+          updated_at?: string
+          user_id: string
+          verification_method?: string
+          verification_token?: string
+          verified_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_verified?: boolean
+          name?: string
+          target_url?: string
+          updated_at?: string
+          user_id?: string
+          verification_method?: string
+          verification_token?: string
+          verified_at?: string | null
+        }
+        Relationships: []
+      }
+      security_scans: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          document_sha256: string | null
+          health_score: number | null
+          id: string
+          scan_type: string
+          started_at: string | null
+          status: string
+          summary: Json
+          target_id: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          document_sha256?: string | null
+          health_score?: number | null
+          id?: string
+          scan_type?: string
+          started_at?: string | null
+          status?: string
+          summary?: Json
+          target_id: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          document_sha256?: string | null
+          health_score?: number | null
+          id?: string
+          scan_type?: string
+          started_at?: string | null
+          status?: string
+          summary?: Json
+          target_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "security_scans_target_id_fkey"
+            columns: ["target_id"]
+            isOneToOne: false
+            referencedRelation: "security_targets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      security_vulnerabilities: {
+        Row: {
+          affected_url: string
+          category: string
+          created_at: string
+          cvss_score: number | null
+          description: string
+          evidence: string | null
+          id: string
+          remediation_patch: string | null
+          scan_id: string
+          severity: string
+          status: string
+          target_id: string
+          title: string
+        }
+        Insert: {
+          affected_url: string
+          category: string
+          created_at?: string
+          cvss_score?: number | null
+          description: string
+          evidence?: string | null
+          id?: string
+          remediation_patch?: string | null
+          scan_id: string
+          severity: string
+          status?: string
+          target_id: string
+          title: string
+        }
+        Update: {
+          affected_url?: string
+          category?: string
+          created_at?: string
+          cvss_score?: number | null
+          description?: string
+          evidence?: string | null
+          id?: string
+          remediation_patch?: string | null
+          scan_id?: string
+          severity?: string
+          status?: string
+          target_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "security_vulnerabilities_scan_id_fkey"
+            columns: ["scan_id"]
+            isOneToOne: false
+            referencedRelation: "security_scans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "security_vulnerabilities_target_id_fkey"
+            columns: ["target_id"]
+            isOneToOne: false
+            referencedRelation: "security_targets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      security_scan_logs: {
+        Row: {
+          created_at: string
+          id: string
+          level: string
+          message: string
+          scan_id: string
+          step_name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          level?: string
+          message: string
+          scan_id: string
+          step_name: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          level?: string
+          message?: string
+          scan_id?: string
+          step_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "security_scan_logs_scan_id_fkey"
+            columns: ["scan_id"]
+            isOneToOne: false
+            referencedRelation: "security_scans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      security_api_keys: {
+        Row: {
+          created_at: string
+          id: string
+          key_hash: string
+          key_prefix: string
+          last_used_at: string | null
+          name: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          key_hash: string
+          key_prefix: string
+          last_used_at?: string | null
+          name?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          key_hash?: string
+          key_prefix?: string
+          last_used_at?: string | null
+          name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      security_integrations: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          notify_on_critical: boolean
+          notify_on_scan_complete: boolean
+          provider: "SLACK" | "DISCORD" | "GENERIC_WEBHOOK"
+          user_id: string
+          webhook_url: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          notify_on_critical?: boolean
+          notify_on_scan_complete?: boolean
+          provider: "SLACK" | "DISCORD" | "GENERIC_WEBHOOK"
+          user_id: string
+          webhook_url: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          notify_on_critical?: boolean
+          notify_on_scan_complete?: boolean
+          provider?: "SLACK" | "DISCORD" | "GENERIC_WEBHOOK"
+          user_id?: string
+          webhook_url?: string
+        }
+        Relationships: []
+      }
+      security_agency_branding: {
+        Row: {
+          agency_name: string
+          created_at: string
+          custom_footer: string | null
+          id: string
+          is_active: boolean
+          logo_url: string | null
+          primary_color: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          agency_name: string
+          created_at?: string
+          custom_footer?: string | null
+          id?: string
+          is_active?: boolean
+          logo_url?: string | null
+          primary_color?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          agency_name?: string
+          created_at?: string
+          custom_footer?: string | null
+          id?: string
+          is_active?: boolean
+          logo_url?: string | null
+          primary_color?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

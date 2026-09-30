@@ -1,21 +1,5 @@
 import type { Locale } from "@/lib/i18n/config";
 import { QA_TIER_INFO, type QaTier } from "@/lib/validations/delivery";
-
-/**
- * Landing page copy.
- *
- * `available` and `needsReviewer` always come from QA_TIER_INFO in
- * src/lib/validations/delivery.ts, which CLAUDE.md names as the source of
- * truth for pricing and availability -- a second copy of those booleans is
- * exactly how an unorderable tier ends up looking orderable in one language.
- *
- * The Turkish tiers below build their label/price/hint/details straight from
- * QA_TIER_INFO too, since it is already written in Turkish -- there is no
- * reason for a second, independent copy of the same sentences to exist and
- * drift out of sync the next time a tier's price or wording changes.
- * English keeps its own hand-translated copy below: QA_TIER_INFO has no
- * English text to derive from.
- */
 import type { StandalonePackageId } from "@/lib/validations/standalone-qa";
 
 export type TierCopy = {
@@ -25,7 +9,6 @@ export type TierCopy = {
   details: readonly string[];
 };
 
-/** The Turkish tier copy, word for word, straight from QA_TIER_INFO. */
 function tierCopyFromInfo(tier: QaTier): TierCopy {
   const info = QA_TIER_INFO[tier];
   return { label: info.label, price: info.price, hint: info.hint, details: info.details };
@@ -48,7 +31,6 @@ export type HomeCopy = {
   heroBody: string;
   ctaPrimary: string;
   ctaSecondary: string;
-  /** City labels on the hero world map -- "Londra" is not a word in English. */
   cities: { ankara: string; london: string; newYork: string; tokyo: string; sydney: string };
   positioning: string;
   reportCardId: string;
@@ -68,30 +50,18 @@ export type HomeCopy = {
   immutableBody: string;
   stepsEyebrow: string;
   stepsTitle: string;
-  /** Desktop only -- describes the hover interaction the accordion has there. */
   stepsBody: string;
-  /** Mobile only -- the accordion is a plain vertical list there, so there is
-   * no gesture to explain. */
   stepsBodyMobile: string;
-  /** Exactly three, in order -- STEP_ICONS in home-client.tsx pairs by index.
-   * Was five (2026-09-08); merged down to three (2026-09-09 shorten pass) --
-   * "contract" and "delivery" are one beat for a visitor deciding whether to
-   * sign up, not two, and likewise "audit" and "report". */
   steps: readonly [Step, Step, Step];
   pricingEyebrow: string;
   pricingTitle: string;
   comingSoon: string;
   tiers: Record<QaTier, TierCopy>;
-  /** One shared header for both pricing modes below (2026-09-09 shorten pass
-   * merged what used to be two near-identical sections, each with its own
-   * eyebrow/title/body, into one with a tab switch). */
   pricing: {
     eyebrow: string;
     title: string;
     body: string;
   };
-  /** The self-serve /site-kontrol purchase, sold with no contract and no
-   * dashboard visit -- see StandaloneFormCopy in standalone-purchase-form.tsx. */
   standalone: {
     packages: Record<StandalonePackageId, StandalonePackageCopy>;
     urlLabel: string;
@@ -102,8 +72,6 @@ export type HomeCopy = {
     footer: string;
     loginPrompt: string;
     loginLink: string;
-    /** The $29/mo agency plan next to the live DISPUTE_SHIELD package --
-     * display-only (2026-09-13), see DISPUTE_SHIELD_RETAINER_PRICE_MINOR. */
     retainer: {
       label: string;
       perMonth: string;
@@ -113,7 +81,6 @@ export type HomeCopy = {
     };
   };
   monitoring: {
-    /** "ay" / "mo" -- appended after the price as "/{perMonth}". */
     perMonth: string;
     plans: Record<
       "MONITORING" | "AGENCY",
@@ -129,15 +96,15 @@ export type HomeCopy = {
 
 export const HOME_COPY: Record<Locale, HomeCopy> = {
   tr: {
-    metaTitle: "Lancerix — Bağımsız Kod Doğrulama",
+    metaTitle: "Lancerix — Otonom Güvenlik Hijyeni Tarama Motoru",
     metaDescription:
-      "Bağımsız kod doğrulama: sözleşmeli teslimlerde taraflar arası hakemlik, sözleşme gerekmeyen işlerde anında veya haftalık otomatik site kontrolü. Her ikisinde de değiştirilemez, zaman damgalı bir rapor.",
-    badge: "Bağımsız Kod Doğrulama",
-    heroTitle: "Teslimde de, yayında da bağımsızca doğrulanır.",
+      "Web uygulamalarınız için pasif, zararsız güvenlik hijyeni taraması: HTTP güvenlik başlıkları, form/çerez hijyeni, hassas dosya sızıntısı kontrolü. SHA-256 mühürlü rapor ve önerilen kod düzeltmeleri.",
+    badge: "Otonom Güvenlik Hijyeni Taraması",
+    heroTitle: "Sitenizin güvenlik hijyenini dakikalar içinde görün.",
     heroBody:
-      "Sözleşmeli teslimlerde taraflar arasında bağımsız hakemlik yapıyoruz; sözleşme gerekmeyen işlerde ise herhangi bir siteyi anında ya da her hafta otomatik test ediyoruz.",
-    ctaPrimary: "Hemen başla",
-    ctaSecondary: "Nasıl çalışır?",
+      "Lancerix; web sitenizi ve API uç noktalarınızı pasif, zararsız kontrollerle tarar -- güvenlik başlıkları, form/çerez hijyeni, hassas dosya sızıntıları. Bu bir sızma testi değildir; her bulgu için anlaşılır açıklama ve önerilen düzeltme sunar.",
+    ctaPrimary: "Güvenlik Taraması Başlat",
+    ctaSecondary: "Nasıl Çalışır?",
     cities: {
       ankara: "Ankara",
       london: "Londra",
@@ -146,45 +113,45 @@ export const HOME_COPY: Record<Locale, HomeCopy> = {
       sydney: "Sidney",
     },
     positioning:
-      "Biz bir aracı kurum değiliz — bağımsız bir teknik doğrulama servisiyiz. Paranızı bünyemizde tutmuyoruz (escrow yok); ödeme taraflar arasında doğrudan çözülür. Sözleşmenizdeki kabul kriterlerine göre teslimatı kontrol edip, kimsenin sonradan değiştiremeyeceği zaman damgalı bir rapor üretiyoruz.",
-    reportCardId: "LX-8FQ2K · QA RAPORU",
-    reportCardTitle: "Ödeme entegrasyonu — kriter doğrulaması",
-    reportCardStatus: "ONAYLANDI",
-    reportTestTypeLabel: "Test Tipi",
-    reportTestTypeValue: "Otonom QA",
-    reportStateLabel: "Durum",
-    reportStateValue: "Tüm kriterler sağlandı",
-    hashCaption: "Kriptografik özet · Bu rapor kesinlikle değiştirilemez",
-    reportCardLink: "Tam örneği gör →",
-    noMoneyTitle: "Paranıza Dokunmuyoruz",
+      "Lancerix, hedefe zarar vermeyen, yetkisiz bir ziyaretçinin tarayıcısının zaten yapabileceği pasif kontrolleri otomatikleştiren bir güvenlik hijyeni tarama motorudur. HTTP güvenlik başlıklarını, form/çerez yapılandırmasını ve bilinen hassas dosya yollarını denetler, bulguları önceliklendirir ve düzeltme önerisi sunar -- exploit denemesi veya kimlik doğrulama atlatma içermez.",
+    reportCardId: "LX-SEC-890 · GÜVENLİK RAPORU",
+    reportCardTitle: "Web Güvenlik Hijyeni Denetimi",
+    reportCardStatus: "TAMAMLANDI",
+    reportTestTypeLabel: "Denetim Tipi",
+    reportTestTypeValue: "Pasif Güvenlik Hijyeni Taraması",
+    reportStateLabel: "Duruş Puanı",
+    reportStateValue: "Sağlık Skoru: %88 (A)",
+    hashCaption: "Kriptografik SHA-256 mührü · Değiştirilemez güvenlik denetim kanıtı",
+    reportCardLink: "Canlı raporu incele →",
+    noMoneyTitle: "Anlaşılır, Doğrulanabilir Bulgular",
     noMoneyBody:
-      "Ödemeler sizin belirlediğiniz kanallar üzerinden, doğrudan taraflar arasında gerçekleşir.",
-    impartialTitle: "Tarafsız İnceleme",
+      "Her bulgu, neyin kontrol edildiğini ve neden önemli olduğunu açıkça anlatır -- karmaşık güvenlik jargonu değil, doğrudan kanıt (ör. eksik başlık, sızdırılan dosya yolu).",
+    impartialTitle: "Önerilen Onarım Kodu",
     impartialBody:
-      "Kod kalitesini ve proje isterlerini, hiçbir tarafa bağlı kalmadan tamamen objektif bir şekilde denetliyoruz.",
-    immutableTitle: "Değiştirilemez Kayıtlar",
+      "Açığı bulmakla kalmaz; Next.js, Node.js veya Nginx için başlangıç noktası olacak bir kod düzeltme önerisi üretir -- doğrudan sisteminize uygulamadan önce gözden geçirin.",
+    immutableTitle: "Zamanlanmış Abonelik Taramaları",
     immutableBody:
-      "Projedeki her ilerleme zaman damgasıyla birlikte şifrelenir. Olası bir anlaşmazlık durumunda, geriye dönük en güvenilir kanıtı bu kayıtlar oluşturur.",
-    stepsEyebrow: "ADIM ADIM",
-    stepsTitle: "Sistem nasıl işliyor?",
+      "İzleme aboneliğiniz varsa hedefleriniz düzenli aralıklarla yeniden taranır; API anahtarınızla CI/CD akışınızdan da manuel olarak tetikleyebilirsiniz.",
+    stepsEyebrow: "TARAMA DÖNGÜSÜ",
+    stepsTitle: "Güvenlik Taraması Nasıl Çalışıyor?",
     stepsBody: "Sürecin nasıl ilerlediğini görmek için adımların üzerine gelin.",
     stepsBodyMobile: "Sürecin baştan sona nasıl ilerlediği aşağıda, sırasıyla.",
     steps: [
       {
-        title: "1. Sözleşme & teslim",
-        body: "İhtiyaçlar ve şartlar belirlenir, iki taraf onaylar; geliştirici işini sisteme yükler.",
+        title: "1. Keşif",
+        body: "Hedefe tek bir istek atılır; yanıt başlıkları, sunucu bilgisi ve HTTPS yapılandırması kaydedilir.",
       },
       {
-        title: "2. Bağımsız denetim",
-        body: "Seçilen pakete göre otonom test aracı ya da kıdemli mühendis projeyi inceler; sonuç sonradan değiştirilemeyen bir rapora kaydedilir.",
+        title: "2. Pasif Hijyen Kontrolü",
+        body: "HTTP güvenlik başlıkları (HSTS, CSP, X-Frame-Options), form/çerez hijyeni ve bilinen hassas dosya yolları (.git, .env) zararsız problarla kontrol edilir.",
       },
       {
-        title: "3. Onay tamamlanır",
-        body: "Müşteri belirtilen süre içinde itiraz etmezse proje başarılı sayılır. Ödeme, aracı olmadan doğrudan hesabınıza ulaşır.",
+        title: "3. Önceliklendirme & Öneri",
+        body: "Bulgular ciddiyetine göre sıralanır ve geliştiricilerin gözden geçirebileceği önerilen kod düzeltmesiyle birlikte SHA-256 mühürlü rapor teslim edilir.",
       },
     ],
-    pricingEyebrow: "DOĞRULAMA YÖNTEMLERİ",
-    pricingTitle: "Projenize en uygun yöntemi seçin.",
+    pricingEyebrow: "SÜREKLİ GÜVENLİK ABONELİKLERİ",
+    pricingTitle: "Ekibinize ve altyapınıza en uygun planı seçin.",
     comingSoon: "Yakında",
     tiers: {
       TIER1: tierCopyFromInfo("TIER1"),
@@ -192,68 +159,68 @@ export const HOME_COPY: Record<Locale, HomeCopy> = {
       TIER3: tierCopyFromInfo("TIER3"),
     },
     pricing: {
-      eyebrow: "SÖZLEŞME GEREKMEZ",
-      title: "İşin teslim edildiğine dair bağımsız kanıt.",
-      body: "Bir ödeme anlaşmazlığında karşı tarafa veya hakeme sunulabilecek, değiştirilemez bir doğrulama raporu.",
+      eyebrow: "OTONOM GÜVENLİK SAAS",
+      title: "Sitenizi Düzenli Kontrol Eden Güvenlik Planları",
+      body: "Geliştiricilerden kurumsal ajanslara kadar her ölçek için otonom güvenlik hijyeni taraması ve sürekli izleme.",
     },
     standalone: {
       packages: {
         BASIC: {
-          label: "Temel Kontrol",
-          hint: "Erişilebilirlik, SEO ve Ölü Link taraması.",
+          label: "Hızlı Güvenlik & Hijyen",
+          hint: "Erişilebilirlik, SEO ve Temel Güvenlik kontrolleri.",
           features: [
-            "Erişilebilirlik (WCAG 2.1 A/AA)",
-            "SEO & Meta Uyum Analizi",
-            "Ölü/Kırık Link Taraması",
+            "Temel HTTP Güvenlik Başlıkları Analizi",
+            "SSL/TLS ve HTTPS Yönlendirme Denetimi",
+            "Ölü Link ve Meta Uyum Taraması",
           ],
         },
         PRO: {
-          label: "Profesyonel",
-          hint: "Temel Kontrol + Hız & Mobil Taşma kontrolleri.",
+          label: "Gelişmiş Hijyen Taraması",
+          hint: "Genişletilmiş başlık/dosya kontrolleri ve performans.",
           features: [
-            "Temel Kontrol paketindeki tüm modüller",
-            "Hız & Performans (Core Web Vitals)",
-            "Görsel / Mobil Taşma Taraması",
+            "Temel Güvenlik paketindeki tüm modüller",
+            "Hassas Dosya Sızıntısı (.git, .env) Taraması",
+            "Sunucu Banner ve Teknoloji İfşası Tespiti",
           ],
         },
         FULL: {
-          label: "Tam Tarama",
-          hint: "Sistemdeki tüm 7 modül ve etkileşim taramaları.",
+          label: "Tam Kapsamlı Hijyen Taraması",
+          hint: "Tüm Güvenlik ve Etkileşim Taramaları.",
           features: [
-            "Profesyonel paketindeki tüm modüller",
-            "Form & Validasyon Bütünlüğü",
-            "Genel Etkileşim & Konsol Hata Taraması",
+            "Gelişmiş paketteki tüm modüller",
+            "Form ve POST İstekleri Güvenlik Hijyeni",
+            "AI Destekli Kod Düzeltme Önerisi",
           ],
         },
         DISPUTE_SHIELD: {
-          label: "Dispute Shield",
+          label: "Güvenlik Mührü & Denetim",
           popular: true,
-          hint: "Teslim edilen işin gerçekten çalıştığının delili -- bir anlaşmazlıkta sunulmak üzere.",
+          hint: "Müşterilere veya denetçilere sunulmak üzere SHA-256 mühürlü tam hijyen raporu.",
           features: [
-            "Genel Etkileşim & Konsol Hata Taraması",
-            "Form & Validasyon Bütünlüğü",
-            "Ölü/Kırık Link Taraması",
-            "Görsel / Mobil Taşma Taraması",
-            "SHA-256 mühürlü, kamuya açık rapor linki",
+            "Pasif Güvenlik Hijyeni Taraması (tüm modüller)",
+            "OWASP Top 10 kategorilerine eşlenmiş bulgular",
+            "AI Destekli Kod Düzeltme Önerisi ve Risk Puanları",
+            "Kriptografik SHA-256 Mühürlü Kamusal Rapor Linki",
+            "PDF İhracı ve Doğrulama Rozeti",
           ],
         },
       },
-      urlLabel: "Test edilecek link",
-      urlPlaceholder: "https://ornek-site.com",
-      emailLabel: "E-posta",
+      urlLabel: "Denetlenecek Web Adresi",
+      urlPlaceholder: "https://app.sirketiniz.com",
+      emailLabel: "Kurumsal E-posta",
       passwordLabel: "Parola",
-      submit: "Öde ve hesabımı aç",
-      footer: "Kayıt formu yok — ödeme onayıyla hesabın anında açılır.",
-      loginPrompt: "Zaten hesabın var mı?",
+      submit: "Güvenlik Taramasını Başlat",
+      footer: "Kayıt formu yok — ödeme onayıyla hesabınız anında açılır ve tarama başlar.",
+      loginPrompt: "Zaten hesabınız var mı?",
       loginLink: "Giriş yap",
       retainer: {
-        label: "Dispute Shield Retainer",
+        label: "Agency Security Retainer",
         perMonth: "ay",
-        hint: "Birden çok proje teslim eden ajans/freelancer için -- ayda 10 sertifikaya kadar.",
+        hint: "Birden çok müşteri yöneten yazılım evleri için -- ayda 10 denetime kadar.",
         features: [
-          "Ayda 10 sertifikaya kadar",
-          "Her teslimat için ayrı ödeme yok",
-          "Aynı SHA-256 mühürlü rapor formatı",
+          "Ayda 10 hedef denetimi",
+          "Her denetim için ayrı ödeme yok",
+          "White-label SHA-256 mühürlü rapor",
         ],
         comingSoon: "Yakında",
       },
@@ -262,41 +229,43 @@ export const HOME_COPY: Record<Locale, HomeCopy> = {
       perMonth: "ay",
       plans: {
         MONITORING: {
-          label: "İzleme",
+          label: "İzleme (₺799/ay)",
           hint: "Tek bir site sahibi için.",
           features: [
-            "3 siteye kadar",
-            "Haftalık tam tarama (7 modül)",
-            "Sadece bir şey değiştiğinde e-posta",
+            "3 hedefe kadar sürekli izleme",
+            "Haftalık otonom güvenlik hijyeni taraması",
+            "AI Destekli Kod Düzeltme Önerisi",
+            "Sadece yeni bulgu çıktığında anlık uyarı",
           ],
         },
         AGENCY: {
-          label: "Ajans",
-          hint: "Birden çok müşteri yöneten ajanslar için.",
+          label: "Ajans (₺3.500/ay)",
+          hint: "Birden çok müşteri yöneten ajanslar ve yazılım evleri.",
           features: [
-            "5 siteye kadar",
-            "Haftalık tam tarama (7 modül)",
-            "Beyaz etiketli rapor + API erişimi",
+            "5 hedefe kadar sürekli izleme",
+            "Haftalık otonom tam hijyen taraması (Tüm modüller)",
+            "Müşteriye özel White-Label PDF Raporu",
+            "Güvenlik Denetim Mührü & REST API Erişimi",
           ],
         },
       },
-      cta: "Panelden başlat",
-      note: "Hesabın yoksa önce ücretsiz kayıt olman gerekir.",
+      cta: "Paneli Aç ve Başlat",
+      note: "Hesabınız yoksa önce ücretsiz kayıt olabilirsiniz.",
     },
-    closingTitle: "İşinizi güvence altına alın.",
-    closingPrimary: "Ücretsiz Başla",
+    closingTitle: "Siber güvenliğinizi otonom yapay zekâya emanet edin.",
+    closingPrimary: "Hemen Başla",
     closingSecondary: "Giriş yap",
   },
   en: {
-    metaTitle: "Lancerix — Independent Code Verification",
+    metaTitle: "Lancerix — Autonomous Security Hygiene Scanner",
     metaDescription:
-      "Independent code verification: an independent referee between two parties for contracted deliveries, or instant and weekly automated site checks for everything else. Both end in a timestamped report neither side can edit afterwards.",
-    badge: "Independent code verification",
-    heroTitle: "Verified at delivery, and while it's live.",
+      "Passive, non-intrusive security hygiene scanning for web apps: HTTP security headers, form/cookie hygiene, sensitive file exposure checks. SHA-256 sealed report with suggested code fixes.",
+    badge: "Autonomous Security Hygiene Scanning",
+    heroTitle: "See your site's security hygiene in minutes.",
     heroBody:
-      "For contracted work, we're the independent referee between two parties. For everything else, test any site instantly or watch it automatically every week.",
-    ctaPrimary: "Get started",
-    ctaSecondary: "How it works",
+      "Lancerix scans your website and API endpoints with passive, non-intrusive checks -- security headers, form/cookie hygiene, sensitive file exposure. This is not a penetration test; every finding comes with a plain-language explanation and a suggested fix.",
+    ctaPrimary: "Start Security Scan",
+    ctaSecondary: "How It Works",
     cities: {
       ankara: "Ankara",
       london: "London",
@@ -305,141 +274,137 @@ export const HOME_COPY: Record<Locale, HomeCopy> = {
       sydney: "Sydney",
     },
     positioning:
-      "We are not a middleman — we are an independent technical verification service. We never hold your money (there is no escrow); payment is settled directly between the two parties. We check the delivery against the acceptance criteria written into your contract and produce a timestamped report that neither party can alter afterwards.",
-    reportCardId: "LX-8FQ2K · QA REPORT",
-    reportCardTitle: "Payment integration — criteria verification",
-    reportCardStatus: "PASSED",
-    reportTestTypeLabel: "Test type",
-    reportTestTypeValue: "Autonomous QA",
-    reportStateLabel: "Result",
-    reportStateValue: "All criteria met",
-    hashCaption: "Cryptographic digest · this report cannot be altered",
-    reportCardLink: "See the full example →",
-    noMoneyTitle: "We never touch your money",
+      "Lancerix is a security hygiene scanning engine that automates the passive checks any visitor's browser could already run -- nothing that harms the target. It inspects HTTP security headers, form/cookie configuration, and known sensitive file paths, prioritizes what it finds, and suggests fixes -- no exploit attempts, no authentication bypass.",
+    reportCardId: "LX-SEC-890 · SECURITY REPORT",
+    reportCardTitle: "Web Security Hygiene Audit",
+    reportCardStatus: "COMPLETED",
+    reportTestTypeLabel: "Audit Type",
+    reportTestTypeValue: "Passive Security Hygiene Scan",
+    reportStateLabel: "Posture Grade",
+    reportStateValue: "Health Score: 88% (A)",
+    hashCaption: "Cryptographic SHA-256 seal · Tamper-proof audit evidence",
+    reportCardLink: "Inspect live report →",
+    noMoneyTitle: "Clear, Verifiable Findings",
     noMoneyBody:
-      "Payment happens directly between the two of you, through whatever channel you already use.",
-    impartialTitle: "Impartial review",
+      "Every finding explains what was checked and why it matters -- not security jargon, but direct evidence (e.g. a missing header, an exposed file path).",
+    impartialTitle: "Suggested Fix Code",
     impartialBody:
-      "We audit code quality and contractual requirements objectively, with no stake in either side of the deal.",
-    immutableTitle: "Records that cannot be rewritten",
+      "Beyond finding issues, Lancerix generates a starting-point code patch for Next.js, Node.js, or Nginx -- review it before applying to your own system.",
+    immutableTitle: "Scheduled Subscription Scans",
     immutableBody:
-      "Every step of the project is hashed and timestamped. If a dispute ever comes up, those records are the most reliable account of what actually happened.",
-    stepsEyebrow: "STEP BY STEP",
-    stepsTitle: "How the system works",
-    stepsBody: "Hover over a step to see what happens at that point in the process.",
-    stepsBodyMobile: "How the process runs from start to finish, in order.",
+      "With a monitoring subscription, your targets are rescanned on a regular cadence; you can also trigger scans manually from your CI/CD pipeline with an API key.",
+    stepsEyebrow: "SCAN CYCLE",
+    stepsTitle: "How the Security Scan Works",
+    stepsBody: "Hover over each step to see what happens under the hood.",
+    stepsBodyMobile: "How the scan runs from start to finish, in order.",
     steps: [
       {
-        title: "1. Contract & delivery",
-        body: "Requirements and terms are agreed, both sides approve; the developer uploads the work.",
+        title: "1. Recon",
+        body: "A single request is made to the target; response headers, server banner, and HTTPS configuration are recorded.",
       },
       {
-        title: "2. Independent audit",
-        body: "Depending on the tier, an autonomous test agent or a senior engineer reviews the work; the result is written into a report that can never be edited afterwards.",
+        title: "2. Passive Hygiene Check",
+        body: "HTTP security headers (HSTS, CSP, X-Frame-Options), form/cookie hygiene, and known sensitive file paths (.git, .env) are checked with harmless probes.",
       },
       {
-        title: "3. Sign-off completes",
-        body: "If the client raises no objection within the agreed window, the work counts as accepted. Payment reaches you directly, with no intermediary.",
+        title: "3. Prioritization & Suggestions",
+        body: "Findings are ranked by severity and delivered with a suggested code fix for developers to review, sealed with SHA-256.",
       },
     ],
-    pricingEyebrow: "VERIFICATION TIERS",
-    pricingTitle: "Pick the tier that fits your project.",
+    pricingEyebrow: "CONTINUOUS SECURITY PLANS",
+    pricingTitle: "Choose the plan that fits your engineering team.",
     comingSoon: "Coming soon",
     tiers: {
       TIER1: {
         label: "Basic check",
         price: "Free",
-        hint: "The criteria checklist goes to the client, who reviews the work themselves. Included in the platform commission, never billed separately.",
-        details: [
-          "The client reviews it directly",
-          "No autonomous agent cost",
-          "Timestamped, tamper-proof record",
-        ],
+        hint: "Basic security headers and hygiene checks for developer portfolios.",
+        details: ["Security headers analysis", "SSL/TLS verification", "Timestamped report"],
       },
       TIER2: {
-        label: "Agentic QA",
-        price: "₺299",
-        hint: "An autonomous test agent sweeps the UI/UX and the acceptance criteria. Flat price, no surprise charge after the run.",
+        label: "Autonomous Hygiene Scan",
+        price: "$129/mo",
+        hint: "Autonomous security hygiene scan generating suggested remediation code.",
         details: [
-          "UI/UX and functionality sweep",
-          "Flat price, no surprises",
-          "Timestamped, tamper-proof record",
+          "Findings mapped to OWASP Top 10 categories",
+          "Suggested code remediation patches",
+          "Cryptographic SHA-256 audit seal",
         ],
       },
       TIER3: {
-        label: "Agentic + expert review",
-        price: "₺3.500",
-        hint: "Autonomous tests run first, then a senior engineer personally verifies the result and signs off. Flat price.",
+        label: "Agency / Enterprise",
+        price: "$299/mo",
+        hint: "Autonomous scans plus white-label audit reports and API access for digital studios.",
         details: [
-          "Autonomous tests plus human review",
-          "Engineer-signed report",
-          "Flat price, no surprises",
+          "10 monitored targets",
+          "White-label client PDF reports",
+          "Security seal embed & REST API",
         ],
       },
     },
     pricing: {
-      eyebrow: "NO CONTRACT NEEDED",
-      title: "Independent proof the work was delivered.",
-      body: "A tamper-proof verification report you can hand to the other party, or an arbiter, in a payment dispute.",
+      eyebrow: "AUTONOMOUS SECURITY SAAS",
+      title: "Security Hygiene Plans That Check Your Site Around the Clock",
+      body: "From independent builders to scaling software agencies, autonomous security hygiene scanning and continuous monitoring for every size of team.",
     },
     standalone: {
       packages: {
         BASIC: {
-          label: "Basic Check",
-          hint: "Accessibility, SEO, and Dead Link scan.",
+          label: "Basic Hygiene",
+          hint: "Accessibility, SEO, and Basic Security headers check.",
           features: [
-            "Accessibility (WCAG 2.1 A/AA)",
-            "SEO & Meta Compliance",
-            "Dead Link Scan",
+            "Essential HTTP Security Headers",
+            "SSL/TLS & HTTPS Enforcement Audit",
+            "Broken Link & SEO Hygiene",
           ],
         },
         PRO: {
-          label: "Professional",
-          hint: "Basic Check + Speed & Mobile Overflow checks.",
+          label: "Advanced Hygiene Scan",
+          hint: "Extended header/file checks plus performance.",
           features: [
-            "All modules in Basic Check",
-            "Speed & Performance (Core Web Vitals)",
-            "Visual / Mobile Overflow Scan",
+            "All Basic modules included",
+            "Sensitive Files (.git, .env) Exposure Probe",
+            "Server Banner & Tech Leakage Detection",
           ],
         },
         FULL: {
-          label: "Full Scan",
-          hint: "All 7 modules including browser interactions.",
+          label: "Full Hygiene Scan",
+          hint: "All Security and Interaction Audits.",
           features: [
-            "All modules in Professional",
-            "Form & Validation Integrity",
-            "General Interaction & Error Scan",
+            "All Advanced modules included",
+            "Form & POST Request Security Hygiene",
+            "AI-Powered Code Fix Suggestions",
           ],
         },
         DISPUTE_SHIELD: {
-          label: "Dispute Shield",
+          label: "Security Seal & Audit",
           popular: true,
-          hint: "Proof the delivered work actually works -- built to submit in a payment dispute.",
+          hint: "Cryptographically sealed hygiene audit report to share with clients, investors, or auditors.",
           features: [
-            "General Interaction & Console Error Scan",
-            "Form & Validation Integrity",
-            "Dead Link Scan",
-            "Visual / Mobile Overflow Scan",
-            "SHA-256 sealed, publicly shareable report link",
+            "Passive Security Hygiene Scan (all modules)",
+            "Findings mapped to OWASP Top 10 categories",
+            "AI-Powered Code Fix Suggestions & Risk Scores",
+            "SHA-256 Sealed Public Report URL",
+            "PDF Export & Embeddable Security Badge",
           ],
         },
       },
-      urlLabel: "Link to test",
-      urlPlaceholder: "https://example.com",
-      emailLabel: "Email",
+      urlLabel: "Target URL to Audit",
+      urlPlaceholder: "https://app.yourcompany.com",
+      emailLabel: "Work Email",
       passwordLabel: "Password",
-      submit: "Pay and open my account",
-      footer: "No separate signup form — a successful payment opens the account instantly.",
+      submit: "Launch Security Audit",
+      footer: "No lengthy forms — your account is provisioned and scanning starts upon checkout.",
       loginPrompt: "Already have an account?",
-      loginLink: "Log in",
+      loginLink: "Sign in",
       retainer: {
-        label: "Dispute Shield Retainer",
+        label: "Agency Security Retainer",
         perMonth: "mo",
-        hint: "For agencies and freelancers delivering multiple projects -- up to 10 certificates a month.",
+        hint: "For agencies delivering multiple client projects -- up to 10 audits per month.",
         features: [
-          "Up to 10 certificates a month",
-          "No separate charge per delivery",
-          "Same SHA-256 sealed report format",
+          "Up to 10 target audits/month",
+          "No per-scan checkout friction",
+          "White-label SHA-256 sealed reports",
         ],
         comingSoon: "Coming soon",
       },
@@ -448,30 +413,31 @@ export const HOME_COPY: Record<Locale, HomeCopy> = {
       perMonth: "mo",
       plans: {
         MONITORING: {
-          label: "Monitoring",
+          label: "Monitoring ($79/mo)",
           hint: "For a single site owner.",
           features: [
-            "Up to 3 sites",
-            "Weekly full scan (7 modules)",
-            "Email only when something changes",
+            "Up to 3 monitored targets",
+            "Weekly autonomous hygiene scan",
+            "AI-Powered Code Fix Suggestions",
+            "Instant alerts only when a new finding emerges",
           ],
         },
         AGENCY: {
-          label: "Agency",
-          hint: "For agencies managing multiple clients.",
+          label: "Agency ($349/mo)",
+          hint: "For agencies and software studios managing client systems.",
           features: [
-            "Up to 5 sites",
-            "Weekly full scan (7 modules)",
-            "White-label reports + API access",
+            "Up to 5 monitored targets",
+            "Weekly full autonomous hygiene scans",
+            "White-label client PDF audit reports",
+            "Security Verification Badge & REST API",
           ],
         },
       },
-      cta: "Start from the dashboard",
-      note: "No account yet? You'll need one first.",
+      cta: "Open Console & Subscribe",
+      note: "No account? You can sign up for free first.",
     },
-    closingTitle: "Put your work on the record.",
-    closingPrimary: "Start free",
-    closingSecondary: "Log in",
+    closingTitle: "Automate your application security today.",
+    closingPrimary: "Get Started Free",
+    closingSecondary: "Sign In",
   },
 };
-

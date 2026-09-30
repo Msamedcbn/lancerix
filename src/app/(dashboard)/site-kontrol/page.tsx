@@ -69,7 +69,7 @@ const PACKAGE_LABEL: Record<string, string> = {
   BASIC: "Temel Kontrol Paket",
   PRO: "Profesyonel Paket",
   FULL: "Tam Tarama Paket",
-  DISPUTE_SHIELD: "Dispute Shield",
+  DISPUTE_SHIELD: "Güvenlik Mührü & Denetim",
 };
 
 /** order.package_id comes back as a plain string from the DB, not the

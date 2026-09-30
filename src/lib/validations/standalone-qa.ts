@@ -98,17 +98,23 @@ export const STANDALONE_PACKAGES: Record<
     label: "Tam Tarama",
     priceMinor: { TRY: 44900, USD: 3900, EUR: 3900 },
   },
-  // $29, matching the Dispute Shield Retainer's own $29/mo price (2026-09-13
-  // user decision) -- one clean number for both "one incident" and "up to
-  // 10 a month". TRY/EUR follow this file's existing "digits mirror the USD
-  // price" convention (199/19, 349/29, 449/39), same value as PRO's --
-  // not a currency conversion (CLAUDE.md: regional pricing is a
+  // $29, matching the Security Seal & Audit Retainer's own $29/mo price
+  // (2026-09-13 user decision) -- one clean number for both "one incident"
+  // and "up to 10 a month". TRY/EUR follow this file's existing "digits
+  // mirror the USD price" convention (199/19, 349/29, 449/39), same value
+  // as PRO's -- not a currency conversion (CLAUDE.md: regional pricing is a
   // willingness-to-pay decision, never derived algorithmically). Needs a
   // matching update on the actual Polar product before launch.
+  //
+  // package_id stays "DISPUTE_SHIELD" (internal identifier, matches the DB
+  // constraint and the Polar product's checkout metadata) even though the
+  // user-facing label and homepage copy were fully renamed to "Güvenlik
+  // Mührü & Denetim" as part of merging this into the 2026-09-27 security
+  // pivot -- renaming the identifier itself would need a migration.
   DISPUTE_SHIELD: {
     modules: ["INTERACTION_SCAN", "FORM_VALIDATION", "DEAD_LINKS", "VISUAL_OVERFLOW"],
     feeKurus: 34900,
-    label: "Dispute Shield",
+    label: "Güvenlik Mührü & Denetim",
     priceMinor: { TRY: 34900, USD: 2900, EUR: 2900 },
   },
 } as const;
@@ -119,13 +125,15 @@ export function packageFeeKurus(packageId: StandalonePackageId): number {
 }
 
 /**
- * The "Dispute Shield Retainer" ($29/mo, up to 10 certs/mo for agencies,
- * per the canvas) is display-only as of 2026-09-13 -- shown on the homepage
- * as "Coming soon" next to the live DISPUTE_SHIELD package, not orderable.
- * Building real usage metering (monthly quota, reset, overage behavior) is
- * deliberately deferred until the one-time package has actual demand
- * evidence; see coban-main-design-20260913-180412.md's Open Questions.
- * Same placeholder-pricing caveat as DISPUTE_SHIELD above applies here.
+ * The Security Seal & Audit Retainer ($29/mo, up to 10 audits/mo for
+ * agencies -- branded "Dispute Shield Retainer" in the original
+ * 2026-09-13 canvas, renamed as part of the 2026-09-27 security pivot) is
+ * display-only -- shown on the homepage as "Coming soon" next to the live
+ * DISPUTE_SHIELD package, not orderable. Building real usage metering
+ * (monthly quota, reset, overage behavior) is deliberately deferred until
+ * the one-time package has actual demand evidence; see
+ * coban-main-design-20260913-180412.md's Open Questions. Same
+ * placeholder-pricing caveat as DISPUTE_SHIELD above applies here.
  */
 export const DISPUTE_SHIELD_RETAINER_PRICE_MINOR: Record<SupportedCurrency, number> = {
   TRY: 32900,
