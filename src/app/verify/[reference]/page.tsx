@@ -18,6 +18,19 @@ import {
 
 import { getPublicVerificationRecord } from "@/lib/data/verification";
 import { formatKurus } from "@/lib/escrow/money";
+import {
+  CheckBadgeIcon,
+  ShieldCheckIcon as HeroShieldCheckIcon,
+  ScaleIcon as HeroScaleIcon,
+  ClockIcon as HeroClockIcon,
+  DocumentCheckIcon,
+  ArrowTopRightOnSquareIcon,
+} from "@heroicons/react/24/outline";
+import {
+  SiLetsencrypt,
+  SiNginx,
+  SiPostgresql,
+} from "@icons-pack/react-simple-icons";
 
 export const dynamic = "force-dynamic";
 
@@ -105,7 +118,7 @@ export default async function VerifyReferencePage({
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="space-y-1.5">
               <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-emerald-500/20 text-emerald-300 text-xs font-bold uppercase tracking-wider">
-                <CheckCircle2 className="w-3.5 h-3.5" />
+                <CheckBadgeIcon className="w-4 h-4 text-emerald-400" />
                 <span>HUKUKEN KESİNLEŞMİŞ (TBK m. 477 ZIMNİ KABUL)</span>
               </div>
               <h2 className="text-xl sm:text-2xl font-bold font-display text-white">
@@ -130,7 +143,7 @@ export default async function VerifyReferencePage({
           <div className="rounded-2xl bg-slate-900/90 border border-slate-800 p-5 space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-slate-800/80">
               <span className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-                <Scale className="w-4 h-4 text-emerald-400" />
+                <HeroScaleIcon className="w-4 h-4 text-emerald-400" />
                 Sözleşme Kimliği
               </span>
               <span className="font-mono text-xs px-2.5 py-1 rounded-md bg-slate-800 text-slate-200 font-semibold">
@@ -189,15 +202,30 @@ export default async function VerifyReferencePage({
                 </span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-slate-400 text-xs">Ortalama Yanıt Süresi:</span>
+                <span className="text-slate-400 text-xs flex items-center gap-1.5">
+                  <HeroClockIcon className="w-3.5 h-3.5 text-slate-500" />
+                  Ortalama Yanıt Süresi:
+                </span>
                 <span className="font-mono text-xs text-slate-200">
                   {record.proofGuard.latencyMs} ms
                 </span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-slate-400 text-xs">Güvenlik Protokolü:</span>
+                <span className="text-slate-400 text-xs flex items-center gap-1.5">
+                  <SiLetsencrypt className="w-3.5 h-3.5 text-amber-400" />
+                  Güvenlik Protokolü:
+                </span>
                 <span className="font-mono text-xs text-emerald-300">
                   {record.proofGuard.tlsVersion}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-400 text-xs flex items-center gap-1.5">
+                  <SiNginx className="w-3.5 h-3.5 text-emerald-400" />
+                  Sunucu Mimarisi:
+                </span>
+                <span className="font-mono text-xs text-slate-200">
+                  {record.proofGuard.serverHeader}
                 </span>
               </div>
             </div>

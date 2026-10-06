@@ -18,6 +18,7 @@ import {
 import { HorizontalAccordion } from "@/components/home/horizontal-accordion";
 import { StandalonePurchaseForm } from "@/components/home/standalone-purchase-form";
 import { InstantAuditScanner } from "@/components/home/instant-audit-scanner";
+import { ArbitrationSimulator } from "@/components/contracts/arbitration-simulator";
 import { gsap, useGSAP } from "@/lib/gsap";
 import { SiteHeader } from "@/components/layout/site-header";
 import { SiteFooter } from "@/components/layout/site-footer";
@@ -238,6 +239,13 @@ export function HomeClient({
         <p className="text-2xl leading-relaxed font-medium tracking-tight text-foreground md:text-[1.75rem]">
           {t.positioning}
         </p>
+      </section>
+
+      {/* --- Interactive Dispute Simulator Section -------------------------- */}
+      <section className="px-6 pb-20 md:pb-28">
+        <div className="mx-auto max-w-5xl">
+          <ArbitrationSimulator />
+        </div>
       </section>
 
       {/* --- bento: what you actually get ------------------------------------ */}

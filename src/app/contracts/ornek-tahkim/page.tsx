@@ -18,6 +18,20 @@ import {
 
 import { SHOWCASE_KUYUMCU_DATA } from "@/lib/data/verification";
 import { formatKurus } from "@/lib/escrow/money";
+import { ArbitrationSimulator } from "@/components/contracts/arbitration-simulator";
+import {
+  SiNginx,
+  SiPostgresql,
+  SiLetsencrypt,
+  SiNextdotjs,
+} from "@icons-pack/react-simple-icons";
+import {
+  CheckBadgeIcon,
+  ScaleIcon,
+  ClockIcon as HeroClockIcon,
+  DocumentArrowDownIcon,
+  ArrowTopRightOnSquareIcon,
+} from "@heroicons/react/24/outline";
 
 export const metadata = {
   title: "85.000 TL Kuyumculuk Örnek Tahkim Dosyası — Lancerix",
@@ -115,6 +129,9 @@ export default function OrnekTahkimPage() {
           </div>
         </div>
 
+        {/* Interactive Arbitration & Dispute Simulator */}
+        <ArbitrationSimulator />
+
         {/* Live Dossier Interactive Card */}
         <div className="rounded-3xl bg-slate-900 border border-emerald-500/30 p-6 sm:p-8 space-y-8 shadow-2xl">
           {/* Status Header */}
@@ -136,13 +153,13 @@ export default function OrnekTahkimPage() {
                 {formatKurus(record.projectAmountKurus)}
               </div>
               <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 text-xs font-semibold">
-                <CheckCircle2 className="w-3.5 h-3.5" />
+                <CheckBadgeIcon className="w-4 h-4 text-emerald-400" />
                 <span>Zımnen Kabul Edildi (TBK m. 477)</span>
               </div>
             </div>
           </div>
 
-          {/* ProofGuard Live Monitoring Probe Grid */}
+          {/* ProofGuard Live Monitoring Probe Grid with Simple Icons */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2">
@@ -156,26 +173,38 @@ export default function OrnekTahkimPage() {
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800">
-                <div className="text-xs text-slate-500">HTTP Yanıtı</div>
+              <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 relative overflow-hidden group">
+                <div className="flex items-center justify-between">
+                  <div className="text-xs text-slate-500">HTTP Yanıtı</div>
+                  <SiNextdotjs className="w-3.5 h-3.5 text-slate-600 group-hover:text-slate-300 transition" />
+                </div>
                 <div className="text-lg font-bold font-mono text-emerald-400 mt-1">200 OK</div>
                 <div className="text-[10px] text-slate-400 mt-0.5">Erişilebilirlik Tam</div>
               </div>
 
-              <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800">
-                <div className="text-xs text-slate-500">Ortalama Yanıt</div>
+              <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 relative overflow-hidden group">
+                <div className="flex items-center justify-between">
+                  <div className="text-xs text-slate-500">Ortalama Yanıt</div>
+                  <HeroClockIcon className="w-3.5 h-3.5 text-slate-600 group-hover:text-slate-300 transition" />
+                </div>
                 <div className="text-lg font-bold font-mono text-slate-100 mt-1">138 ms</div>
                 <div className="text-[10px] text-slate-400 mt-0.5">Sözleşme Kriteri: &lt;250ms</div>
               </div>
 
-              <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800">
-                <div className="text-xs text-slate-500">Güvenlik Katmanı</div>
+              <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 relative overflow-hidden group">
+                <div className="flex items-center justify-between">
+                  <div className="text-xs text-slate-500">Güvenlik Katmanı</div>
+                  <SiLetsencrypt className="w-3.5 h-3.5 text-slate-600 group-hover:text-amber-400 transition" />
+                </div>
                 <div className="text-lg font-bold font-mono text-emerald-300 mt-1">TLS 1.3</div>
                 <div className="text-[10px] text-slate-400 mt-0.5">HSTS / CSP Doğrulandı</div>
               </div>
 
-              <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800">
-                <div className="text-xs text-slate-500">Sunucu Donanımı</div>
+              <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 relative overflow-hidden group">
+                <div className="flex items-center justify-between">
+                  <div className="text-xs text-slate-500">Sunucu Donanımı</div>
+                  <SiNginx className="w-3.5 h-3.5 text-slate-600 group-hover:text-emerald-400 transition" />
+                </div>
                 <div className="text-lg font-bold font-mono text-slate-200 mt-1 truncate">Nginx / Cloud</div>
                 <div className="text-[10px] text-slate-400 mt-0.5">Dedicated Staging Host</div>
               </div>
@@ -185,7 +214,7 @@ export default function OrnekTahkimPage() {
           {/* Criteria Presets */}
           <div className="space-y-3">
             <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+              <CheckBadgeIcon className="w-4 h-4 text-emerald-400" />
               Sözleşmeye Bağlı Kriterlerin Karşılanma Durumu (4 / 4 Başarılı)
             </h4>
 
@@ -247,7 +276,7 @@ export default function OrnekTahkimPage() {
                 href="/api/contracts/ornek-tahkim/pdf"
                 className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-sm transition shadow-lg shadow-emerald-500/20"
               >
-                <Download className="w-4 h-4" />
+                <DocumentArrowDownIcon className="w-5 h-5" />
                 <span>Resmi HMK 193 Bilirkişi Raporunu İndir (PDF)</span>
               </a>
 
@@ -256,7 +285,7 @@ export default function OrnekTahkimPage() {
                 className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-4 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm font-semibold transition border border-slate-700"
               >
                 <span>Kamu Doğrulama Sayfası</span>
-                <ExternalLink className="w-3.5 h-3.5" />
+                <ArrowTopRightOnSquareIcon className="w-4 h-4" />
               </Link>
             </div>
 
