@@ -152,7 +152,7 @@ export function HomeClient({
           </span>
 
           <h1
-            className="font-display max-w-3xl font-medium tracking-tight text-foreground"
+            className="font-display max-w-3xl font-extrabold tracking-tight text-foreground"
             style={{ fontSize: "clamp(2.5rem, 5vw, 4.25rem)", lineHeight: 1.1 }}
           >
             {t.heroTitle}
@@ -308,7 +308,7 @@ export function HomeClient({
         <div className="mx-auto max-w-6xl">
           <div className="mb-8 max-w-lg">
             <p className="text-brand mono mb-2 text-xs tracking-[0.14em]">{t.stepsEyebrow}</p>
-            <h2 className="font-display text-3xl font-medium tracking-tight text-foreground md:text-4xl">
+            <h2 className="font-display text-3xl font-bold tracking-tight text-foreground md:text-4xl">
               {t.stepsTitle}
             </h2>
             <p className="mt-3 text-base leading-relaxed text-muted-foreground md:hidden">
@@ -341,7 +341,7 @@ export function HomeClient({
         <span id="dene" className="sr-only" aria-hidden />
         <div className="mx-auto max-w-3xl text-center">
           <p className="text-brand mono mb-2 text-xs tracking-[0.14em]">{t.pricing.eyebrow}</p>
-          <h2 className="font-display text-3xl font-medium tracking-tight text-foreground md:text-4xl">
+          <h2 className="font-display text-3xl font-bold tracking-tight text-foreground md:text-4xl">
             {t.pricing.title}
           </h2>
           <p className="mx-auto mt-3 max-w-xl text-base leading-relaxed text-muted-foreground">
@@ -387,7 +387,7 @@ export function HomeClient({
         </div>
         <div className="relative mx-auto max-w-2xl">
           <h2
-            className="font-display font-medium tracking-[-0.01em] text-foreground"
+            className="font-display font-extrabold tracking-tight text-foreground"
             style={{ fontSize: "clamp(1.9rem, 4vw, 3rem)", lineHeight: 1.15 }}
           >
             {t.closingTitle}

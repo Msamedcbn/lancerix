@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState } from "react";
-import { Building2, CalendarClock, FileText, ListChecks } from "lucide-react";
+import { Building2, CalendarClock, FileText, ListChecks, Sparkles } from "lucide-react";
 
 import {
   createContract,
@@ -10,6 +10,7 @@ import {
   type CounterpartyResult,
   type PreviewResult,
 } from "@/app/(dashboard)/contract-actions";
+import { CRITERIA_PRESETS, type CriteriaPreset } from "@/lib/contracts/criteria-presets";
 import { Field, TextArea, TextInput } from "@/components/field";
 import { FormFeedback, SubmitButton } from "@/components/form-feedback";
 import type { PreviousClient } from "@/lib/data/contracts";
@@ -88,6 +89,7 @@ type DraftSnapshot = {
   plannedStartDate: string;
   projectAmount: string;
   phases: Phase[];
+  proposedCriteria?: string[];
 };
 
 /** Nothing typed yet means nothing worth restoring -- and nothing worth storing. */
@@ -99,7 +101,8 @@ function isEmptyDraft(d: Omit<DraftSnapshot, "v" | "savedAt" | "step">): boolean
     d.plannedStartDate === "" &&
     d.clientPublicId.trim() === "" &&
     d.inviteEmail.trim() === "" &&
-    d.phases.length === 0
+    d.phases.length === 0 &&
+    (!d.proposedCriteria || d.proposedCriteria.length === 0)
   );
 }
 
@@ -221,6 +224,7 @@ function DraftFields({
   plannedStartDate,
   projectAmount,
   requestId,
+  proposedCriteria = [],
 }: Readonly<{
   productType: ProductType;
   projectCategory: ProjectCategory;
@@ -233,6 +237,7 @@ function DraftFields({
   plannedStartDate: string;
   projectAmount: string;
   requestId: string;
+  proposedCriteria?: string[];
 }>) {
   return (
     <>
@@ -248,6 +253,15 @@ function DraftFields({
       <input type="hidden" name="scopeOfWork" value={scopeOfWork} />
       <input type="hidden" name="plannedStartDate" value={plannedStartDate} />
       <input type="hidden" name="projectAmount" value={projectAmount} />
+
+      {proposedCriteria.map((crit, index) => (
+        <input
+          key={index}
+          type="hidden"
+          name={`criteria[${index}][description]`}
+          value={crit}
+        />
+      ))}
 
       {phases.map((row, index) => (
         <div key={row.id}>
@@ -315,6 +329,7 @@ export function ContractForm({
   const [plannedStartDate, setPlannedStartDate] = useState("");
   const [projectAmount, setProjectAmount] = useState("");
   const [phases, setPhases] = useState<Phase[]>([]);
+  const [proposedCriteria, setProposedCriteria] = useState<string[]>([]);
   const [restoredAt, setRestoredAt] = useState<number | null>(null);
 
   // Restore runs in an effect, not in useState's initialiser: localStorage
@@ -344,6 +359,7 @@ export function ContractForm({
     setPlannedStartDate(draft.plannedStartDate);
     setProjectAmount(draft.projectAmount);
     setPhases(draft.phases);
+    if (draft.proposedCriteria) setProposedCriteria(draft.proposedCriteria);
     setRestoredAt(draft.savedAt);
   }, [draftKey, fromRequest]);
 
@@ -374,6 +390,7 @@ export function ContractForm({
       plannedStartDate,
       projectAmount,
       phases,
+      proposedCriteria,
     };
 
     const timer = setTimeout(() => {
@@ -400,6 +417,7 @@ export function ContractForm({
     plannedStartDate,
     projectAmount,
     phases,
+    proposedCriteria,
   ]);
 
   const discardDraft = () => {
@@ -420,6 +438,7 @@ export function ContractForm({
     setPlannedStartDate("");
     setProjectAmount("");
     setPhases([]);
+    setProposedCriteria([]);
   };
 
   const updatePhase = (
@@ -499,6 +518,7 @@ export function ContractForm({
     plannedStartDate,
     projectAmount,
     requestId: fromRequest?.id ?? "",
+    proposedCriteria,
   };
 
   return (
@@ -794,16 +814,92 @@ export function ContractForm({
       {step === 2 && (
         <div className="fade-in flex max-w-3xl flex-col gap-8">
 
-          <div className="flex items-start gap-3 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-xs leading-relaxed text-sky-900 dark:border-sky-800/60 dark:bg-sky-950/30 dark:text-sky-100">
-            <svg className="mt-0.5 size-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <span>
-              <strong className="font-semibold">Kabul kriterlerini bu adımda girmiyorsun.</strong> Sözleşmeyi
-              gönderdikten sonra müşteri, imzalamadan önce kabul kriterlerini kendisi belirleyecek — bu senin
-              imzanı da beklemeye alır, o yüzden müşteriye bunu hatırlatman gerekebilir.
-            </span>
-          </div>
+          {/* ── Ön Kabul Kriterleri (Specification as Code) ── */}
+          <fieldset className="flex flex-col gap-4 rounded-2xl border border-zinc-200/80 bg-white/90 p-5 shadow-sm backdrop-blur-md dark:border-zinc-800/80 dark:bg-zinc-900/80">
+            <div className="flex flex-col gap-1 pb-3 border-b border-zinc-200/60 dark:border-zinc-800/60">
+              <div className="flex items-center justify-between">
+                <legend className="text-base font-bold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
+                  <Sparkles className="size-4 text-brand" />
+                  Kabul Kriterleri (Specification as Code)
+                </legend>
+                <span className="text-[11px] font-mono text-emerald-700 bg-emerald-50 dark:bg-emerald-950/40 dark:text-emerald-300 px-2 py-0.5 rounded-full font-bold">
+                  TBK m. 474 Koruma Kalkanı
+                </span>
+              </div>
+              <p className="max-w-[65ch] text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">
+                Teslimatta &quot;içime sinmedi&quot; gibi keyfi itirazları engelleyen teknik şartlar. Hazır şablonlardan seçebilir veya kriter önerebilirsiniz. Müşteri imzalamadan önce bunları onaylayabilir veya düzenleyebilir.
+              </p>
+            </div>
+
+            {/* Presets bar */}
+            <div className="flex flex-col gap-2">
+              <span className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">
+                Hızlı Şablon Yükle:
+              </span>
+              <div className="flex flex-wrap gap-2">
+                {CRITERIA_PRESETS.map((p) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => {
+                      const descriptions = p.items.map((it) => it.description);
+                      setProposedCriteria((prev) => [...prev, ...descriptions]);
+                    }}
+                    className="rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-1.5 text-xs font-semibold text-zinc-800 hover:border-brand hover:text-brand hover:bg-brand/5 active:scale-95 transition-all flex items-center gap-1.5 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
+                  >
+                    <span>{p.title}</span>
+                    <span className="text-[10px] bg-zinc-200/60 dark:bg-zinc-700 px-1.5 py-0.5 rounded-full font-mono">
+                      +{p.items.length}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Current Proposed Criteria */}
+            {proposedCriteria.length > 0 ? (
+              <div className="flex flex-col gap-2.5 pt-2">
+                {proposedCriteria.map((crit, index) => (
+                  <div key={index} className="flex items-start gap-2">
+                    <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-brand/10 text-xs font-bold text-brand mt-1">
+                      {index + 1}
+                    </span>
+                    <TextInput
+                      value={crit}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setProposedCriteria((prev) =>
+                          prev.map((item, idx) => (idx === index ? val : item)),
+                        );
+                      }}
+                      placeholder="Kabul kriteri açıklaması..."
+                    />
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setProposedCriteria((prev) => prev.filter((_, idx) => idx !== index))
+                      }
+                      className="shrink-0 rounded-lg px-2 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 transition-colors dark:text-rose-400 dark:hover:bg-rose-950/40"
+                    >
+                      Kaldır
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-zinc-400 italic py-1">
+                Henüz kriter eklenmedi. Yukarıdaki şablonlardan yükleyebilir veya boş bırakarak müşterinin belirlemesini sağlayabilirsiniz.
+              </p>
+            )}
+
+            <button
+              type="button"
+              onClick={() => setProposedCriteria((prev) => [...prev, ""])}
+              className="inline-flex items-center gap-1.5 self-start text-xs font-semibold text-brand hover:underline underline-offset-4"
+            >
+              + Manuel Kriter Ekle
+            </button>
+          </fieldset>
 
           {/* ── Workflow Phases ── */}
           <fieldset className="flex flex-col gap-5">
@@ -970,6 +1066,26 @@ export function ContractForm({
                 {preview.document}
               </pre>
             </>
+          )}
+
+          {/* Criteria summary */}
+          {proposedCriteria.length > 0 && (
+            <div className="rounded-2xl border border-zinc-200/80 bg-white/90 p-5 dark:border-zinc-800/80 dark:bg-zinc-900/80">
+              <h3 className="mb-3 flex items-center gap-1.5 text-sm font-bold text-zinc-950 dark:text-zinc-50">
+                <Sparkles className="size-4 shrink-0 text-brand" aria-hidden />
+                Kabul Kriterleri ({proposedCriteria.length} Madde)
+              </h3>
+              <ol className="flex flex-col gap-2">
+                {proposedCriteria.map((c, i) => (
+                  <li key={i} className="flex items-start gap-2.5 text-xs text-zinc-700 dark:text-zinc-300">
+                    <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-brand/10 text-[10px] font-bold text-brand">
+                      {i + 1}
+                    </span>
+                    <span>{c}</span>
+                  </li>
+                ))}
+              </ol>
+            </div>
           )}
 
           {/* Phase summary */}

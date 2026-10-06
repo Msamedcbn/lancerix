@@ -10,6 +10,9 @@ import type { AcceptanceCriterion } from "@/lib/data/contracts";
 import type { FormState } from "@/lib/forms";
 import { PROJECT_CATEGORY_INFO, type ProjectCategory } from "@/lib/validations/project-category";
 
+import { Sparkles } from "lucide-react";
+import { CRITERIA_PRESETS, type CriteriaPreset } from "@/lib/contracts/criteria-presets";
+
 const INITIAL: FormState = { error: null };
 
 type Row = { id: number; description: string };
@@ -44,11 +47,25 @@ export function CriteriaPanel({
       : [blank(0)],
   );
 
+  const applyPreset = (preset: CriteriaPreset) => {
+    // If only one blank row exists, replace it; otherwise append
+    const isOnlyOneBlank = rows.length === 1 && !rows[0]?.description?.trim();
+    const newItems: Row[] = preset.items.map((item, idx) => ({
+      id: isOnlyOneBlank ? idx + 1 : rows.length + idx + 1,
+      description: item.description,
+    }));
+    if (isOnlyOneBlank) {
+      setRows(newItems);
+    } else {
+      setRows((prev) => [...prev, ...newItems]);
+    }
+  };
+
   const editable = side === "client" && !anySigned;
 
   if (!editable) {
     return (
-      <Panel title="Kabul Kriterleri">
+      <Panel title="Kabul Kriterleri (Specification as Code)">
         {criteria.length === 0 ? (
           <p className="text-sm text-zinc-500 dark:text-zinc-400">
             {side === "freelancer"
@@ -73,18 +90,44 @@ export function CriteriaPanel({
           </ol>
         )}
         <p className="mt-5 border-t border-zinc-200 pt-3 text-xs leading-relaxed text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
-          Teslim edildiğinde her kriter bu listeye göre doğrulanır.
+          Teslim edildiğinde her kriter bu listeye göre doğrulanır (TBK m. 474 gereği somut teknik itiraz esastır).
         </p>
       </Panel>
     );
   }
 
   return (
-    <Panel title="Kabul Kriterleri">
+    <Panel title="Kabul Kriterleri (Specification as Code)">
       <p className="-mt-1 mb-4 text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">
         İş tamamlandığında neye bakılarak &quot;iş tamam&quot; denileceğini
-        sen tanımlarsın. İmzalamadan önce en az bir kriter gerekir.
+        sen tanımlarsın. İmzalamadan önce en az bir somut kriter gerekir.
       </p>
+
+      {/* Preset Templates */}
+      <div className="mb-5 rounded-2xl border border-border/80 bg-muted/30 p-4 space-y-2.5">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
+            <Sparkles className="size-4 text-brand" />
+            Hızlı Şablonlar (TBK m. 474 / HMK m. 193 Uyumlu):
+          </span>
+          <span className="text-[11px] text-muted-foreground">Tek tıkla objektif kriterleri yükle</span>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {CRITERIA_PRESETS.map((preset) => (
+            <button
+              key={preset.id}
+              type="button"
+              onClick={() => applyPreset(preset)}
+              className="rounded-xl border border-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground hover:border-brand hover:text-brand hover:bg-brand/5 active:scale-95 transition-all flex items-center gap-1.5 shadow-2xs"
+            >
+              <span>{preset.title}</span>
+              <span className="text-[10px] bg-muted px-1.5 py-0.5 rounded-full text-muted-foreground font-mono">
+                +{preset.items.length}
+              </span>
+            </button>
+          ))}
+        </div>
+      </div>
 
       <form action={action} className="flex flex-col gap-4">
         <input type="hidden" name="contractId" value={contractId} />

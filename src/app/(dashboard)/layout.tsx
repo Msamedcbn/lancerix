@@ -14,45 +14,68 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-/**
- * Lancerix Autonomous AI Security & Pentest Agent Navigation.
- */
-const SECURITY_NAV: readonly NavItem[] = [
-  { href: "/dashboard" as Route, label: "Güvenlik Merkezi", icon: "shield-check" },
+const FREELANCER_NAV: readonly NavItem[] = [
+  { href: "/freelancer" as Route, label: "Projeler & Sözleşmeler", icon: "briefcase", section: "HAKEMLİK & PROTOKOL" },
+  { href: "/freelancer/new" as Route, label: "Yeni Proje / Şartname", icon: "file-text" },
+  { href: "/freelancer/requests" as Route, label: "Gelen Talepler", icon: "inbox" },
+  { href: "/freelancer/earnings" as Route, label: "Kazanç & Hak Ediş", icon: "wallet" },
+  { href: "/freelancer/invoices" as Route, label: "Makbuzlar", icon: "receipt" },
+  { href: "/dashboard" as Route, label: "Güvenlik Merkezi", icon: "shield-check", section: "GÜVENLİK & PENTEST" },
   { href: "/targets" as Route, label: "Hedefler & Varlıklar", icon: "globe" },
-  { href: "/scans" as Route, label: "Ajan Taramaları", icon: "terminal" },
-  { href: "/vulnerabilities" as Route, label: "Zafiyetler & Yamalar", icon: "shield-alert" },
-  { href: "/compliance" as Route, label: "SOC 2 & Uyumluluk", icon: "list-checks" },
-  { href: "/settings/api-keys" as Route, label: "API & CI/CD", icon: "cpu" },
-  { href: "/settings/integrations" as Route, label: "Entegrasyonlar", icon: "bell" },
-  { href: "/settings/white-label" as Route, label: "White-Label Ajans", icon: "sparkles" },
+  { href: "/scans" as Route, label: "Denetim Taramaları", icon: "terminal" },
+  { href: "/vulnerabilities" as Route, label: "Zafiyetler", icon: "shield-alert" },
   { href: "/izleme" as Route, label: "Sürekli İzleme", icon: "radar" },
-  { href: "/profil" as Route, label: "Hesap & Ayarlar", icon: "user" },
+  { href: "/profil" as Route, label: "Hesap & Ayarlar", icon: "user", section: "HESAP" },
+];
+
+const CLIENT_NAV: readonly NavItem[] = [
+  { href: "/client" as Route, label: "Sözleşmeler & Ödemeler", icon: "credit-card", section: "HAKEMLİK & ONAY" },
+  { href: "/client/approvals" as Route, label: "Teslimatlar & Onaylar", icon: "check-circle" },
+  { href: "/client/requests" as Route, label: "Geliştirici Çağır", icon: "user-plus" },
+  { href: "/client/company" as Route, label: "Şirket Bilgileri", icon: "building" },
+  { href: "/client/invoices" as Route, label: "Faturalar", icon: "file-text" },
+  { href: "/dashboard" as Route, label: "Güvenlik Merkezi", icon: "shield-check", section: "GÜVENLİK & PENTEST" },
+  { href: "/targets" as Route, label: "Hedefler & Varlıklar", icon: "globe" },
+  { href: "/scans" as Route, label: "Denetim Taramaları", icon: "terminal" },
+  { href: "/izleme" as Route, label: "Sürekli İzleme", icon: "radar" },
+  { href: "/profil" as Route, label: "Hesap & Ayarlar", icon: "user", section: "HESAP" },
+];
+
+const ADMIN_NAV: readonly NavItem[] = [
+  { href: "/admin" as Route, label: "Yönetici Masası", icon: "layout-dashboard", section: "YÖNETİM" },
+  { href: "/admin/analytics" as Route, label: "Analytics", icon: "trending-up" },
+  { href: "/admin/disputes" as Route, label: "Uyuşmazlıklar & İtirazlar", icon: "alert-triangle" },
+  { href: "/admin/qa-queue" as Route, label: "QA Kuyruğu", icon: "list-checks" },
+  { href: "/admin/users" as Route, label: "Kullanıcılar", icon: "contact" },
+  { href: "/freelancer" as Route, label: "Geliştirici Projeleri", icon: "briefcase", section: "HAKEMLİK & PROTOKOL" },
+  { href: "/client" as Route, label: "İşveren Masası", icon: "credit-card" },
+  { href: "/dashboard" as Route, label: "Güvenlik Merkezi", icon: "shield-check", section: "GÜVENLİK & PENTEST" },
+  { href: "/targets" as Route, label: "Hedefler & Varlıklar", icon: "globe" },
+  { href: "/scans" as Route, label: "Denetim Taramaları", icon: "terminal" },
+  { href: "/vulnerabilities" as Route, label: "Zafiyetler", icon: "shield-alert" },
+  { href: "/compliance" as Route, label: "SOC 2 & Uyumluluk", icon: "list-checks" },
+  { href: "/site-kontrol" as Route, label: "Site Kontrolü", icon: "shield" },
+  { href: "/profil" as Route, label: "Hesap & Ayarlar", icon: "user", section: "HESAP" },
 ];
 
 const NAV: Record<UserRole, readonly NavItem[]> = {
-  FREELANCER: SECURITY_NAV,
-  CLIENT: SECURITY_NAV,
-  ADMIN: [
-    ...SECURITY_NAV,
-    { href: "/admin" as Route, label: "Yönetici Masası", icon: "layout-dashboard" },
-    { href: "/admin/analytics" as Route, label: "Analytics", icon: "trending-up" },
-    { href: "/admin/users" as Route, label: "Kullanıcılar", icon: "contact" },
-  ],
+  FREELANCER: FREELANCER_NAV,
+  CLIENT: CLIENT_NAV,
+  ADMIN: ADMIN_NAV,
 };
 
 export default async function DashboardLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   const session = await requireSession();
-  const nav = NAV[session.role] || SECURITY_NAV;
+  const nav = NAV[session.role] || FREELANCER_NAV;
 
   const header = (
     <Link href={nav[0]!.href} className="flex items-center gap-2.5">
       <span className="bg-primary text-primary-foreground flex size-8 items-center justify-center rounded-lg shadow-sm">
         <ShieldCheck className="size-4" aria-hidden />
       </span>
-      <span className="text-[0.95rem] font-bold tracking-tight text-foreground">
+      <span className="font-display text-base font-extrabold tracking-tight text-foreground">
         Lancerix
       </span>
     </Link>

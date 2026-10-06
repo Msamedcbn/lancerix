@@ -12,7 +12,7 @@ export function PageHeading({
   return (
     <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between pb-2 border-b border-border">
       <div className="max-w-[58ch]">
-        <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+        <h1 className="font-display text-2xl font-extrabold tracking-tight text-foreground sm:text-3xl">
           {title}
         </h1>
         {subtitle ? (
@@ -83,7 +83,7 @@ export function Stat({
         </p>
         <span className="size-2 rounded-full bg-brand animate-pulse" />
       </div>
-      <p className="tnum mt-3 text-3xl font-bold tracking-tight text-foreground">
+      <p className="font-display tnum mt-3 text-3xl font-extrabold tracking-tight text-foreground">
         {value}
       </p>
       {hint ? (
@@ -126,7 +126,7 @@ export function Panel({
       {title || action ? (
         <div className="mb-4 flex items-center justify-between gap-3">
           {title ? (
-            <h2 className="text-base font-semibold tracking-tight text-foreground">
+            <h2 className="font-display text-base font-bold tracking-tight text-foreground">
               {title}
             </h2>
           ) : null}

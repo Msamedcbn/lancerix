@@ -17,7 +17,7 @@ export function SiteHeader({
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
         <Link href={home} className="flex items-center gap-2">
           <Mark className="text-brand size-5" title={BRAND} />
-          <span className="font-semibold tracking-tight text-foreground">{BRAND}</span>
+          <span className="font-display text-lg font-extrabold tracking-tight text-foreground">{BRAND}</span>
         </Link>
         <nav className="hidden items-center gap-6 text-sm font-medium text-muted-foreground md:flex">
           <Link href={`${home}#nasil`} className="hover:text-foreground transition-colors">{t.howItWorks}</Link>

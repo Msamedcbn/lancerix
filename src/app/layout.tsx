@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
-import { Plus_Jakarta_Sans, IBM_Plex_Mono } from "next/font/google";
+import { Plus_Jakarta_Sans, IBM_Plex_Mono, Outfit } from "next/font/google";
 
 import { appUrl } from "@/lib/env.server";
 import { localeFromPath } from "@/lib/i18n/config";
@@ -19,8 +19,19 @@ const mono = IBM_Plex_Mono({
 });
 
 /**
- * The primary font used across the application for headings and body.
- * Modern, clean, and extremely legible for financial interfaces.
+ * The authoritative display voice: punchy headings, hero titles, metrics, badges.
+ * Modern geometric grotesque with high impact and commanding presence.
+ */
+const outfit = Outfit({
+  subsets: ["latin", "latin-ext"],
+  weight: ["500", "600", "700", "800", "900"],
+  variable: "--font-outfit",
+  display: "swap",
+});
+
+/**
+ * The primary font used across the application for body and UI elements.
+ * Modern, clean, and extremely legible.
  */
 const jakarta = Plus_Jakarta_Sans({
   subsets: ["latin", "latin-ext"],
@@ -64,7 +75,7 @@ export default async function RootLayout({
     <html
       lang={localeFromPath(pathname)}
       suppressHydrationWarning
-      className={`${mono.variable} ${jakarta.variable}`}
+      className={`${mono.variable} ${jakarta.variable} ${outfit.variable}`}
     >
       <body className="font-sans antialiased">{children}</body>
     </html>

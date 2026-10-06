@@ -1,40 +1,31 @@
-# Lancerix — Autonomous Security Hygiene Scanning SaaS
+# Lancerix — Technical Arbitration & Verification Protocol (Proof of Delivery + Security QA)
 
-Lancerix's core product, as of the 2026-09-27 pivot, is an autonomous
-**security hygiene scanning** engine: given a target URL, it runs a passive,
-non-intrusive audit (HTTP security headers, form/cookie hygiene, known
-sensitive file exposure, TLS enforcement), produces an SHA-256 sealed,
-timestamped report, and suggests remediation code. It is explicitly **not**
-a penetration test — no exploit attempts, no port scanning, no
-authentication bypass, no CVE database. Every user-facing surface must stay
-honest about this distinction; see "Honest positioning" below before adding
-or editing any copy that touches severity, CVSS, or OWASP language.
+Lancerix's core mission (as reunified on 2026-10-06) is to solve the critical
+software delivery dispute and payment extortion problem between freelancers and
+clients:
+1. **Kriptografik Teslimat Kanıtı (Proof of Delivery):** Objective, timestamped,
+   SHA-256 sealed proof of working code, API endpoints, DOM state, and deployment.
+2. **Teknik Hakemlik & Uyuşmazlık Çözümü:** Protecting freelancers against
+   arbitrary, bad-faith "Beğenmedim / Ayıplı İfa" payment withholding. A binding
+   neutral expert record (`contracts/[id]/record`) under TBK art. 473-477.
+3. **Objektif İtiraz Saati & Bariyeri:** Clients cannot unilaterally reject
+   without citing specific breached acceptance criteria and reproduction steps;
+   unanswered deliveries auto-accept when the review window closes.
+4. **Gömülü Güvenlik & Pentest Katmanı:** The autonomous security hygiene engine
+   (`src/lib/security/vuln-engine.ts`) serves both as an embedded quality gate
+   on deliveries ("Temel güvenlik açıklarından arındırılmış teslimat onayı") and
+   as a standalone asset scanning/monitoring suite (`/dashboard`, `/targets`, `/scans`).
 
-## Product history (read this before assuming either era is "the app")
+## Product Architecture & Unification (2026-10-06)
 
-This codebase carries two products, one active and one dormant, because the
-pivot replaced the navigation and homepage without deleting the earlier
-code:
-
-1. **Active: the security hygiene scanner** (below). This is what a
-   freelancer/client/admin session lands on today — `NAV` in
-   `src/app/(dashboard)/layout.tsx` points every role at `SECURITY_NAV`.
-2. **Dormant: the Faz 1 freelance verification marketplace.** A 3-way
-   contract-bound QA product (`src/app/(dashboard)/contracts`,
-   `src/app/(dashboard)/freelancer`, `src/app/(dashboard)/client`), an
-   escrow state machine (`src/lib/escrow`), and stopaj/e-invoice tax
-   handling (`src/lib/tax`) — all still on disk, still schema-complete,
-   **but unreachable from navigation** and not the product being built
-   against. Confirmed a deliberate, full pivot (2026-09-30) — not a bug to
-   fix, not an oversight to restore. Do not extend this code path or route
-   users into it without an explicit instruction that Faz 1/Faz 2 is back
-   in scope; treat it as a reference implementation of a different product,
-   not dead code to casually delete either.
-
-If a future session needs `git log`/`git blame` on this: the pivot commits
-are dated around 2026-09-27 and arrived uncommitted (17 days of local work,
-reviewed and cleaned up on 2026-09-30 — see
-`~/.gstack/projects/demearac/` for that session's notes if present).
+This codebase combines both pillars into a unified platform:
+- **Hakemlik & Protokol (`/freelancer`, `/client`, `/contracts`):**
+  Contract signing, structured acceptance criteria (`acceptance_criteria`),
+  delivery state machine (`deliveries`, `delivery_events`), review countdown clock,
+  and dispute resolution record.
+- **Güvenlik & Pentest (`/dashboard`, `/targets`, `/scans`, `/vulnerabilities`):**
+  Passive, non-destructive web security hygiene scanning, SSL/TLS audit, sensitive
+  path inspection, and SOC 2 / OWASP compliance mapping.
 
 ## Honest positioning (non-negotiable)
 

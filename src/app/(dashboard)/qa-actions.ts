@@ -9,6 +9,7 @@ import { FAIL, firstIssue, OK, toUserMessage, type FormState } from "@/lib/forms
 import { createQaOrderCheckout, payViaPolarCheckout } from "@/lib/polar";
 import { notifyDeliverySubmitted, notifyQaOutcome, notifyReviewerAssigned } from "@/lib/notify/email";
 import { processTier2Order } from "@/lib/qa/agent";
+import { probeDeliveryTarget } from "@/lib/qa/delivery-prober";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -178,6 +179,17 @@ export async function submitQaDelivery(
         reviewerName: reviewer.profile?.full_name ?? reviewer.full_name ?? "",
         token: token.token,
       });
+    });
+  }
+
+  if (parsed.data.stagingUrl) {
+    const staging = parsed.data.stagingUrl;
+    after(async () => {
+      try {
+        await probeDeliveryTarget(staging);
+      } catch (err) {
+        console.error("[ProofGuard] Initial probe failed:", err);
+      }
     });
   }
 

@@ -75,7 +75,7 @@ export type NavIcon =
   | "bell"
   | "sparkles";
 
-export type NavItem = { href: Route; label: string; icon: NavIcon };
+export type NavItem = { href: Route; label: string; icon: NavIcon; section?: string };
 
 const ICONS: Record<NavIcon, typeof Briefcase> = {
   briefcase: Briefcase,
@@ -178,27 +178,35 @@ export function Sidebar({
         <div className="px-5 py-5">{header}</div>
 
         <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto px-3">
-          {items.map((item) => {
+          {items.map((item, index) => {
             const active = isActive(item.href);
             const Icon = ICONS[item.icon];
+            const prevSection = index > 0 ? items[index - 1]?.section : undefined;
+            const showSection = item.section && item.section !== prevSection;
 
             return (
-              <Link
-                key={item.href}
-                href={item.href}
-                aria-current={active ? "page" : undefined}
-                className={`group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors ${
-                  active
-                    ? "bg-brand-muted text-brand font-medium"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                }`}
-              >
-                <Icon
-                  className={`size-[1.05rem] shrink-0 ${active ? "" : "text-muted-foreground/80 group-hover:text-foreground/80"}`}
-                  aria-hidden
-                />
-                <span className="truncate">{item.label}</span>
-              </Link>
+              <div key={item.href} className="flex flex-col">
+                {showSection && (
+                  <div className={`font-display px-3 pb-1 text-[0.68rem] font-extrabold uppercase tracking-wider text-muted-foreground/70 ${index === 0 ? "pt-1" : "pt-4"}`}>
+                    {item.section}
+                  </div>
+                )}
+                <Link
+                  href={item.href}
+                  aria-current={active ? "page" : undefined}
+                  className={`group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors ${
+                    active
+                      ? "bg-brand-muted text-brand font-semibold"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground font-medium"
+                  }`}
+                >
+                  <Icon
+                    className={`size-[1.05rem] shrink-0 ${active ? "" : "text-muted-foreground/80 group-hover:text-foreground/80"}`}
+                    aria-hidden
+                  />
+                  <span className="truncate">{item.label}</span>
+                </Link>
+              </div>
             );
           })}
         </nav>

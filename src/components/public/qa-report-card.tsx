@@ -44,7 +44,7 @@ export function QaReportCard({
         <span className="rounded-full bg-zinc-100 px-2.5 py-0.5 text-xs font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
           {categoryLabel}
         </span>
-        <h1 className="mt-3 text-2xl font-bold tracking-tight text-zinc-950 dark:text-zinc-50">
+        <h1 className="font-display mt-3 text-2xl font-extrabold tracking-tight text-zinc-950 dark:text-zinc-50">
           {report.contractTitle}
         </h1>
         <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">

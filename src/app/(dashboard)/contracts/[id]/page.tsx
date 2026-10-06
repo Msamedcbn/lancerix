@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { CalendarClock, CheckCircle2, MailWarning, PencilLine, XCircle } from "lucide-react";
+import { CalendarClock, CheckCircle2, FileText, MailWarning, PencilLine, XCircle } from "lucide-react";
 
 import { CriteriaPanel } from "@/app/(dashboard)/contracts/[id]/criteria-panel";
 import {
@@ -29,7 +29,7 @@ import {
   type ProjectCategory,
 } from "@/lib/validations/project-category";
 import { requireSession } from "@/lib/auth/session";
-import { getContract, kurus, type Milestone } from "@/lib/data/contracts";
+import { getContract, kurus, type Milestone, type AcceptanceCriterion } from "@/lib/data/contracts";
 import {
   listDeliveries,
   listDeliveryEvents,
@@ -206,6 +206,7 @@ function DeliveryPanel({
   deliveries,
   events,
   signedByBoth,
+  criteria = [],
 }: Readonly<{
   contractId: string;
   projectCategory: ProjectCategory;
@@ -213,6 +214,7 @@ function DeliveryPanel({
   deliveries: DeliveryRow[];
   events: DeliveryEvent[];
   signedByBoth: boolean;
+  criteria?: AcceptanceCriterion[];
 }>) {
   const latest = deliveries[0];
   const isFreelancer = side === "freelancer";
@@ -316,7 +318,11 @@ function DeliveryPanel({
 
         {latest.status === "AWAITING_CLIENT" && !isFreelancer ? (
           <div className="border-t border-border pt-5 dark:border-border/50">
-            <ClientDecision contractId={contractId} deliveryId={latest.id} />
+            <ClientDecision
+              contractId={contractId}
+              deliveryId={latest.id}
+              criteria={criteria}
+            />
           </div>
         ) : null}
 
@@ -451,9 +457,10 @@ export default async function ContractPage({
             <ContractStatusBadge status={contract.status} />
             <Link
               href={`/contracts/${contract.id}/record`}
-              className="inline-flex items-center rounded-xl border border-border bg-card px-4 py-2 text-sm font-medium text-foreground hover:bg-muted active:scale-[0.98] dark:border-border/50 dark:bg-muted dark:text-foreground dark:hover:bg-muted/80"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-card px-3.5 py-2 text-xs font-semibold text-foreground hover:bg-muted active:scale-[0.98] shadow-2xs dark:border-border/50 dark:bg-muted dark:text-foreground"
             >
-              Kaydı gör
+              <FileText className="size-3.5 text-brand" />
+              Resmi Tahkim & Bilirkişi Kaydı
             </Link>
           </div>
         }
@@ -680,6 +687,7 @@ export default async function ContractPage({
                 deliveries={deliveries}
                 events={events}
                 signedByBoth={signedByBoth}
+                criteria={contract.criteria}
               />
               <CriteriaPanel
                 contractId={contract.id}
