@@ -16,6 +16,7 @@ export const metadata: Metadata = {
 
 const FREELANCER_NAV: readonly NavItem[] = [
   { href: "/freelancer" as Route, label: "Projeler & Sözleşmeler", icon: "briefcase", section: "HAKEMLİK & PROTOKOL" },
+  { href: "/contracts/ornek-tahkim" as Route, label: "Örnek Tahkim (85K)", icon: "scroll" },
   { href: "/freelancer/new" as Route, label: "Yeni Proje / Şartname", icon: "file-text" },
   { href: "/freelancer/requests" as Route, label: "Gelen Talepler", icon: "inbox" },
   { href: "/freelancer/earnings" as Route, label: "Kazanç & Hak Ediş", icon: "wallet" },
@@ -30,6 +31,7 @@ const FREELANCER_NAV: readonly NavItem[] = [
 
 const CLIENT_NAV: readonly NavItem[] = [
   { href: "/client" as Route, label: "Sözleşmeler & Ödemeler", icon: "credit-card", section: "HAKEMLİK & ONAY" },
+  { href: "/contracts/ornek-tahkim" as Route, label: "Örnek Tahkim (85K)", icon: "scroll" },
   { href: "/client/approvals" as Route, label: "Teslimatlar & Onaylar", icon: "check-circle" },
   { href: "/client/requests" as Route, label: "Geliştirici Çağır", icon: "user-plus" },
   { href: "/client/company" as Route, label: "Şirket Bilgileri", icon: "building" },

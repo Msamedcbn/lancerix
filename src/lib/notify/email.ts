@@ -312,6 +312,74 @@ export async function notifyDeliverySubmitted({
   });
 }
 
+/**
+ * Notifies both parties when a delivery is automatically accepted under TBK m. 477
+ * due to expiration of the statutory review deadline without technical defect objection.
+ */
+export async function notifyDeliveryTacitlyAccepted({
+  toClientUserId,
+  clientFallbackEmail = "",
+  toFreelancerUserId,
+  freelancerFallbackEmail = "",
+  contractId,
+  contractTitle,
+  reference,
+}: Readonly<{
+  toClientUserId: string | null;
+  clientFallbackEmail?: string;
+  toFreelancerUserId: string | null;
+  freelancerFallbackEmail?: string;
+  contractId: string;
+  contractTitle: string;
+  reference: string;
+}>): Promise<{ clientResult: SendResult; freelancerResult: SendResult }> {
+  const clientTo = await addressFor(toClientUserId, clientFallbackEmail);
+  const freelancerTo = await addressFor(toFreelancerUserId, freelancerFallbackEmail);
+
+  let clientResult: SendResult = { ok: false, reason: "no client address" };
+  let freelancerResult: SendResult = { ok: false, reason: "no freelancer address" };
+
+  if (clientTo) {
+    clientResult = await sendEmail({
+      to: clientTo,
+      subject: `[TBK m. 477] Yasal Kabul Gerçekleşti: ${contractTitle}`,
+      body: [
+        `Sayın İşveren,`,
+        "",
+        `${contractTitle} (${reference}) sözleşmesine ait teslimatın yasal inceleme süresi dolmuştur.`,
+        "",
+        `Türk Borçlar Kanunu madde 477 gereğince süresi içinde somut teknik ayıp bildirimi yapılmadığından teslimat kanunen ZIMNEN KABUL EDİLMİŞ ve tahkim dosyası kilitlenmiştir.`,
+        "",
+        `HMK m. 193 Bilirkişi Raporunu inceleyin:`,
+        `${appUrlFor(`/contracts/${contractId}`)}`,
+        "",
+        `Kamu Doğrulama Özeti: ${appUrlFor(`/verify/${reference}`)}`,
+      ].join("\n"),
+    });
+  }
+
+  if (freelancerTo) {
+    freelancerResult = await sendEmail({
+      to: freelancerTo,
+      subject: `[TBK m. 477] Teslimatınız Zımnen Kabul Edildi: ${contractTitle}`,
+      body: [
+        `Sayın Yazılımcı / Mühendis,`,
+        "",
+        `${contractTitle} (${reference}) teslimatınız için tanınan yasal inceleme süresi dolmuştur.`,
+        "",
+        `İşveren tarafından teknik ayıp bildirilmediği için teslimat TBK m. 477 uyarınca KANUNEN KABUL EDİLMİŞTİR.`,
+        "",
+        `Tahkim dosyanız ve resmi bilirkişi raporunuz kilitlenerek kesinleşmiştir:`,
+        `${appUrlFor(`/contracts/${contractId}`)}`,
+        "",
+        `Kamu Doğrulama Özeti: ${appUrlFor(`/verify/${reference}`)}`,
+      ].join("\n"),
+    });
+  }
+
+  return { clientResult, freelancerResult };
+}
+
 export async function notifyQaOutcome({
   toUserId,
   fallbackEmail,

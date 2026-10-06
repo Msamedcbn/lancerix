@@ -5,6 +5,7 @@ import path from "node:path";
 
 import fontkit from "@pdf-lib/fontkit";
 import { PDFDocument, rgb } from "pdf-lib";
+import QRCode from "qrcode";
 
 /**
  * Renders the exact signed text as a PDF, monospace, one page per overflow.
@@ -42,7 +43,11 @@ async function loadFontBytes(): Promise<Buffer> {
 
 export async function renderContractPdf(
   documentText: string,
-  meta: { reference: string; title: string },
+  meta: {
+    reference: string;
+    title: string;
+    verifyUrl?: string;
+  },
 ): Promise<Uint8Array> {
   const pdf = await PDFDocument.create();
   pdf.registerFontkit(fontkit);
@@ -58,6 +63,7 @@ export async function renderContractPdf(
     .flatMap((line) => wrapToWidth(line, font, FONT_SIZE, usableWidth));
 
   let page = pdf.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
+  const firstPage = page;
   let y = PAGE_HEIGHT - MARGIN;
 
   for (const line of lines) {
@@ -75,6 +81,54 @@ export async function renderContractPdf(
       });
     }
     y -= LINE_HEIGHT;
+  }
+
+  // Embed dynamic verification QR code on the first page if verifyUrl is provided
+  if (meta.verifyUrl) {
+    try {
+      const qrPngBuffer = await QRCode.toBuffer(meta.verifyUrl, {
+        type: "png",
+        width: 140,
+        margin: 1,
+        color: {
+          dark: "#0f172a",
+          light: "#ffffff",
+        },
+      });
+
+      const qrImage = await pdf.embedPng(qrPngBuffer);
+      const qrSize = 58;
+      const qrX = PAGE_WIDTH - MARGIN - qrSize;
+      const qrY = PAGE_HEIGHT - MARGIN - qrSize + 4;
+
+      // Draw official border box around QR stamp
+      firstPage.drawRectangle({
+        x: qrX - 4,
+        y: qrY - 14,
+        width: qrSize + 8,
+        height: qrSize + 22,
+        borderColor: rgb(0.75, 0.8, 0.85),
+        borderWidth: 0.75,
+        color: rgb(0.98, 0.99, 1.0),
+      });
+
+      firstPage.drawImage(qrImage, {
+        x: qrX,
+        y: qrY,
+        width: qrSize,
+        height: qrSize,
+      });
+
+      firstPage.drawText("HMK 193 DOĞRULA", {
+        x: qrX - 1,
+        y: qrY - 10,
+        size: 5.5,
+        font,
+        color: rgb(0.2, 0.3, 0.45),
+      });
+    } catch (err) {
+      console.error("[PDF-QR] Error embedding QR code into PDF:", err);
+    }
   }
 
   return pdf.save();

@@ -102,9 +102,16 @@ export async function GET(
     );
   }
 
+  const verifyBaseUrl =
+    process.env.APP_URL ??
+    (process.env.VERCEL_PROJECT_PRODUCTION_URL
+      ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+      : "https://app.lancerix.com");
+
   const pdfBytes = await renderContractPdf(document, {
     reference: contract.reference,
     title: type === "dossier" ? `${contract.title} — Bilirkişi Raporu` : contract.title,
+    verifyUrl: `${verifyBaseUrl}/verify/${contract.reference}`,
   });
 
   return new NextResponse(Buffer.from(pdfBytes), {
