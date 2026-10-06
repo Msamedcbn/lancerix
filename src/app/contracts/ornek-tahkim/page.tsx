@@ -1,19 +1,11 @@
 import Link from "next/link";
 import {
-  ShieldCheck,
   CheckCircle2,
   Scale,
-  Download,
   Server,
   Lock,
-  ExternalLink,
   ArrowRight,
-  Clock,
   AlertCircle,
-  FileCheck,
-  Coins,
-  Cpu,
-  Fingerprint,
 } from "lucide-react";
 
 import { SHOWCASE_KUYUMCU_DATA } from "@/lib/data/verification";
@@ -21,13 +13,11 @@ import { formatKurus } from "@/lib/escrow/money";
 import { ArbitrationSimulator } from "@/components/contracts/arbitration-simulator";
 import {
   SiNginx,
-  SiPostgresql,
   SiLetsencrypt,
   SiNextdotjs,
 } from "@icons-pack/react-simple-icons";
 import {
   CheckBadgeIcon,
-  ScaleIcon,
   ClockIcon as HeroClockIcon,
   DocumentArrowDownIcon,
   ArrowTopRightOnSquareIcon,
@@ -74,7 +64,7 @@ export default function OrnekTahkimPage() {
           </h1>
 
           <p className="text-base sm:text-lg text-slate-300 max-w-3xl leading-relaxed">
-            Yazılımcı 22 gün boyunca canlı kur motorunu ve MASAK uyumluluk altyapısını geliştirip demo yaptıktan sonra; işverenin keyfi olarak "projeyi iptal ettik" deme girişiminin, Lancerix teknik delil protokolü sayesinde nasıl çürütüldüğünü adım adım inceleyin.
+            Yazılımcı 22 gün boyunca canlı kur motorunu ve MASAK uyumluluk altyapısını geliştirip demo yaptıktan sonra; işverenin keyfi olarak &ldquo;projeyi iptal ettik&rdquo; deme girişiminin, Lancerix teknik delil protokolü sayesinde nasıl çürütüldüğünü adım adım inceleyin.
           </p>
         </div>
 
@@ -88,7 +78,7 @@ export default function OrnekTahkimPage() {
             </div>
             <div>
               <h2 className="text-lg font-bold font-display text-white">
-                Olayın Özeti: Keyfi Fesih ve "Beğenmedim" Girişimi
+                Olayın Özeti: Keyfi Fesih ve &ldquo;Beğenmedim&rdquo; Girişimi
               </h2>
               <p className="text-xs text-slate-400">
                 Piyasadaki klasik serbest çalışan / işveren krizinin somut örneği
@@ -113,7 +103,7 @@ export default function OrnekTahkimPage() {
                 Teslimat & Sessizlik
               </div>
               <p className="text-slate-400 leading-relaxed">
-                22 günlük geliştirme sonrası canlı demo çalışır vaziyette teslim edildi. İşveren sözlü "tamam" dedi ancak faturayı ödememek için 7 gün boyunca somut hiçbir teknik ayıp bildirmedi.
+                22 günlük geliştirme sonrası canlı demo çalışır vaziyette teslim edildi. İşveren sözlü &ldquo;tamam&rdquo; dedi ancak faturayı ödememek için 7 gün boyunca somut hiçbir teknik ayıp bildirmedi.
               </p>
             </div>
 

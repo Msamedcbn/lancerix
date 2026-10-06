@@ -471,3 +471,26 @@ that references it.
 **Depends on / blocked by:** (a) an actual second admin being hired; (b)
 Tier 3/4 order volume high enough that the token-link workflow visibly
 strains. Neither has happened yet.
+
+---
+
+## Çift taraflı SMS / WhatsApp teslimat ve TBK 477 süre bildirimi
+
+**What:** Teslimat yapıldığında veya 7 günlük zımni kabul süresinin dolmasına 24 saat
+kaldığında işverene ve yazılımcıya resmiyet hissi veren SMS veya WhatsApp bildirimi
+gönderilmesi (Netgsm / Twilio webhook entegrasyonu).
+
+**Why:** Müşterilerin "e-postamı kontrol etmemiştim, teslimatı görmedim" bahanesini
+kökten kesmek ve TBK 477 inceleme süresini inkar edilemez bir kanala taşımak.
+
+**Pros:** Yüksek açılma oranı, inkâr edilemez resmi bildirim kaydı.
+**Cons:** Operatör onaylı başlıklı SMS hesabı (Netgsm) ve ön ödemeli SMS kredisi gerektirir.
+
+**Context:** 2026-10-06 CEO İncelemesinde (D3.3) değerlendirildi. Resend e-posta motoru
+zaten sorunsuz çalıştığı ve harici SMS sağlayıcı onayı çekirdek hakemlik geliştirmesini
+bloke etmemesi gerektiği için ertelendi.
+
+**Effort estimate:** M (human: ~1 gün / CC: ~25 dk)
+**Priority:** P2
+**Depends on / blocked by:** Kurumsal SMS sağlayıcı hesabı ve onaylı SMS başlığı.
+

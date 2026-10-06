@@ -123,7 +123,7 @@ export default async function ContractRecordPage({
         <p>
           İşbu rapor; tarafların serbest iradesiyle imzaladığı teknik şartnameyi, belirlenen somut kabul kriterlerini,
           teslim anındaki çalışma ve güvenlik denetim kayıtlarını (Proof of Delivery) ve kanuni itiraz penceresi sürecini
-          belgeleyen resmi teknik delil kaydıdır. Sübjektif ("beğenmedim") ret beyanlarının aksine, tarafların somut teknik
+          belgeleyen resmi teknik delil kaydıdır. Sübjektif (&ldquo;beğenmedim&rdquo;) ret beyanlarının aksine, tarafların somut teknik
           ayıp bildirimleri ve sistemin otonom denetimleri mahkeme, arabuluculuk ve icra mercilerinde bağlayıcı delil teşkil eder.
         </p>
       </div>

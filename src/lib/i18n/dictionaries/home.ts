@@ -61,6 +61,31 @@ export type HomeCopy = {
     eyebrow: string;
     title: string;
     body: string;
+    freeTier: {
+      badge: string;
+      label: string;
+      price: string;
+      period: string;
+      hint: string;
+      cta: string;
+      features: readonly string[];
+    };
+    shieldTier: {
+      badge: string;
+      label: string;
+      period: string;
+      hint: string;
+      cta: string;
+      features: readonly string[];
+    };
+    agencyTier: {
+      badge: string;
+      label: string;
+      perMonth: string;
+      hint: string;
+      cta: string;
+      features: readonly string[];
+    };
   };
   standalone: {
     packages: Record<StandalonePackageId, StandalonePackageCopy>;
@@ -150,8 +175,8 @@ export const HOME_COPY: Record<Locale, HomeCopy> = {
         body: "İşveren 7 gün içinde somut teknik log sunmazsa TBK m. 477 uyarınca zımni kabul gerçekleşir; uyuşmazlıkta resmi bilirkişi raporu hazır olur.",
       },
     ],
-    pricingEyebrow: "SÜREKLİ GÜVENLİK ABONELİKLERİ",
-    pricingTitle: "Ekibinize ve altyapınıza en uygun planı seçin.",
+    pricingEyebrow: "ŞEFFAF VE ADİL MODEL",
+    pricingTitle: "Yazılımcıya Ücretsiz, Teslimatta Eksiksiz Güvence",
     comingSoon: "Yakında",
     tiers: {
       TIER1: tierCopyFromInfo("TIER1"),
@@ -159,9 +184,53 @@ export const HOME_COPY: Record<Locale, HomeCopy> = {
       TIER3: tierCopyFromInfo("TIER3"),
     },
     pricing: {
-      eyebrow: "OTONOM GÜVENLİK SAAS",
-      title: "Sitenizi Düzenli Kontrol Eden Güvenlik Planları",
-      body: "Geliştiricilerden kurumsal ajanslara kadar her ölçek için otonom güvenlik hijyeni taraması ve sürekli izleme.",
+      eyebrow: "ŞEFFAF VE ADİL MODEL",
+      title: "Yazılımcıya Ücretsiz, Teslimatta Eksiksiz Güvence",
+      body: "Sözleşme oluşturma ve kabul kriterlerini belirleme her zaman ücretsizdir. Kriptografik teslimat kanıtı ve resmi tahkim güvencesi ihtiyaca göre ölçeklenir.",
+      freeTier: {
+        badge: "Bireysel Geliştirici",
+        label: "Standart Protokol",
+        price: "Ücretsiz",
+        period: "sözleşme başına",
+        hint: "Şartname hazırlama ve standart teslimat koruması.",
+        cta: "Hemen Başla",
+        features: [
+          "TBK m. 474 & HMK m. 193 uyumlu sözleşme",
+          "Objektif kabul kriterleri (Specification as Code)",
+          "ProofGuard canlı çalışma ve uptime kontrolü",
+          "7 günlük yasal zımni kabul sayacı",
+          "Kriptografik SHA-256 kök parmak izi",
+        ],
+      },
+      shieldTier: {
+        badge: "En Çok Tercih Edilen",
+        label: "Dispute Shield & Tahkim Dosyası",
+        period: "sözleşme başına",
+        hint: "Mahkemede ve arabuluculukta bağlayıcı resmi delil tutanağı.",
+        cta: "Protokolü Başlat",
+        features: [
+          "Standart protokole ait tüm özellikler",
+          "Resmi Adli Bilişim PDF Tutanağı (Kaşeli & QR kodlu)",
+          "Pasif güvenlik & hassas dosya sızıntı denetimi (Check #4)",
+          "Arabulucu & bilirkişi için şifresiz token inceleme linki",
+          "GitHub README & Web için dinamik SVG mühür rozeti",
+          "Keyfi ayıplı ifa iddialarına karşı bağlayıcı hakemlik kaydı",
+        ],
+      },
+      agencyTier: {
+        badge: "Yazılım Stüdyoları",
+        label: "Ajans & Kurumsal Retainer",
+        perMonth: "ay",
+        hint: "Birden çok müşteri ve ekip yöneten ajanslar için.",
+        cta: "Ekip İçin Başlat",
+        features: [
+          "Ayda 10 sözleşmeye kadar tam tahkim ve adli bilişim dosyası",
+          "Özel kurumsal marka & kaşe desteği (White-Label)",
+          "REST API ve webhook teslimat entegrasyonu",
+          "Öncelikli teknik bilirkişi incelemesi",
+          "Sözleşme başına ek ödeme sürtünmesi yok",
+        ],
+      },
     },
     standalone: {
       packages: {
@@ -311,8 +380,8 @@ export const HOME_COPY: Record<Locale, HomeCopy> = {
         body: "Clients must submit concrete technical logs within 7 days; silence triggers statutory acceptance, producing an authoritative dossier.",
       },
     ],
-    pricingEyebrow: "CONTINUOUS SECURITY PLANS",
-    pricingTitle: "Choose the plan that fits your engineering team.",
+    pricingEyebrow: "TRANSPARENT & FAIR PRICING",
+    pricingTitle: "Free for Developers, Absolute Certainty on Delivery",
     comingSoon: "Coming soon",
     tiers: {
       TIER1: {
@@ -343,9 +412,53 @@ export const HOME_COPY: Record<Locale, HomeCopy> = {
       },
     },
     pricing: {
-      eyebrow: "AUTONOMOUS SECURITY SAAS",
-      title: "Security Hygiene Plans That Check Your Site Around the Clock",
-      body: "From independent builders to scaling software agencies, autonomous security hygiene scanning and continuous monitoring for every size of team.",
+      eyebrow: "TRANSPARENT & FAIR PRICING",
+      title: "Free for Developers, Absolute Certainty on Delivery",
+      body: "Drafting contracts and binding acceptance criteria is always free. Cryptographic proof of delivery and binding arbitration scale to your project needs.",
+      freeTier: {
+        badge: "Individual Developer",
+        label: "Standard Protocol",
+        price: "Free",
+        period: "per contract",
+        hint: "Specification drafting and standard delivery protection.",
+        cta: "Get Started Free",
+        features: [
+          "TBK Art. 474 & HMK Art. 193 compliant contract",
+          "Objective acceptance criteria (Specification as Code)",
+          "ProofGuard live uptime & health prober",
+          "7-day statutory tacit acceptance countdown",
+          "Cryptographic SHA-256 root seal",
+        ],
+      },
+      shieldTier: {
+        badge: "Most Popular",
+        label: "Dispute Shield & Dossier",
+        period: "per contract",
+        hint: "Binding expert witness evidence admissible in court and mediation.",
+        cta: "Start Protocol",
+        features: [
+          "All features in Standard Protocol",
+          "Official Forensic PDF Dossier (Sealed with QR verification)",
+          "Passive security & sensitive file exposure hygiene (Check #4)",
+          "Token-gated guest access for mediators & counsel",
+          "Embeddable dynamic SVG verification badge for GitHub",
+          "Binding technical arbitration record against bad-faith rejections",
+        ],
+      },
+      agencyTier: {
+        badge: "Software Studios",
+        label: "Agency Retainer",
+        perMonth: "mo",
+        hint: "For digital agencies and studios managing multiple client deliverables.",
+        cta: "Start for Team",
+        features: [
+          "Up to 10 sealed contracts & forensic dossiers per month",
+          "Custom agency branding (White-Label)",
+          "REST API & webhook delivery integration",
+          "Priority expert witness inspection",
+          "Zero per-contract checkout friction",
+        ],
+      },
     },
     standalone: {
       packages: {

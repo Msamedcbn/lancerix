@@ -13,10 +13,10 @@ import {
   ScanSearch,
   ShieldCheck,
   Scale,
+  Sparkles,
 } from "lucide-react";
 
 import { HorizontalAccordion } from "@/components/home/horizontal-accordion";
-import { StandalonePurchaseForm } from "@/components/home/standalone-purchase-form";
 import { InstantAuditScanner } from "@/components/home/instant-audit-scanner";
 import { ArbitrationSimulator } from "@/components/contracts/arbitration-simulator";
 import { gsap, useGSAP } from "@/lib/gsap";
@@ -25,7 +25,13 @@ import { SiteFooter } from "@/components/layout/site-footer";
 import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/config";
 import { HOME_COPY } from "@/lib/i18n/dictionaries/home";
 import { formatMoney, type SupportedCurrency } from "@/lib/validations/currency";
-import { DISPUTE_SHIELD_RETAINER_PRICE_MINOR } from "@/lib/validations/standalone-qa";
+import { STANDALONE_PACKAGES } from "@/lib/validations/standalone-qa";
+
+const AGENCY_RETAINER_PRICES: Record<SupportedCurrency, number> = {
+  TRY: 99000,
+  USD: 7900,
+  EUR: 7900,
+};
 
 // Dynamically import WorldMap to avoid SSR issues with canvas/svg if any
 const WorldMap = dynamic(() => import("@/components/ui/world-map"), {
@@ -376,34 +382,151 @@ export function HomeClient({
           </p>
         </div>
 
-        <div className="mt-10">
-          <StandalonePurchaseForm copy={t.standalone} currency={currency} packageIds={["DISPUTE_SHIELD"]} />
-
-          <div className="mx-auto mt-4 max-w-5xl">
-            <div className="flex flex-col justify-between gap-4 rounded-2xl border border-dashed border-border bg-muted/20 p-6 sm:flex-row sm:items-center">
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-semibold text-foreground">{t.standalone.retainer.label}</span>
-                  <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                    {t.standalone.retainer.comingSoon}
-                  </span>
-                </div>
-                <p className="mt-1 text-xs text-muted-foreground">{t.standalone.retainer.hint}</p>
-                <ul className="mt-3 flex flex-col gap-1.5 text-xs text-muted-foreground">
-                  {t.standalone.retainer.features.map((feature) => (
-                    <li key={feature} className="flex items-start gap-2">
-                      <CheckCircle2 className="text-brand mt-0.5 size-3.5 shrink-0" aria-hidden />
-                      {feature}
-                    </li>
-                  ))}
-                </ul>
+        <div className="mt-12 grid grid-cols-1 gap-6 lg:grid-cols-3 max-w-6xl mx-auto items-stretch">
+          {/* Plan 1: Standart Protokol */}
+          <GlassCard className="flex flex-col justify-between p-7 relative border-border/80">
+            <div>
+              <div className="flex items-center justify-between gap-2 mb-3">
+                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  {t.pricing.freeTier.badge}
+                </span>
               </div>
-              <span className="tnum shrink-0 text-lg font-bold text-foreground">
-                {formatMoney(DISPUTE_SHIELD_RETAINER_PRICE_MINOR[currency], currency)}
-                <span className="text-xs font-medium text-muted-foreground">/{t.standalone.retainer.perMonth}</span>
+              <h3 className="font-display text-xl font-bold text-foreground">
+                {t.pricing.freeTier.label}
+              </h3>
+              <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
+                {t.pricing.freeTier.hint}
+              </p>
+
+              <div className="mt-6 mb-6 pb-6 border-b border-border/50">
+                <span className="font-display text-3xl font-extrabold text-foreground">
+                  {t.pricing.freeTier.price}
+                </span>
+                <span className="ml-1.5 text-xs text-muted-foreground font-medium">
+                  / {t.pricing.freeTier.period}
+                </span>
+              </div>
+
+              <ul className="flex flex-col gap-3 text-xs text-muted-foreground">
+                {t.pricing.freeTier.features.map((feature, i) => (
+                  <li key={i} className="flex items-start gap-2.5">
+                    <CheckCircle2 className="size-4 shrink-0 text-emerald-500 mt-0.5" aria-hidden />
+                    <span>{feature}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="mt-8 pt-6 border-t border-border/50 text-center">
+              <Magnetic>
+                <Link
+                  href="/register"
+                  className="mac-spring inline-block w-full rounded-xl border border-border bg-background py-3 text-center text-sm font-semibold text-foreground shadow-sm transition-all hover:bg-muted active:scale-[0.98]"
+                >
+                  {t.pricing.freeTier.cta}
+                </Link>
+              </Magnetic>
+            </div>
+          </GlassCard>
+
+          {/* Plan 2: Dispute Shield & Tahkim Dosyası (Öne Çıkan) */}
+          <GlassCard className="flex flex-col justify-between p-7 relative border-brand/40 bg-brand/5 shadow-xl ring-1 ring-brand/30 md:-translate-y-2">
+            <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
+              <span className="bg-brand text-brand-foreground rounded-full px-3.5 py-1 text-[11px] font-bold uppercase tracking-wider shadow-sm flex items-center gap-1.5">
+                <Sparkles className="size-3" />
+                {t.pricing.shieldTier.badge}
               </span>
             </div>
-          </div>
+
+            <div>
+              <div className="flex items-center justify-between gap-2 mb-3 mt-1">
+                <span className="text-xs font-semibold text-brand uppercase tracking-wider">
+                  TBK m. 477 Delil Kalkanı
+                </span>
+              </div>
+              <h3 className="font-display text-xl font-bold text-foreground">
+                {t.pricing.shieldTier.label}
+              </h3>
+              <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
+                {t.pricing.shieldTier.hint}
+              </p>
+
+              <div className="mt-6 mb-6 pb-6 border-b border-border/50">
+                <span className="font-display text-4xl font-extrabold text-foreground">
+                  {formatMoney(STANDALONE_PACKAGES.DISPUTE_SHIELD.priceMinor[currency], currency)}
+                </span>
+                <span className="ml-1.5 text-xs text-muted-foreground font-medium">
+                  / {t.pricing.shieldTier.period}
+                </span>
+              </div>
+
+              <ul className="flex flex-col gap-3 text-xs text-muted-foreground">
+                {t.pricing.shieldTier.features.map((feature, i) => (
+                  <li key={i} className="flex items-start gap-2.5">
+                    <CheckCircle2 className="size-4 shrink-0 text-brand mt-0.5" aria-hidden />
+                    <span className="text-foreground/90 font-medium">{feature}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="mt-8 pt-6 border-t border-border/50 text-center">
+              <Magnetic>
+                <Link
+                  href="/register"
+                  className="mac-spring inline-block w-full rounded-xl bg-brand py-3 text-center text-sm font-semibold text-brand-foreground shadow-md transition-all hover:opacity-90 active:scale-[0.98]"
+                >
+                  {t.pricing.shieldTier.cta}
+                </Link>
+              </Magnetic>
+            </div>
+          </GlassCard>
+
+          {/* Plan 3: Ajans & Kurumsal Retainer */}
+          <GlassCard className="flex flex-col justify-between p-7 relative border-border/80">
+            <div>
+              <div className="flex items-center justify-between gap-2 mb-3">
+                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  {t.pricing.agencyTier.badge}
+                </span>
+              </div>
+              <h3 className="font-display text-xl font-bold text-foreground">
+                {t.pricing.agencyTier.label}
+              </h3>
+              <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
+                {t.pricing.agencyTier.hint}
+              </p>
+
+              <div className="mt-6 mb-6 pb-6 border-b border-border/50">
+                <span className="font-display text-3xl font-extrabold text-foreground">
+                  {formatMoney(AGENCY_RETAINER_PRICES[currency], currency)}
+                </span>
+                <span className="ml-1.5 text-xs text-muted-foreground font-medium">
+                  / {t.pricing.agencyTier.perMonth}
+                </span>
+              </div>
+
+              <ul className="flex flex-col gap-3 text-xs text-muted-foreground">
+                {t.pricing.agencyTier.features.map((feature, i) => (
+                  <li key={i} className="flex items-start gap-2.5">
+                    <CheckCircle2 className="size-4 shrink-0 text-emerald-500 mt-0.5" aria-hidden />
+                    <span>{feature}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="mt-8 pt-6 border-t border-border/50 text-center">
+              <Magnetic>
+                <Link
+                  href="/register"
+                  className="mac-spring inline-block w-full rounded-xl border border-border bg-background py-3 text-center text-sm font-semibold text-foreground shadow-sm transition-all hover:bg-muted active:scale-[0.98]"
+                >
+                  {t.pricing.agencyTier.cta}
+                </Link>
+              </Magnetic>
+            </div>
+          </GlassCard>
         </div>
       </section>
 

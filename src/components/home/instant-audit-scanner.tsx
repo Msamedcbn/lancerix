@@ -2,17 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import {
-  Globe,
-  Terminal,
-  ShieldCheck,
-  ShieldAlert,
-  ArrowRight,
-  Loader2,
-  CheckCircle2,
-  AlertTriangle,
-  Lock,
-} from "lucide-react";
+import { Globe, ArrowRight, Loader2 } from "lucide-react";
 
 import { runInstantAuditAction } from "@/app/(dashboard)/security-actions";
 
@@ -31,15 +21,17 @@ export function InstantAuditScanner() {
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  async function handleScan(e: React.FormEvent) {
-    e.preventDefault();
-    if (!url.trim()) return;
+  async function handleScan(e: React.FormEvent, customUrl?: string) {
+    if (e) e.preventDefault();
+    const target = (customUrl || url).trim();
+    if (!target) return;
 
+    if (customUrl) setUrl(customUrl);
     setLoading(true);
     setError(null);
     setResult(null);
 
-    const res = await runInstantAuditAction(url);
+    const res = await runInstantAuditAction(target);
     setLoading(false);
 
     if (res.success) {
@@ -52,23 +44,23 @@ export function InstantAuditScanner() {
   return (
     <div className="mx-auto max-w-3xl w-full">
       {/* Search Input Bar */}
-      <form onSubmit={handleScan} className="relative flex flex-col sm:flex-row gap-2.5">
+      <form onSubmit={(e) => handleScan(e)} className="relative flex flex-col sm:flex-row gap-2.5">
         <div className="relative flex-1">
           <Globe className="absolute left-4 top-3.5 size-4 text-muted-foreground" />
           <input
             type="text"
             value={url}
             onChange={(e) => setUrl(e.target.value)}
-            placeholder="Web sitenizi yazın (örn: https://app.sirketiniz.com)"
+            placeholder="Web sitenizi veya canlı test adresinizi yazın (örn: https://app.sirketiniz.com)"
             required
-            className="w-full rounded-2xl border border-border/80 bg-background/80 pl-11 pr-4 py-3.5 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 backdrop-blur-md transition-all shadow-sm"
+            className="w-full rounded-2xl border border-border/80 bg-background/80 pl-11 pr-4 py-3.5 text-sm text-foreground placeholder:text-muted-foreground focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20 backdrop-blur-md transition-all shadow-sm"
           />
         </div>
 
         <button
           type="submit"
           disabled={loading}
-          className="inline-flex shrink-0 items-center justify-center gap-2 rounded-2xl bg-primary px-6 py-3.5 text-sm font-semibold text-primary-foreground shadow-md transition-all hover:bg-primary/90 disabled:opacity-50 active:scale-[0.98]"
+          className="inline-flex shrink-0 items-center justify-center gap-2 rounded-2xl bg-brand px-6 py-3.5 text-sm font-semibold text-brand-foreground shadow-md transition-all hover:opacity-90 disabled:opacity-50 active:scale-[0.98]"
         >
           {loading ? (
             <>
@@ -76,11 +68,34 @@ export function InstantAuditScanner() {
             </>
           ) : (
             <>
-              Ücretsiz Tara <ArrowRight className="size-4" />
+              Canlı Örnekle Tara <ArrowRight className="size-4" />
             </>
           )}
         </button>
       </form>
+
+      {/* Quick Example Suggestions */}
+      <div className="mt-3 flex flex-wrap items-center justify-center gap-2 text-xs text-muted-foreground">
+        <span className="text-[11px] font-medium text-muted-foreground/80">Hazır örnekle dene:</span>
+        {[
+          { label: "example.com", target: "https://example.com" },
+          { label: "react.dev", target: "https://react.dev" },
+          { label: "nextjs.org", target: "https://nextjs.org" },
+        ].map((sample) => (
+          <button
+            key={sample.target}
+            type="button"
+            onClick={(e) => {
+              setUrl(sample.target);
+              handleScan(e, sample.target);
+            }}
+            disabled={loading}
+            className="rounded-full border border-border/70 bg-background/60 px-3 py-1 text-[11px] font-mono text-muted-foreground transition hover:border-brand/60 hover:text-foreground hover:bg-muted/50 disabled:opacity-50"
+          >
+            {sample.label}
+          </button>
+        ))}
+      </div>
 
       {error && (
         <div className="mt-4 rounded-xl border border-red-500/20 bg-red-500/10 p-3.5 text-xs text-red-400 font-medium text-center">

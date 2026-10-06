@@ -140,7 +140,7 @@ export function ClientDecision({
             <span>⚖️</span> Hukuki & Teknik Hakemlik Uyarısı (TBK m. 474):
           </p>
           <p>
-            Sözleşme şartnamesi ve eser sözleşmesi hükümleri uyarınca soyut veya sübjektif ("beğenmedim", "içime sinmedi" vb.) gerekçeler geçerli bir ret oluşturmaz. İtirazın kabul edilebilmesi için sözleşmedeki hangi teknik kriterin ihlal edildiğini ve somut hata kanıtını (log, ekran görüntüsü, API yanıtı) bildirmeniz gereklidir. Bu beyan değiştirilemez delil kütüğüne işlenir.
+            Sözleşme şartnamesi ve eser sözleşmesi hükümleri uyarınca soyut veya sübjektif (&ldquo;beğenmedim&rdquo;, &ldquo;içime sinmedi&rdquo; vb.) gerekçeler geçerli bir ret oluşturmaz. İtirazın kabul edilebilmesi için sözleşmedeki hangi teknik kriterin ihlal edildiğini ve somut hata kanıtını (log, ekran görüntüsü, API yanıtı) bildirmeniz gereklidir. Bu beyan değiştirilemez delil kütüğüne işlenir.
           </p>
         </div>
       ) : null}

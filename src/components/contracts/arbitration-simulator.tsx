@@ -6,15 +6,11 @@ import {
   CheckBadgeIcon,
   ExclamationTriangleIcon,
   ClockIcon,
-  ShieldCheckIcon,
   ShieldExclamationIcon,
   DocumentCheckIcon,
-  ArrowRightIcon,
   CommandLineIcon,
-  SparklesIcon,
   InformationCircleIcon,
 } from "@heroicons/react/24/outline";
-import { CheckCircleIcon as CheckCircleSolid } from "@heroicons/react/24/solid";
 import {
   SiNginx,
   SiPostgresql,
@@ -107,7 +103,7 @@ export function ArbitrationSimulator() {
           </div>
           <div>
             <div className="text-xs font-bold font-display">Senaryo 2: TBK m. 474</div>
-            <div className="text-[11px] text-slate-400 mt-0.5">Keyfi "Beğenmedim" Fesih Girişimi</div>
+            <div className="text-[11px] text-slate-400 mt-0.5">Keyfi &ldquo;Beğenmedim&rdquo; Fesih Girişimi</div>
           </div>
         </button>
 
@@ -251,7 +247,7 @@ export function ArbitrationSimulator() {
             <div className="p-4 rounded-2xl bg-slate-950/50 border border-slate-800/80 flex items-start gap-3 text-xs text-slate-400">
               <InformationCircleIcon className="w-5 h-5 text-slate-500 shrink-0 mt-0.5" />
               <span>
-                "İtirazı Göndermeyi Dene" butonuna basarak Lancerix kural motorunun keyfi fesih girişimini nasıl engellediğini görün.
+                &ldquo;İtirazı Göndermeyi Dene&rdquo; butonuna basarak Lancerix kural motorunun keyfi fesih girişimini nasıl engellediğini görün.
               </span>
             </div>
           )}
@@ -285,7 +281,7 @@ export function ArbitrationSimulator() {
               <div className="p-3 rounded-xl bg-slate-900 border border-slate-800">
                 <div className="font-semibold text-slate-200">Delil Kütüğüne İşlenme</div>
                 <p className="text-[11px] text-slate-400 mt-1">
-                  Hata logu ve düzeltme commit'i SHA-256 ile bilirkişi raporuna eklenir; her iki taraf korunur.
+                  Hata logu ve düzeltme commit&apos;i SHA-256 ile bilirkişi raporuna eklenir; her iki taraf korunur.
                 </p>
               </div>
             </div>
