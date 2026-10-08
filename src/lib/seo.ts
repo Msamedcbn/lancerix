@@ -135,3 +135,147 @@ export function pageMetadata({
     ...socialMetadata({ title, description, path, locale }),
   };
 }
+
+export function caseStudyJsonLd({
+  origin,
+  path,
+  title,
+  description,
+  datePublished = "2026-10-06T14:30:00Z",
+  dateModified = "2026-10-08T12:00:00Z",
+  locale = "tr",
+  questions = [],
+}: {
+  origin: string;
+  path: string;
+  title: string;
+  description: string;
+  datePublished?: string;
+  dateModified?: string;
+  locale?: Locale;
+  questions?: Array<{ q: string; a: string }>;
+}) {
+  const isTr = locale === "tr";
+  const homeTitle = isTr ? "Ana Sayfa" : "Home";
+  const casesTitle = isTr ? "Vakalar & Emsal Kararlar" : "Precedent Case Studies";
+  const casesPath = isTr ? "/vaka" : "/en/case-study";
+
+  const graph: Array<Record<string, unknown>> = [
+    {
+      "@type": "TechArticle",
+      headline: title,
+      description,
+      url: `${origin}${path}`,
+      datePublished,
+      dateModified,
+      inLanguage: isTr ? "tr-TR" : "en-US",
+      author: {
+        "@type": "Person",
+        name: "Samed Çoban",
+        jobTitle: isTr ? "Kurucu & Kıdemli Sistem Mimarı" : "Founder & Senior Systems Architect",
+        url: `${origin}${isTr ? "/hakkinda" : "/en/about"}`,
+      },
+      publisher: {
+        "@type": "Organization",
+        name: SITE_NAME,
+        url: origin,
+        logo: {
+          "@type": "ImageObject",
+          url: `${origin}/icon`,
+        },
+      },
+    },
+    {
+      "@type": "BreadcrumbList",
+      itemListElement: [
+        {
+          "@type": "ListItem",
+          position: 1,
+          name: homeTitle,
+          item: `${origin}${isTr ? "/" : "/en"}`,
+        },
+        {
+          "@type": "ListItem",
+          position: 2,
+          name: casesTitle,
+          item: `${origin}${casesPath}`,
+        },
+        {
+          "@type": "ListItem",
+          position: 3,
+          name: title,
+          item: `${origin}${path}`,
+        },
+      ],
+    },
+  ];
+
+  if (questions.length > 0) {
+    graph.push({
+      "@type": "FAQPage",
+      mainEntity: questions.map((item) => ({
+        "@type": "Question",
+        name: item.q,
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: item.a,
+        },
+      })),
+    });
+  }
+
+  return {
+    "@context": "https://schema.org",
+    "@graph": graph,
+  };
+}
+
+export function casesHubJsonLd({
+  origin,
+  path,
+  title,
+  description,
+  locale = "tr",
+}: {
+  origin: string;
+  path: string;
+  title: string;
+  description: string;
+  locale?: Locale;
+}) {
+  const isTr = locale === "tr";
+  return {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "CollectionPage",
+        name: title,
+        description,
+        url: `${origin}${path}`,
+        inLanguage: isTr ? "tr-TR" : "en-US",
+        publisher: {
+          "@type": "Organization",
+          name: SITE_NAME,
+          url: origin,
+        },
+      },
+      {
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          {
+            "@type": "ListItem",
+            position: 1,
+            name: isTr ? "Ana Sayfa" : "Home",
+            item: `${origin}${isTr ? "/" : "/en"}`,
+          },
+          {
+            "@type": "ListItem",
+            position: 2,
+            name: title,
+            item: `${origin}${path}`,
+          },
+        ],
+      },
+    ],
+  };
+}

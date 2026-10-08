@@ -5,8 +5,52 @@ import Link from "next/link";
 import { Globe, ArrowRight, Loader2 } from "lucide-react";
 
 import { runInstantAuditAction } from "@/app/(dashboard)/security-actions";
+import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/config";
 
-export function InstantAuditScanner() {
+const SCANNER_COPY: Record<
+  Locale,
+  {
+    placeholder: string;
+    submitIdle: string;
+    submitLoading: string;
+    samplePrompt: string;
+    assessmentTitle: string;
+    healthScore: string;
+    findingsTitle: (count: number) => string;
+    ctaHeadline: string;
+    ctaSubtext: string;
+    ctaButton: string;
+  }
+> = {
+  tr: {
+    placeholder: "Web sitenizi veya canlı test adresinizi yazın (örn: https://app.sirketiniz.com)",
+    submitIdle: "Canlı Örnekle Tara",
+    submitLoading: "Otonom Denetleniyor...",
+    samplePrompt: "Hazır örnekle dene:",
+    assessmentTitle: "Hızlı Güvenlik Değerlendirmesi",
+    healthScore: "Sağlık Skoru",
+    findingsTitle: (count) => `Tespit Edilen Bulgular (${count} Zafiyet):`,
+    ctaHeadline: "Tam teknik raporu ve otomatik onarım kodlarını (Fix PR) inceleyin.",
+    ctaSubtext: "Ücretsiz hesap açarak bu hedefi sürekli izlemeye alabilirsiniz.",
+    ctaButton: "Ücretsiz Kayıt Ol & Yamaları Gör",
+  },
+  en: {
+    placeholder: "Enter your website or live staging URL (e.g. https://app.yourcompany.com)",
+    submitIdle: "Run Live Audit",
+    submitLoading: "Autonomously Auditing...",
+    samplePrompt: "Try sample:",
+    assessmentTitle: "Instant Security Assessment",
+    healthScore: "Health Score",
+    findingsTitle: (count) => `Detected Findings (${count} Issues):`,
+    ctaHeadline: "Review full technical report and autonomous fix pull requests.",
+    ctaSubtext: "Create a free account to continuously monitor this target.",
+    ctaButton: "Sign Up Free & View Fixes",
+  },
+};
+
+export function InstantAuditScanner({
+  locale = DEFAULT_LOCALE,
+}: Readonly<{ locale?: Locale }>) {
   const [url, setUrl] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<{
@@ -20,6 +64,8 @@ export function InstantAuditScanner() {
     logs: { stepName: string; message: string; level: string }[];
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const t = SCANNER_COPY[locale];
 
   async function handleScan(e: React.FormEvent, customUrl?: string) {
     if (e) e.preventDefault();
@@ -51,7 +97,7 @@ export function InstantAuditScanner() {
             type="text"
             value={url}
             onChange={(e) => setUrl(e.target.value)}
-            placeholder="Web sitenizi veya canlı test adresinizi yazın (örn: https://app.sirketiniz.com)"
+            placeholder={t.placeholder}
             required
             className="w-full rounded-2xl border border-border/80 bg-background/80 pl-11 pr-4 py-3.5 text-sm text-foreground placeholder:text-muted-foreground focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20 backdrop-blur-md transition-all shadow-sm"
           />
@@ -64,11 +110,11 @@ export function InstantAuditScanner() {
         >
           {loading ? (
             <>
-              <Loader2 className="size-4 animate-spin" /> Otonom Denetleniyor...
+              <Loader2 className="size-4 animate-spin" /> {t.submitLoading}
             </>
           ) : (
             <>
-              Canlı Örnekle Tara <ArrowRight className="size-4" />
+              {t.submitIdle} <ArrowRight className="size-4" />
             </>
           )}
         </button>
@@ -76,7 +122,7 @@ export function InstantAuditScanner() {
 
       {/* Quick Example Suggestions */}
       <div className="mt-3 flex flex-wrap items-center justify-center gap-2 text-xs text-muted-foreground">
-        <span className="text-[11px] font-medium text-muted-foreground/80">Hazır örnekle dene:</span>
+        <span className="text-[11px] font-medium text-muted-foreground/80">{t.samplePrompt}</span>
         {[
           { label: "example.com", target: "https://example.com" },
           { label: "react.dev", target: "https://react.dev" },
@@ -109,7 +155,7 @@ export function InstantAuditScanner() {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-border/60">
             <div className="space-y-1">
               <span className="text-[11px] font-mono text-muted-foreground uppercase tracking-wider">
-                Hızlı Güvenlik Değerlendirmesi
+                {t.assessmentTitle}
               </span>
               <h3 className="font-semibold text-foreground text-base truncate max-w-md">
                 {result.url}
@@ -118,7 +164,7 @@ export function InstantAuditScanner() {
 
             <div className="flex items-center gap-3">
               <div className="text-right">
-                <span className="text-xs text-muted-foreground block">Sağlık Skoru</span>
+                <span className="text-xs text-muted-foreground block">{t.healthScore}</span>
                 <span className="text-2xl font-extrabold text-foreground">
                   %{result.healthScore} ({result.grade})
                 </span>
@@ -129,7 +175,7 @@ export function InstantAuditScanner() {
           {/* Quick Findings Preview */}
           <div className="space-y-2">
             <span className="text-xs font-semibold text-muted-foreground block">
-              Tespit Edilen Bulgular ({result.vulnerabilitiesCount} Zafiyet):
+              {t.findingsTitle(result.vulnerabilitiesCount)}
             </span>
             <div className="divide-y divide-border/40 rounded-xl border border-border/60 bg-muted/20">
               {result.findingsPreview.slice(0, 4).map((f, i) => (
@@ -155,16 +201,16 @@ export function InstantAuditScanner() {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 rounded-xl border border-primary/20 bg-primary/5 p-4">
             <div className="space-y-0.5 text-xs text-muted-foreground">
               <p className="font-semibold text-foreground">
-                Tam teknik raporu ve otomatik onarım kodlarını (Fix PR) inceleyin.
+                {t.ctaHeadline}
               </p>
-              <p>Ücretsiz hesap açarak bu hedefi sürekli izlemeye alabilirsiniz.</p>
+              <p>{t.ctaSubtext}</p>
             </div>
 
             <Link
               href="/register"
               className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-xl bg-primary px-4 py-2.5 text-xs font-semibold text-primary-foreground shadow-sm hover:bg-primary/90 transition-all"
             >
-              Ücretsiz Kayıt Ol & Yamaları Gör <ArrowRight className="size-3.5" />
+              {t.ctaButton} <ArrowRight className="size-3.5" />
             </Link>
           </div>
         </div>

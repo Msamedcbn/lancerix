@@ -62,6 +62,62 @@ export type Database = {
           },
         ]
       }
+      delivery_seals: {
+        Row: {
+          access_token: string
+          created_at: string
+          criteria: Json
+          document_sha256: string
+          expires_at: string
+          git_commit: string | null
+          id: string
+          project_name: string
+          prober_summary: Json
+          status: string
+          target_url: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          access_token?: string
+          created_at?: string
+          criteria?: Json
+          document_sha256: string
+          expires_at?: string
+          git_commit?: string | null
+          id?: string
+          project_name: string
+          prober_summary?: Json
+          status?: string
+          target_url: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          access_token?: string
+          created_at?: string
+          criteria?: Json
+          document_sha256?: string
+          expires_at?: string
+          git_commit?: string | null
+          id?: string
+          project_name?: string
+          prober_summary?: Json
+          status?: string
+          target_url?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delivery_seals_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       admin_activity_log: {
         Row: {
           actor_id: string

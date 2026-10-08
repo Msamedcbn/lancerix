@@ -22,6 +22,7 @@ export function SiteHeader({
         <nav className="hidden items-center gap-6 text-sm font-medium text-muted-foreground md:flex">
           <Link href={`${home}#nasil`} className="hover:text-foreground transition-colors">{t.howItWorks}</Link>
           <Link href={`${home}#fiyat`} className="hover:text-foreground transition-colors">{t.pricing}</Link>
+          <Link href={PUBLIC_ROUTES.casesHub[locale]} className="hover:text-foreground transition-colors font-medium text-brand">{t.cases}</Link>
         </nav>
         <div className="flex items-center gap-4">
           <LanguageSwitcher locale={locale} />

@@ -1,3 +1,4 @@
+import type { Route } from "next";
 import Link from "next/link";
 import { Mark } from "@/components/brand/mark";
 import { Github, Twitter, Linkedin, Mail } from "lucide-react";
@@ -64,6 +65,12 @@ export function SiteFooter({
               </li>
               <li>
                 <Link href={PUBLIC_ROUTES.roadmap[locale]} className="hover:text-foreground transition-colors">{t.roadmap}</Link>
+              </li>
+              <li>
+                <Link href={PUBLIC_ROUTES.casesHub[locale] as Route} className="hover:text-foreground transition-colors font-medium text-brand">{t.casesHub}</Link>
+              </li>
+              <li>
+                <Link href={PUBLIC_ROUTES.caseStudy[locale] as Route} className="hover:text-foreground transition-colors font-medium text-emerald-600">{t.caseStudy}</Link>
               </li>
               <li>
                 <Link href={PUBLIC_ROUTES.about[locale]} className="hover:text-foreground transition-colors">{t.about}</Link>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, type ReactNode } from "react";
+import type { Route } from "next";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import {
@@ -12,13 +13,11 @@ import {
   FileSignature,
   ScanSearch,
   ShieldCheck,
-  Scale,
   Sparkles,
 } from "lucide-react";
 
 import { HorizontalAccordion } from "@/components/home/horizontal-accordion";
 import { InstantAuditScanner } from "@/components/home/instant-audit-scanner";
-import { ArbitrationSimulator } from "@/components/contracts/arbitration-simulator";
 import { gsap, useGSAP } from "@/lib/gsap";
 import { SiteHeader } from "@/components/layout/site-header";
 import { SiteFooter } from "@/components/layout/site-footer";
@@ -154,15 +153,6 @@ export function HomeClient({
         </div>
 
         <div className="relative mx-auto flex max-w-4xl flex-col items-center z-10">
-          <Link
-            href="/contracts/ornek-tahkim"
-            className="mb-4 inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-4 py-1.5 text-xs font-semibold text-emerald-400 hover:bg-emerald-500/20 transition shadow-sm group"
-          >
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-            <span>85.000 TL Gerçek Tahkim Dosyası (TBK m. 477 Vaka İncelemesi)</span>
-            <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
-          </Link>
-
           <span className="mb-6 inline-flex items-center gap-2 rounded-full border border-border glass px-4 py-1.5 text-xs font-medium text-foreground shadow-sm">
             <span className="bg-brand size-1.5 rounded-full animate-pulse" aria-hidden />
             {t.badge}
@@ -189,15 +179,6 @@ export function HomeClient({
               </Link>
             </Magnetic>
             <Magnetic>
-              <Link
-                href="/contracts/ornek-tahkim"
-                className="mac-spring inline-flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-6 py-3.5 text-base font-semibold text-emerald-400 shadow-sm transition-all hover:bg-emerald-500/20 active:scale-[0.98]"
-              >
-                <Scale className="w-4 h-4" />
-                <span>85.000 TL Vaka İncelemesi</span>
-              </Link>
-            </Magnetic>
-            <Magnetic>
               <a
                 href="#nasil"
                 className="mac-spring inline-block rounded-xl border border-border bg-background px-7 py-3.5 text-base font-medium text-foreground shadow-sm transition-all hover:bg-muted active:scale-[0.98]"
@@ -209,7 +190,7 @@ export function HomeClient({
 
           {/* Instant Live Domain Audit Hook */}
           <div className="mt-10 w-full max-w-2xl mx-auto">
-            <InstantAuditScanner />
+            <InstantAuditScanner locale={locale} />
           </div>
         </div>
 
@@ -245,13 +226,6 @@ export function HomeClient({
         <p className="text-2xl leading-relaxed font-medium tracking-tight text-foreground md:text-[1.75rem]">
           {t.positioning}
         </p>
-      </section>
-
-      {/* --- Interactive Dispute Simulator Section -------------------------- */}
-      <section className="px-6 pb-20 md:pb-28">
-        <div className="mx-auto max-w-5xl">
-          <ArbitrationSimulator />
-        </div>
       </section>
 
       {/* --- bento: what you actually get ------------------------------------ */}
@@ -295,7 +269,7 @@ export function HomeClient({
                 {t.hashCaption}
               </p>
               <Link
-                href="/report/ornek"
+                href={(locale === "tr" ? "/vaka/85k-kuyumculuk-tahkim" : "/en/case-study/85k-arbitration") as unknown as Route}
                 className="text-brand mt-3 inline-flex items-center gap-1 text-xs font-semibold hover:underline"
               >
                 {t.reportCardLink}
@@ -441,7 +415,7 @@ export function HomeClient({
             <div>
               <div className="flex items-center justify-between gap-2 mb-3 mt-1">
                 <span className="text-xs font-semibold text-brand uppercase tracking-wider">
-                  TBK m. 477 Delil Kalkanı
+                  {locale === "tr" ? "TBK m. 477 Delil Kalkanı" : "Art. 477 Evidence Shield"}
                 </span>
               </div>
               <h3 className="font-display text-xl font-bold text-foreground">

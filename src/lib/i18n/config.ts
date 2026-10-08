@@ -49,6 +49,23 @@ export const PUBLIC_ROUTES = {
     en: "/en/guide/what-to-do-if-a-client-doesnt-pay",
   },
   about: { tr: "/hakkinda", en: "/en/about" },
+  casesHub: { tr: "/vaka", en: "/en/case-study" },
+  caseStudy: {
+    tr: "/vaka/85k-kuyumculuk-tahkim",
+    en: "/en/case-study/85k-arbitration",
+  },
+  caseStudyFintech: {
+    tr: "/vaka/120k-fintech-mobil-app",
+    en: "/en/case-study/120k-fintech-mobile-app",
+  },
+  caseStudyLogistics: {
+    tr: "/vaka/210k-lojistik-erp-kapsam",
+    en: "/en/case-study/210k-logistics-erp-scope",
+  },
+  caseStudyEcommerce: {
+    tr: "/vaka/45k-e-ticaret-otomasyon",
+    en: "/en/case-study/45k-ecommerce-automation",
+  },
 } as const satisfies Record<string, Record<Locale, string>>;
 
 export type PublicRouteId = keyof typeof PUBLIC_ROUTES;

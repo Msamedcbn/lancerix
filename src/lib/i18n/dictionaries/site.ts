@@ -9,7 +9,7 @@ import type { Locale } from "@/lib/i18n/config";
  * the parenthetical only reads naturally in Turkish.
  */
 export type SiteCopy = {
-  nav: { howItWorks: string; pricing: string; login: string; register: string };
+  nav: { howItWorks: string; pricing: string; cases: string; login: string; register: string };
   footer: {
     tagline: string;
     product: string;
@@ -24,6 +24,8 @@ export type SiteCopy = {
     trustArchitecture: string;
     roadmap: string;
     about: string;
+    casesHub: string;
+    caseStudy: string;
     login: string;
     terms: string;
     rights: string;
@@ -39,6 +41,7 @@ export const SITE_COPY: Record<Locale, SiteCopy> = {
     nav: {
       howItWorks: "Nasıl çalışır",
       pricing: "Fiyatlandırma",
+      cases: "Emsal Vakalar",
       login: "Giriş yap",
       register: "Hesap oluştur",
     },
@@ -57,6 +60,8 @@ export const SITE_COPY: Record<Locale, SiteCopy> = {
       trustArchitecture: "Güven Mimarisi",
       roadmap: "Yol Haritası (Neredeyiz?)",
       about: "Kurucu",
+      casesHub: "Emsal Vakalar & Kararlar",
+      caseStudy: "85.000 TL Tahkim Vakası",
       login: "Giriş Yap",
       terms: "Şartlar ve Koşullar",
       rights: "Tüm hakları saklıdır.",
@@ -69,6 +74,7 @@ export const SITE_COPY: Record<Locale, SiteCopy> = {
     nav: {
       howItWorks: "How it works",
       pricing: "Pricing",
+      cases: "Precedent Cases",
       login: "Log in",
       register: "Create account",
     },
@@ -87,6 +93,8 @@ export const SITE_COPY: Record<Locale, SiteCopy> = {
       trustArchitecture: "Trust Architecture",
       roadmap: "Roadmap",
       about: "Founder",
+      casesHub: "Precedent Case Studies",
+      caseStudy: "85K ₺ Arbitration Case",
       login: "Log in",
       terms: "Terms of service",
       rights: "All rights reserved.",

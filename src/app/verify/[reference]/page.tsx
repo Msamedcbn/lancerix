@@ -1,3 +1,4 @@
+import type { Metadata, Route } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
@@ -18,6 +19,9 @@ import {
 
 import { getPublicVerificationRecord } from "@/lib/data/verification";
 import { formatKurus } from "@/lib/escrow/money";
+import { createAdminClient } from "@/lib/supabase/admin";
+import type { DeliverySealRecord } from "@/lib/delivery/types";
+import { VerifyClient } from "./verify-client";
 import {
   CheckBadgeIcon,
   ShieldCheckIcon as HeroShieldCheckIcon,
@@ -38,11 +42,33 @@ export async function generateMetadata({
   params,
 }: {
   params: Promise<{ reference: string }>;
-}) {
+}): Promise<Metadata> {
   const { reference } = await params;
+  const record = await getPublicVerificationRecord(reference);
+  if (record) {
+    return {
+      title: `HMK 193 Doğrulama: ${reference} — Lancerix`,
+      description: `6100 sayılı HMK m. 193 ve TBK m. 474/477 uyarınca resmi teknik bilirkişi ve teslimat doğrulama kaydı.`,
+    };
+  }
+
+  const admin = createAdminClient();
+  const { data: seal } = await admin
+    .from("delivery_seals")
+    .select("project_name, access_token")
+    .eq("access_token", reference)
+    .maybeSingle();
+
+  if (seal) {
+    return {
+      title: `Teslimat Doğrulama Raporu: ${seal.project_name} | Lancerix ProofGuard`,
+      description: `Kriptografik SHA-256 damgalı teslimat kanıtı ve TBK 477 yasal itiraz geri sayımı (${seal.access_token.slice(0, 8)}).`,
+    };
+  }
+
   return {
-    title: `HMK 193 Doğrulama: ${reference} — Lancerix`,
-    description: `6100 sayılı HMK m. 193 ve TBK m. 474/477 uyarınca resmi teknik bilirkişi ve teslimat doğrulama kaydı.`,
+    title: `Doğrulama Bulunamadı — Lancerix`,
+    description: `Belirtilen referans veya anahtara ait geçerli bir doğrulama kaydı bulunamadı.`,
   };
 }
 
@@ -55,6 +81,49 @@ export default async function VerifyReferencePage({
   const record = await getPublicVerificationRecord(reference);
 
   if (!record) {
+    const admin = createAdminClient();
+    const { data: seal } = await admin
+      .from("delivery_seals")
+      .select("*")
+      .eq("access_token", reference)
+      .maybeSingle();
+
+    if (seal) {
+      const verifyUrl = `https://lancerix.com/verify/${seal.access_token}`;
+      return (
+        <div className="min-h-screen bg-slate-950 text-slate-100 selection:bg-indigo-500/30 selection:text-indigo-200">
+          {/* Background Glow */}
+          <div className="fixed inset-0 pointer-events-none overflow-hidden">
+            <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[800px] h-[500px] bg-gradient-to-b from-indigo-600/15 via-blue-600/10 to-transparent blur-3xl" />
+            <div className="absolute top-1/3 -right-40 w-[400px] h-[400px] bg-emerald-600/10 blur-3xl" />
+          </div>
+
+          {/* Top Navigation Bar */}
+          <div className="relative border-b border-slate-800/80 bg-slate-950/60 backdrop-blur-md sticky top-0 z-20">
+            <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
+              <Link href={"/teslimat" as Route} className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
+                  <ShieldCheck className="w-4 h-4" />
+                </div>
+                <span className="font-bold text-sm tracking-tight text-white font-mono">
+                  Lancerix <span className="text-indigo-400 font-normal">ProofGuard</span>
+                </span>
+              </Link>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">
+                  TBK 477 Delil Portalı
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <main className="max-w-4xl mx-auto px-4 py-8 relative z-10">
+            <VerifyClient seal={seal as unknown as DeliverySealRecord} verifyUrl={verifyUrl} />
+          </main>
+        </div>
+      );
+    }
+
     return (
       <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center p-4">
         <div className="max-w-md w-full bg-slate-900 border border-red-500/30 rounded-2xl p-6 text-center shadow-2xl">
@@ -65,14 +134,22 @@ export default async function VerifyReferencePage({
             Belge Doğrulanamadı
           </h1>
           <p className="text-sm text-slate-400 mb-6">
-            <span className="font-mono text-slate-200">{reference}</span> referanslı sözleşme veya bilirkişi mühür kaydı bulunamadı. Lütfen QR kodu veya bağlantıyı kontrol ediniz.
+            <span className="font-mono text-slate-200">{reference}</span> referanslı sözleşme veya teslimat mühür kaydı bulunamadı. Lütfen QR kodu veya bağlantıyı kontrol ediniz.
           </p>
-          <Link
-            href="/"
-            className="inline-flex items-center justify-center px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-sm font-medium transition text-white"
-          >
-            Lancerix Ana Sayfasına Dön
-          </Link>
+          <div className="flex flex-col gap-2">
+            <Link
+              href={"/teslimat" as Route}
+              className="inline-flex items-center justify-center px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-sm font-medium transition text-white"
+            >
+              Yeni Teslimat Mührü Oluştur
+            </Link>
+            <Link
+              href="/"
+              className="inline-flex items-center justify-center px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-sm font-medium transition text-slate-300"
+            >
+              Lancerix Ana Sayfasına Dön
+            </Link>
+          </div>
         </div>
       </div>
     );
@@ -104,7 +181,7 @@ export default async function VerifyReferencePage({
 
           <div className="flex items-center gap-2 self-start sm:self-auto">
             <Link
-              href="/contracts/ornek-tahkim"
+              href={"/vaka/85k-kuyumculuk-tahkim" as Route}
               className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-medium text-slate-200 transition border border-slate-700"
             >
               <FileText className="w-3.5 h-3.5 text-emerald-400" />

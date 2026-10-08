@@ -40,6 +40,26 @@ const GUIDE_UPDATED: Partial<Record<PublicRouteId, Record<Locale, string>>> = {
     tr: GUIDE_MUSTERI_ODEMEZSE_COPY.tr.updated,
     en: GUIDE_MUSTERI_ODEMEZSE_COPY.en.updated,
   },
+  casesHub: {
+    tr: "2026-10-08",
+    en: "2026-10-08",
+  },
+  caseStudy: {
+    tr: "2026-10-08",
+    en: "2026-10-08",
+  },
+  caseStudyFintech: {
+    tr: "2026-10-08",
+    en: "2026-10-08",
+  },
+  caseStudyLogistics: {
+    tr: "2026-10-08",
+    en: "2026-10-08",
+  },
+  caseStudyEcommerce: {
+    tr: "2026-10-08",
+    en: "2026-10-08",
+  },
 };
 
 /**

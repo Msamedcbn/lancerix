@@ -46,6 +46,10 @@ const PUBLIC_ROUTES = [
   "/guven-mimarisi",
   "/hakkinda",
   "/audit",
+  "/teslimat",
+  "/verify",
+  "/vaka",
+  "/contracts/ornek-tahkim",
 ];
 
 /**

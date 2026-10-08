@@ -16,7 +16,8 @@ export const metadata: Metadata = {
 
 const FREELANCER_NAV: readonly NavItem[] = [
   { href: "/freelancer" as Route, label: "Projeler & Sözleşmeler", icon: "briefcase", section: "HAKEMLİK & PROTOKOL" },
-  { href: "/contracts/ornek-tahkim" as Route, label: "Örnek Tahkim (85K)", icon: "scroll" },
+  { href: "/teslimat" as Route, label: "Teslimat Mührü (TBK 477)", icon: "shield-check" },
+  { href: "/vaka/85k-kuyumculuk-tahkim" as Route, label: "Örnek Tahkim (85K)", icon: "scroll" },
   { href: "/freelancer/new" as Route, label: "Yeni Proje / Şartname", icon: "file-text" },
   { href: "/freelancer/requests" as Route, label: "Gelen Talepler", icon: "inbox" },
   { href: "/freelancer/earnings" as Route, label: "Kazanç & Hak Ediş", icon: "wallet" },
@@ -31,7 +32,7 @@ const FREELANCER_NAV: readonly NavItem[] = [
 
 const CLIENT_NAV: readonly NavItem[] = [
   { href: "/client" as Route, label: "Sözleşmeler & Ödemeler", icon: "credit-card", section: "HAKEMLİK & ONAY" },
-  { href: "/contracts/ornek-tahkim" as Route, label: "Örnek Tahkim (85K)", icon: "scroll" },
+  { href: "/vaka/85k-kuyumculuk-tahkim" as Route, label: "Örnek Tahkim (85K)", icon: "scroll" },
   { href: "/client/approvals" as Route, label: "Teslimatlar & Onaylar", icon: "check-circle" },
   { href: "/client/requests" as Route, label: "Geliştirici Çağır", icon: "user-plus" },
   { href: "/client/company" as Route, label: "Şirket Bilgileri", icon: "building" },
@@ -49,6 +50,7 @@ const ADMIN_NAV: readonly NavItem[] = [
   { href: "/admin/disputes" as Route, label: "Uyuşmazlıklar & İtirazlar", icon: "alert-triangle" },
   { href: "/admin/qa-queue" as Route, label: "QA Kuyruğu", icon: "list-checks" },
   { href: "/admin/users" as Route, label: "Kullanıcılar", icon: "contact" },
+  { href: "/teslimat" as Route, label: "Teslimat Mührü Sihirbazı", icon: "shield-check" },
   { href: "/freelancer" as Route, label: "Geliştirici Projeleri", icon: "briefcase", section: "HAKEMLİK & PROTOKOL" },
   { href: "/client" as Route, label: "İşveren Masası", icon: "credit-card" },
   { href: "/dashboard" as Route, label: "Güvenlik Merkezi", icon: "shield-check", section: "GÜVENLİK & PENTEST" },
